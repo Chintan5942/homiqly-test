@@ -21,6 +21,8 @@ const adminGetQueries = {
     company_details.companyAddress AS company_companyAddress,
     company_details.contactPerson AS company_contactPerson,
 
+    vendor_settings.manual_assignment_enabled AS status,
+
     COALESCE(
         CONCAT(
             '[',
@@ -83,10 +85,13 @@ LEFT JOIN service_categories
         company_service_categories.service_categories_id
     )
 
+ LEFT JOIN vendor_settings
+    ON vendors.vendor_id = vendor_settings.vendor_id
+
 GROUP BY vendors.vendor_id`,
 
 
-getAllServiceTypes: `
+    getAllServiceTypes: `
     SELECT
         st.service_type_id,
         st.serviceTypeName,
@@ -163,8 +168,157 @@ getAllServiceTypes: `
 
     getAllUsers: `SELECT user_id, firstName, lastName,profileImage, email address, state, postalcode, phone, created_at
     FROM users
-    ORDER BY created_at DESC`
+    ORDER BY created_at DESC`,
 
+     getAllBookings: `
+SELECT
+    sb.booking_id,
+    sb.bookingDate,
+    sb.bookingTime,
+    sb.bookingStatus,
+    sb.notes,
+    sb.bookingMedia,
+    sb.payment_intent_id,
+
+    u.user_id,
+    CONCAT(u.firstName, ' ', u.lastName) AS userName,
+    u.email AS userEmail,
+    u.phone AS userPhone,
+
+    sc.serviceCategory,
+    s.serviceName,
+
+    st.service_type_id,
+    st.serviceTypeName,
+    st.serviceTypeMedia,
+
+    v.vendor_id,
+    v.vendorType,
+
+    idet.id AS individual_id,
+    idet.name AS individual_name,
+    idet.phone AS individual_phone,
+    idet.email AS individual_email,
+
+    cdet.id AS company_id,
+    cdet.companyName AS company_name,
+    cdet.contactPerson AS company_contact_person,
+    cdet.companyEmail AS company_email,
+    cdet.companyPhone AS company_phone,
+
+    p.status AS payment_status,
+    p.amount AS payment_amount,
+    p.currency AS payment_currency,
+
+    pk.package_id,
+    pk.packageName,
+    pk.totalPrice,
+    pk.totalTime,
+    pk.availabilityCity,
+    pk.packageMedia,
+
+    pi.item_id AS package_item_id,
+    pi.itemName AS package_item_name,
+    pi.price AS package_item_price,
+    pi.timeRequired AS package_item_time,
+    pi.itemMedia AS package_item_media,
+
+    pr.preference_id,
+    pr.preferenceName,
+    pr.preferenceValue
+
+FROM service_booking sb
+LEFT JOIN users u ON sb.user_id = u.user_id
+LEFT JOIN service_categories sc ON sb.service_categories_id = sc.service_categories_id
+LEFT JOIN services s ON sb.service_id = s.service_id
+
+-- Service Type
+LEFT JOIN service_booking_types sbt ON sb.booking_id = sbt.booking_id
+LEFT JOIN service_type st ON sbt.service_type_id = st.service_type_id
+
+-- Vendor
+LEFT JOIN vendors v ON sb.vendor_id = v.vendor_id
+LEFT JOIN individual_details idet ON v.vendor_id = idet.vendor_id
+LEFT JOIN company_details cdet ON v.vendor_id = cdet.vendor_id
+
+-- Payment
+LEFT JOIN payments p ON p.payment_intent_id = sb.payment_intent_id
+
+-- Packages
+LEFT JOIN booking_packages bp ON sb.booking_id = bp.booking_id
+LEFT JOIN packages pk ON bp.package_id = pk.package_id
+
+-- Package Items
+LEFT JOIN booking_package_items bpi ON bp.booking_package_id = bpi.booking_package_id
+LEFT JOIN package_items pi ON bpi.package_item_id = pi.item_id
+
+-- Preferences
+LEFT JOIN booking_preferences pr ON pr.booking_package_item_id = bpi.booking_package_item_id
+
+ORDER BY sb.bookingDate DESC, sb.bookingTime DESC;`,
+
+   getAdminCreatedPackages: `
+    SELECT
+        st.service_type_id,
+        st.serviceTypeName,
+        st.serviceTypeMedia,
+
+        s.service_id,
+        s.serviceName,
+
+        sc.service_categories_id,
+        sc.serviceCategory,
+
+        COALESCE((
+            SELECT CONCAT('[', GROUP_CONCAT(
+                JSON_OBJECT(
+                    'package_id', p.package_id,
+                    'title', p.packageName,
+                    'description', p.description,
+                    'price', p.totalPrice,
+                    'time_required', p.totalTime,
+                    'package_media', p.packageMedia,
+                    'sub_packages', IFNULL((
+                        SELECT CONCAT('[', GROUP_CONCAT(
+                            JSON_OBJECT(
+                                'sub_package_id', pi.item_id,
+                                'item_name', pi.itemName,
+                                'description', pi.description,
+                                'price', pi.price,
+                                'time_required', pi.timeRequired,
+                                'item_media', pi.itemMedia
+                            )
+                        ), ']')
+                        FROM package_items pi
+                        WHERE pi.package_id = p.package_id
+                    ), '[]'),
+                    'preferences', IFNULL((
+                        SELECT CONCAT('[', GROUP_CONCAT(
+                            JSON_OBJECT(
+                                'preference_id', bp.preference_id,
+                                'preference_value', bp.preferenceValue
+                            )
+                        ), ']')
+                        FROM booking_preferences bp
+                        WHERE bp.package_id = p.package_id
+                    ), '[]')
+                )
+            ), ']')
+            FROM packages p
+            WHERE p.service_type_id = st.service_type_id
+        ), '[]') AS packages
+
+    FROM service_type st
+    JOIN services s ON s.service_id = st.service_id
+    JOIN service_categories sc ON sc.service_categories_id = s.service_categories_id
+
+    ORDER BY st.service_type_id DESC
+  `,
+    getManualAssignmentStatus: `
+    SELECT setting_value FROM settings
+    WHERE setting_key = 'manual_vendor_assignment'
+    LIMIT 1
+  `
 
 }
 
