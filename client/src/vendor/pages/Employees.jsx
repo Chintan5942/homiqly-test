@@ -5,14 +5,23 @@ import { Button } from "../../shared/components/Button";
 import api from "../../lib/axiosConfig";
 import { useNavigate } from "react-router-dom"; // if you're using react-router
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
+import EditEmployeesModal from "../components/Modals/EditEmployeesModal";
 
 const Employees = () => {
   const [showModal, setShowModal] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
 
-  // const navigate = useNavigate(); // for redirect (if needed)
+  const openEdit = (employee) => {
+    setSelectedEmployee(employee);
+    console.log("Selected employee for edit:", employee);
+    console.log("selectedEmployee state:", selectedEmployee);
+
+    setShowEditModal(true);
+  };
 
   const fetchProfile = async () => {
     try {
@@ -20,13 +29,9 @@ const Employees = () => {
       const res = await api.get("/api/vendor/getprofile");
 
       const profile = res.data.profile;
-      // console.log("Profile fetched:", profile);
 
       if (profile.vendorType === "individual") {
         setAccessDenied(true);
-
-        // Optionally redirect:
-        // navigate("/not-authorized");
       }
     } catch (error) {
       console.error("Failed to fetch profile", error);
@@ -54,14 +59,18 @@ const Employees = () => {
 
   if (accessDenied) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-red-600 text-lg font-semibold">
+      <div className="flex items-center justify-center h-96 text-red-600 text-lg font-semibold">
         Access denied. This page is only available for company profiles.
       </div>
     );
   }
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner />;
+      </div>
+    );
   }
   return (
     <div className="p-4">
@@ -69,19 +78,31 @@ const Employees = () => {
         <h1 className="text-xl font-semibold">Employees</h1>
         <Button
           type="button"
-          variant="secondary"
+          variant="lightInherit"
           onClick={() => setShowModal(true)}
         >
           + Create Employee
         </Button>
       </div>
 
-      <EmployeesTable employees={employees} isLoading={isLoading} />
+      <EmployeesTable
+        employees={employees}
+        isLoading={isLoading}
+        onDelete={fetchEmployees}
+        onEdit={openEdit} // ensure table calls this with employee
+      />
 
       <CreateEmployeesModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         onEmployeeCreated={fetchEmployees}
+      />
+
+      <EditEmployeesModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        employee={selectedEmployee}
+        onEmployeeUpdated={fetchEmployees}
       />
     </div>
   );

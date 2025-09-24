@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useVendorAuth } from "../contexts/VendorAuthContext";
 import { FiHelpCircle, FiMenu, FiX } from "react-icons/fi";
@@ -12,19 +12,44 @@ import {
   FiUser,
 } from "react-icons/fi";
 import { HeaderMenu } from "../../shared/components/Header";
+import NotificationIcon from "../components/NotificationIcon";
+import api from "../../lib/axiosConfig"; // ✅ your axios instance
+import { Loader, Loader2 } from "lucide-react";
 
 const DashboardLayout = () => {
   const { currentUser, logout } = useVendorAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [vendorType, setVendorType] = useState(null); // ✅ track vendor type
+  const [loading, setLoading] = useState(true);
 
   const handleLogout = () => {
     logout();
     navigate("/vendor/login");
   };
 
+  // ✅ Fetch vendor profile
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get("/api/vendor/getprofile");
+      const profile = res.data.profile;
+      setVendorType(profile.vendorType); // save vendorType
+    } catch (error) {
+      console.error("Failed to fetch profile", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  // ✅ Sidebar menu items
   const menuItems = [
     {
       path: "/vendor/dashboard",
@@ -43,7 +68,7 @@ const DashboardLayout = () => {
     },
     {
       path: "/vendor/services",
-      name: "My Services",
+      name: "Apply for Services",
       icon: <FiShoppingBag className="w-5 h-5" />,
     },
     {
@@ -51,16 +76,19 @@ const DashboardLayout = () => {
       name: "Bookings",
       icon: <FiShoppingBag className="w-5 h-5" />,
     },
-    {
-      path: "/vendor/supply-kits",
-      name: "Supply Kits",
-      icon: <FiBox className="w-5 h-5" />,
-    },
-    {
-      path: "/vendor/employees",
-      name: "Employees",
-      icon: <FiUser className="w-5 h-5" />,
-    },
+    // { path: "/vendor/supply-kits", name: "Supply Kits", icon: <FiBox className="w-5 h-5" /> },
+
+    // ✅ Show Employees only if vendorType !== "individual"
+    ...(vendorType !== "individual"
+      ? [
+          {
+            path: "/vendor/employees",
+            name: "Employees",
+            icon: <FiUser className="w-5 h-5" />,
+          },
+        ]
+      : []),
+
     {
       path: "/vendor/payments",
       name: "Payments",
@@ -76,6 +104,11 @@ const DashboardLayout = () => {
       name: "Support",
       icon: <FiHelpCircle className="w-5 h-5" />,
     },
+    {
+      path: "/vendor/accountdetails",
+      name: "Bank account details",
+      icon: <FiCreditCard className="w-5 h-5" />,
+    },
   ];
 
   const getPageTitle = () => {
@@ -84,9 +117,18 @@ const DashboardLayout = () => {
     return menuItem ? menuItem.name : "Dashboard";
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen gap-2">
+        <Loader2 className="animate-spin" />
+        Loading...
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-background">
-      {/* Sidebar for desktop */}
+      {/* Sidebar */}
       <aside
         className={`bg-background text-text-primary fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -122,7 +164,7 @@ const DashboardLayout = () => {
 
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Top header */}
+        {/* Header */}
         <header className="bg-white shadow-sm z-10">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center">
@@ -147,38 +189,17 @@ const DashboardLayout = () => {
               </h1>
             </div>
 
-            <HeaderMenu
-              userName={currentUser?.name || "Vendor User"}
-              userRole={currentUser?.vendor_type || "vendor"}
-              onLogout={handleLogout}
-              profilePath="/vendor/profile"
-              settingsPath="/vendor/settings"
-            />
+            <div className="flex items-center space-x-4">
+              <HeaderMenu
+                userName={currentUser?.name || "Vendor User"}
+                userRole={currentUser?.vendor_type || "vendor"}
+                onLogout={handleLogout}
+                profilePath="/vendor/profile"
+                settingsPath="/vendor/settings"
+              />
+              <NotificationIcon />
+            </div>
           </div>
-
-          {/* Mobile menu */}
-          {mobileMenuOpen && (
-            <nav className="lg:hidden bg-white border-t border-gray-200">
-              <ul className="px-2 py-3 space-y-1">
-                {menuItems.map((item) => (
-                  <li key={item.path}>
-                    <Link
-                      to={item.path}
-                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                        location.pathname === item.path
-                          ? "bg-primary text-white"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <span className="mr-3">{item.icon}</span>
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          )}
         </header>
 
         {/* Page content */}

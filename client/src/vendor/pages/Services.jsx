@@ -3,12 +3,15 @@ import api from "../../lib/axiosConfig";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { Button } from "../../shared/components/Button";
 import { toast } from "react-toastify";
+import ApplyServiceModal from "../components/Modals/ApplyServiceModal";
 
 const Services = () => {
   const [groupedPackages, setGroupedPackages] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [requestingPackages, setRequestingPackages] = useState({});
+  const [showModal, setShowModal] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState(null);
 
   useEffect(() => {
     const fetchPackages = async () => {
@@ -73,17 +76,27 @@ const Services = () => {
         <h2 className="text-2xl font-bold text-gray-800">Apply for Services</h2>
 
         {/* Dropdown */}
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="w-full md:w-60 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          {categoryList.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            onClick={() => {
+              setSelectedPackage(null);
+              setShowModal(true);
+            }}
+          >
+            Request New Services
+          </Button>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="w-full md:w-60 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {categoryList.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {loading ? (
@@ -106,17 +119,28 @@ const Services = () => {
                     key={service.service_type_id}
                     className="rounded-2xl shadow-md bg-white overflow-hidden transition-all hover:shadow-lg border border-gray-100"
                   >
-                    <img
-                      src={service.service_type_media}
-                      alt={service.service_type_name}
-                      className="w-full h-48 object-cover"
-                    />
+                    {service.service_type_media && (
+                      <img
+                        src={service.service_type_media}
+                        alt={service.service_type_name}
+                        className="w-full h-48 object-cover"
+                      />
+                    )}
                     <div className="p-5">
-                      <h4 className="text-xl font-semibold text-gray-800">
+                      <h3 className="text-xl font-semibold text-gray-800">
                         {service.service_type_name}
+                      </h3>
+                      <h4>
+                        Service:
+                        <span className="font-semibold text-gray-800">
+                          {service.service_name}
+                        </span>
                       </h4>
-                      <p className="text-sm text-gray-500 mb-3">
-                        Service: {service.service_name}
+                      <p>
+                        service filter :{" "}
+                        <span className="font-semibold text-gray-800">
+                          {service.service_filter}
+                        </span>
                       </p>
 
                       {service.packages.map((pkg) => (
@@ -124,26 +148,6 @@ const Services = () => {
                           key={pkg.package_id}
                           className="mt-6 bg-gray-50 border border-gray-200 p-4 rounded-xl"
                         >
-                          <img
-                            src={pkg.package_media}
-                            alt={pkg.title}
-                            className="w-full h-36 object-cover rounded-md mb-3"
-                          />
-                          <div className="flex justify-between items-center mb-1">
-                            <h5 className="text-md font-bold text-gray-800">
-                              {pkg.title}
-                            </h5>
-                            <p className="text-sm font-medium text-blue-700">
-                              ₹{pkg.price}
-                            </p>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">
-                            {pkg.description}
-                          </p>
-                          <p className="text-xs text-gray-500 mb-3">
-                            Time: {pkg.time_required}
-                          </p>
-
                           {/* Sub-Packages */}
                           {pkg.sub_packages?.length > 0 && (
                             <div className="mb-3">
@@ -166,7 +170,7 @@ const Services = () => {
                                         {sub.item_name}
                                       </p>
                                       <p className="text-xs text-gray-500">
-                                        ₹{sub.price} | {sub.time_required}
+                                        ${sub.price} | {sub.time_required}
                                       </p>
                                     </div>
                                   </li>
@@ -176,7 +180,7 @@ const Services = () => {
                           )}
 
                           {/* Preferences */}
-                          {pkg.preferences?.length > 0 && (
+                          {/* {pkg.preferences?.length > 0 && (
                             <div className="mb-3">
                               <p className="text-sm font-semibold text-gray-700">
                                 Preferences:
@@ -193,15 +197,46 @@ const Services = () => {
                               </div>
                             </div>
                           )}
+                          {pkg.addons?.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-sm font-semibold text-gray-700 mb-2">
+                                Addons :
+                              </p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {pkg.addons.map((pref, index) => (
+                                  <div
+                                    key={index}
+                                    className="bg-white shadow-md rounded-lg border p-4 flex flex-col"
+                                  >
+                                    <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                                      {pref.addon_name}
+                                    </h4>
+                                    <p className="text-xs text-gray-600 mb-2">
+                                      {pref.description}
+                                    </p>
+                                    <span className="text-sm font-medium text-blue-600">
+                                      ${pref.price}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )} */}
 
                           <div className="flex justify-end">
                             <Button
                               size="sm"
                               variant="primary"
                               disabled={requestingPackages[pkg.package_id]}
-                              onClick={() =>
-                                handleRequestService(pkg.package_id)
-                              }
+                              onClick={() => {
+                                setSelectedPackage({
+                                  ...pkg,
+                                  service_id: service.service_id,
+                                  service_category_id:
+                                    service.service_category_id,
+                                });
+                                setShowModal(true);
+                              }}
                             >
                               {requestingPackages[pkg.package_id]
                                 ? "Requesting..."
@@ -217,6 +252,12 @@ const Services = () => {
             </div>
           ))
       )}
+
+      <ApplyServiceModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        initialPackage={selectedPackage}
+      />
     </div>
   );
 };

@@ -20,6 +20,10 @@ import Ratings from "../pages/Ratings";
 import Settings from "../pages/Settings";
 import SupportForm from "../pages/SupportForm";
 import Employees from "../pages/Employees";
+import PaymentDetails from "../pages/subpages/PaymentDetails";
+import BookingDetailsPage from "../pages/subpages/BookingDetailsPage";
+import AccountDetails from "../pages/AccountDetails";
+import LoadingSlider from "../../shared/components/LoadingSpinner";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -28,7 +32,7 @@ const ProtectedRoute = ({ children }) => {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        Loading...
+        <LoadingSlider />{" "}
       </div>
     );
   }
@@ -81,12 +85,15 @@ const VendorRoutes = () => {
         <Route path="profile" element={<Profile />} />
         <Route path="services" element={<Services />} />
         <Route path="bookings" element={<Bookings />} />
+        <Route path="bookings/:bookingId" element={<BookingDetailsPage />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="supply-kits" element={<SupplyKits />} />
         <Route path="employees" element={<Employees />} />
         <Route path="payments" element={<Payments />} />
+        <Route path="payments/:paymentId" element={<PaymentDetails />} />
         <Route path="ratings" element={<Ratings />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="accountdetails" element={<AccountDetails />} />
         <Route path="support" element={<SupportForm />} />
       </Route>
 

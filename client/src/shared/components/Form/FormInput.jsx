@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from "react";
 
 const FormInput = ({
   label,
   name,
-  type = 'text',
+  type = "text",
   placeholder,
   value,
   onChange,
@@ -11,50 +11,54 @@ const FormInput = ({
   disabled = false,
   error,
   icon,
-  className = '',
+  className = "",
   ...rest
 }) => {
+  const [touched, setTouched] = useState(false);
+  const showError = required && touched && !value;
+
   return (
-    <div className={`mb-4 ${className}`}>
-      {label && (
-        <label 
-          htmlFor={name} 
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          {label}
-          {required && <span className="text-error ml-1">*</span>}
-        </label>
-      )}
-      
-      <div className="relative rounded-md shadow-sm">
-        {icon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            {icon}
-          </div>
+    <div className={`w-full ${className}`}>
+      <div className="relative">
+        {label && (
+          <label
+            htmlFor={name}
+            className="block mb-1 text-sm font-medium text-gray-700"
+          >
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </label>
         )}
-        
-        <input
-          id={name}
-          name={name}
-          type={type}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          disabled={disabled}
-          required={required}
-          className={`
-            block w-full rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm
-            ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2
-            ${disabled ? 'bg-gray-100 text-gray-500' : 'bg-white'}
-            ${error ? 'border-error' : 'border-gray-300'}
-          `}
-          {...rest}
-        />
+
+        <div
+          className={`relative flex items-center rounded-lg border ${
+            showError || error ? "border-red-400" : "border-gray-300"
+          } shadow-sm bg-white focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all`}
+        >
+          {icon && (
+            <div className="pl-3 text-gray-400 pointer-events-none">{icon}</div>
+          )}
+
+          <input
+            id={name}
+            name={name}
+            type={type}
+            value={value}
+            onChange={onChange}
+            onBlur={() => setTouched(true)} // Mark field as touched
+            placeholder={placeholder}
+            disabled={disabled}
+            className={`w-full outline-none text-sm placeholder-gray-400 rounded-lg bg-transparent py-1.5 ${
+              icon ? "pl-2 pr-4" : "px-4"
+            } ${disabled ? "text-gray-400 bg-gray-50" : "text-gray-900"}`}
+            {...rest}
+          />
+        </div>
+
+        {(showError || error) && (
+          <p className="text-sm text-red-500 mt-1 font-medium">{error}</p>
+        )}
       </div>
-      
-      {error && (
-        <p className="mt-1 text-sm text-error">{error}</p>
-      )}
     </div>
   );
 };

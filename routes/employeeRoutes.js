@@ -1,31 +1,43 @@
 const express = require('express');
 const router = express.Router();
+const { upload, handleUploads } = require("../middleware/upload");
 const {
-    getEmployeesByVendor,
+    getAllEmployees,
     createEmployee,
-    assignEmployeeToBooking,
+    assignBookingToEmployee,
+    getEmployeesWithPackages,
+    employeeLogin,
+    getEmployeesByVendor,
+    toggleEmployeeStatus,
+    deleteEmployee,
+    getEmployeeStatus,
     getEmployeeBookings,
-    updateBookingStatus,
-    getEmployeeTasks,
-    updateTaskStatus,
-    getEmployeeDashboard,
-    getEmployeeNotifications,
-    markNotificationAsRead
+    getEmployeeProfile,
+    editEmployeeProfile,
+    updateBookingStatusByEmployee,
+    getEmployeeBookingHistory,
+    changeEmployeePassword
 } = require('../controller/employeeController');
 const { authenticationToken } = require('../middleware/authMiddleware');
+const multiUpload = upload.any();
 
-// Vendor routes (for managing employees)
-router.get('/vendor/employees', authenticationToken, getEmployeesByVendor);
-router.post('/create', authenticationToken, createEmployee);
-router.post('/assign-booking', authenticationToken, assignEmployeeToBooking);
+router.get('/getallemployee', authenticationToken, getAllEmployees);
+router.post('/create-employee', authenticationToken, createEmployee);
+router.post('/assign-booking', authenticationToken, assignBookingToEmployee);
+router.post('/login', employeeLogin);
+router.put('/togglechange', authenticationToken, toggleEmployeeStatus);
+router.delete('/remove-employee', authenticationToken, deleteEmployee);
+router.get('/getemployeepackages', authenticationToken, getEmployeesWithPackages);
 
-// Employee routes (for employee dashboard)
-router.get('/dashboard', authenticationToken, getEmployeeDashboard);
-router.get('/bookings', authenticationToken, getEmployeeBookings);
-router.put('/booking/status', authenticationToken, updateBookingStatus);
-router.get('/tasks', authenticationToken, getEmployeeTasks);
-router.put('/task/status', authenticationToken, updateTaskStatus);
-router.get('/notifications', authenticationToken, getEmployeeNotifications);
-router.put('/notification/:notification_id/read', authenticationToken, markNotificationAsRead);
+router.get('/getemployee', authenticationToken, getEmployeesByVendor);
+router.get('/getstatus', authenticationToken, getEmployeeStatus);
+router.get('/getprofile', authenticationToken, getEmployeeProfile);
+router.put('/editprofile', authenticationToken, multiUpload, handleUploads, editEmployeeProfile);
+
+router.put('/updatebookingstatus', authenticationToken, updateBookingStatusByEmployee);
+
+router.put('/changepassword', authenticationToken, changeEmployeePassword);
+router.get('/getbookingemployee', authenticationToken, getEmployeeBookings);
+router.get('/bookinghistory', authenticationToken, getEmployeeBookingHistory);
 
 module.exports = router;

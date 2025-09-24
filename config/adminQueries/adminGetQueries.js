@@ -1,97 +1,96 @@
 const adminGetQueries = {
 
+    vendorDetails: `
+SELECT
+    v.vendor_id,
+    v.vendorType,
+    v.is_authenticated,
 
-    vendorDetails: `SELECT
-    vendors.vendor_id,
-    vendors.vendorType,
-    vendors.is_authenticated,
+    -- Individual Vendor Details
+    i.vendor_id AS individual_id,
+    i.name AS individual_name,
+    i.email AS individual_email,
+    i.phone AS individual_phone,
+    i.otherInfo AS individual_otherInfo,
+    i.resume AS individual_resume,
 
-    individual_details.id AS individual_id,
-    individual_details.name AS individual_name,
-    individual_details.email AS individual_email,
-    individual_details.phone AS individual_phone,
-    individual_details.otherInfo AS individual_otherInfo,
-    individual_details.resume AS individual_resume,
+    -- Company Vendor Details
+    c.vendor_id AS company_id,
+    c.companyName AS company_companyName,
+    c.googleBusinessProfileLink AS company_googleBusinessProfileLink,
+    c.companyEmail AS company_companyEmail,
+    c.companyPhone AS company_companyPhone,
+    c.companyAddress AS company_companyAddress,
+    c.contactPerson AS company_contactPerson,
 
-    company_details.id AS company_id,
-    company_details.companyName AS company_companyName,
-    company_details.googleBusinessProfileLink AS company_googleBusinessProfileLink,
-    company_details.companyEmail AS company_companyEmail,
-    company_details.companyPhone AS company_companyPhone,
-    company_details.companyAddress AS company_companyAddress,
-    company_details.contactPerson AS company_contactPerson,
+    vs.manual_assignment_enabled AS status,
 
+    -- Packages with Service info
     COALESCE(
-        CONCAT(
-            '[',
-            GROUP_CONCAT(
-                DISTINCT CASE
-                    WHEN vendors.vendorType = 'individual' THEN JSON_OBJECT(
-                        'category_id', service_categories.service_categories_id,
-                        'categoryName', service_categories.serviceCategory,
-                        'service_id', services.service_id,
-                        'serviceName', services.serviceName,
-                        'serviceLocation', individual_services.serviceLocation,
-                        'serviceDescription ', individual_services.serviceDescription,
-                        'categoryName', service_categories.serviceCategory
+        (
+            SELECT CONCAT(
+                '[',
+                GROUP_CONCAT(
+                    DISTINCT JSON_OBJECT(
+                        'vendor_packages_id', vp.vendor_packages_id,
+                        'package_id', p.package_id,
+                        'serviceLocation', vp.serviceLocation,
+                        'service_id', s.service_id,
+                        'serviceName', TRIM(s.serviceName),
+                        'serviceImage', s.serviceImage,
+                        'category_id', sc.service_categories_id,
+                        'categoryName', sc.serviceCategory
                     )
-                    WHEN vendors.vendorType = 'company' THEN JSON_OBJECT(
-                        'category_id', service_categories.service_categories_id,
-                        'categoryName', service_categories.serviceCategory,
-                        'service_id', services.service_id,
-                        'serviceName', services.serviceName,
-                        'serviceLocation', company_services.serviceLocation,
-                        'serviceDescription ', company_services.serviceDescription,
-                        'categoryName', service_categories.serviceCategory
-                    )
-                END
-                ORDER BY
-                COALESCE(individual_services.service_id, company_services.service_id)
-            ),
-            ']'
+                ),
+                ']'
+            )
+            FROM vendor_packages vp
+            INNER JOIN packages p ON p.package_id = vp.package_id
+            INNER JOIN service_type st ON st.service_type_id = p.service_type_id
+            INNER JOIN services s ON s.service_id = st.service_id
+            INNER JOIN service_categories sc ON sc.service_categories_id = s.service_categories_id
+            WHERE vp.vendor_id = v.vendor_id
         ),
         '[]'
-    ) AS services
+    ) AS packages,
 
-FROM vendors
+    -- Package Items
+    COALESCE(
+        (
+            SELECT CONCAT(
+                '[',
+                GROUP_CONCAT(
+                    JSON_OBJECT(
+                        'vendor_package_item_id', vpi.vendor_package_item_id,
+                        'vendor_packages_id', vpi.vendor_packages_id,
+                        'package_id', pi.package_id,
+                        'package_item_id', pi.item_id,
+                        'itemName', pi.itemName,
+                        'description', pi.description,
+                        'itemMedia', pi.itemMedia
+                    )
+                ),
+                ']'
+            )
+            FROM vendor_package_items vpi
+            INNER JOIN package_items pi ON pi.item_id = vpi.package_item_id
+            INNER JOIN vendor_packages vp2 ON vp2.vendor_packages_id = vpi.vendor_packages_id
+            WHERE vp2.vendor_id = v.vendor_id
+        ),
+        '[]'
+    ) AS package_items
 
-LEFT JOIN individual_details
-    ON vendors.vendor_id = individual_details.vendor_id
+FROM vendors v
+LEFT JOIN individual_details i ON v.vendor_id = i.vendor_id
+LEFT JOIN company_details c ON v.vendor_id = c.vendor_id
+LEFT JOIN vendor_settings vs ON v.vendor_id = vs.vendor_id
+GROUP BY v.vendor_id;
 
-LEFT JOIN company_details
-    ON vendors.vendor_id = company_details.vendor_id
+`,
 
-LEFT JOIN individual_services
-    ON vendors.vendor_id = individual_services.vendor_id
-
-LEFT JOIN company_services
-    ON vendors.vendor_id = company_services.vendor_id
-
-LEFT JOIN services
-    ON services.service_id = COALESCE(individual_services.service_id, company_services.service_id)
-
-LEFT JOIN individual_service_categories
-    ON vendors.vendor_id = individual_service_categories.vendor_id
-
-LEFT JOIN company_service_categories
-    ON vendors.vendor_id = company_service_categories.vendor_id
-
-LEFT JOIN service_categories
-    ON service_categories.service_categories_id =
-    COALESCE (
-        individual_service_categories.service_categories_id,
-        company_service_categories.service_categories_id
-    )
-
-GROUP BY vendors.vendor_id`,
-
-
-getAllServiceTypes: `
+    getAllServiceTypes: `
     SELECT
         st.service_type_id,
-        st.serviceTypeName,
-        st.serviceTypeMedia,
-        st.is_approved,
 
         s.service_id,
         s.serviceName,
@@ -159,12 +158,169 @@ getAllServiceTypes: `
     JOIN services s ON st.service_id = s.service_id
     LEFT JOIN individual_details ind ON v.vendor_id = ind.vendor_id
     LEFT JOIN company_details comp ON v.vendor_id = comp.vendor_id
-    ORDER BY st.service_type_id DESC`,
+    ORDER BY st.service_type_id DESC
+`,
 
-    getAllUsers: `SELECT user_id, firstName, lastName,profileImage, email address, state, postalcode, phone, created_at
+    getAllUserDetails: `
+SELECT 
+    user_id, 
+    firstName, 
+    lastName,
+    profileImage,
+    email,
+    phone,
+    address,
+    state,
+    postalcode,
+    created_at
     FROM users
-    ORDER BY created_at DESC`
+    ORDER BY created_at DESC
+`,
 
+    getAllBookings: `
+SELECT
+    sb.booking_id,
+    sb.bookingDate,
+    sb.bookingTime,
+    sb.bookingStatus,
+    sb.notes,
+    sb.bookingMedia,
+    sb.payment_intent_id,
+
+    u.user_id,
+    CONCAT(u.firstName, ' ', u.lastName) AS userName,
+    u.email AS userEmail,
+    u.phone AS userPhone,
+
+    sc.serviceCategory,
+    s.serviceName,
+
+    st.service_type_id,
+
+    v.vendor_id,
+    v.vendorType,
+
+    idet.id AS individual_id,
+    idet.name AS individual_name,
+    idet.phone AS individual_phone,
+    idet.email AS individual_email,
+
+    cdet.id AS company_id,
+    cdet.companyName AS company_name,
+    cdet.contactPerson AS company_contact_person,
+    cdet.companyEmail AS company_email,
+    cdet.companyPhone AS company_phone,
+
+    p.status AS payment_status,
+    p.amount AS payment_amount,
+    p.currency AS payment_currency,
+
+    pk.package_id,
+    pi.item_id AS package_item_id,
+    pi.itemName AS package_item_name,
+    pi.price AS package_item_price,
+    pi.timeRequired AS package_item_time,
+    pi.itemMedia AS package_item_media,
+
+    pr.preference_id,
+    pr.preferenceName,
+    pr.preferenceValue
+
+        FROM service_booking sb
+        LEFT JOIN users u ON sb.user_id = u.user_id
+        LEFT JOIN service_categories sc ON sb.service_categories_id = sc.service_categories_id
+        LEFT JOIN services s ON sb.service_id = s.service_id
+
+        -- Service Type
+        LEFT JOIN service_booking_types sbt ON sb.booking_id = sbt.booking_id
+        LEFT JOIN service_type st ON sbt.service_type_id = st.service_type_id
+
+        -- Vendor
+        LEFT JOIN vendors v ON sb.vendor_id = v.vendor_id
+        LEFT JOIN individual_details idet ON v.vendor_id = idet.vendor_id
+        LEFT JOIN company_details cdet ON v.vendor_id = cdet.vendor_id
+
+        -- Payment
+        LEFT JOIN payments p ON p.payment_intent_id = sb.payment_intent_id
+
+        -- Packages
+        LEFT JOIN booking_packages bp ON sb.booking_id = bp.booking_id
+        LEFT JOIN packages pk ON bp.package_id = pk.package_id
+
+        -- Package Items
+        LEFT JOIN booking_package_items bpi ON bp.booking_package_id = bpi.booking_package_id
+        LEFT JOIN package_items pi ON bpi.package_item_id = pi.item_id
+
+        -- Preferences
+        LEFT JOIN booking_preferences pr ON pr.booking_package_item_id = bpi.booking_package_item_id
+
+        -- Ratings
+        LEFT JOIN rating r ON r.package_id = pk.package_id AND r.user_id = u.user_id
+
+        ORDER BY sb.bookingDate DESC, sb.bookingTime DESC
+`,
+
+    getAdminCreatedPackages: `
+    SELECT
+        st.service_type_id,
+
+        s.service_id,
+        s.serviceName,
+
+        sc.service_categories_id,
+        sc.serviceCategory,
+
+        COALESCE((
+            SELECT CONCAT('[', GROUP_CONCAT(
+                JSON_OBJECT(
+                    'package_id', p.package_id,
+                    'title', p.packageName,
+                    'description', p.description,
+                    'price', p.totalPrice,
+                    'time_required', p.totalTime,
+                    'package_media', p.packageMedia,
+                    'sub_packages', IFNULL((
+                        SELECT CONCAT('[', GROUP_CONCAT(
+                            JSON_OBJECT(
+                                'sub_package_id', pi.item_id,
+                                'item_name', pi.itemName,
+                                'description', pi.description,
+                                'price', pi.price,
+                                'time_required', pi.timeRequired,
+                                'item_media', pi.itemMedia
+                            )
+                        ), ']')
+                        FROM package_items pi
+                        WHERE pi.package_id = p.package_id
+                    ), '[]'),
+                    'preferences', IFNULL((
+                        SELECT CONCAT('[', GROUP_CONCAT(
+                            JSON_OBJECT(
+                                'preference_id', bp.preference_id,
+                                'preference_value', bp.preferenceValue
+                            )
+                        ), ']')
+                        FROM booking_preferences bp
+                        WHERE bp.package_id = p.package_id
+                    ), '[]')
+                )
+            ), ']')
+            FROM packages p
+            WHERE p.service_type_id = st.service_type_id
+        ), '[]') AS packages
+
+    FROM service_type st
+    JOIN services s ON s.service_id = st.service_id
+    JOIN service_categories sc ON sc.service_categories_id = s.service_categories_id
+
+    ORDER BY st.service_type_id DESC
+`,
+
+    getManualAssignmentStatus: `
+    SELECT setting_value FROM settings
+    WHERE setting_key = 'manual_vendor_assignment'
+    LIMIT 1
+`
 
 }
 

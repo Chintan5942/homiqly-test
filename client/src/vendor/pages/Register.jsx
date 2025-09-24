@@ -13,6 +13,7 @@ import {
   FiCheck,
 } from "react-icons/fi";
 import axios from "axios";
+// import Button from "../../shared/components/Button/Button";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -36,53 +37,59 @@ const Register = () => {
   const [googleBusinessLink, setGoogleBusinessLink] = useState("");
   const [resume, setResume] = useState(null);
 
-  // Services data
+  // Services data (new API shape)
   const [serviceCategories, setServiceCategories] = useState([]);
-  console.log("Service categories 123:", serviceCategories);
+  /**
+   * selectedServices structure (per package)
+   * [
+   *   {
+   *     package_id: 103,
+   *     serviceLocation: "rajkot",
+   *     sub_packages: [{ item_id: 167 }, { item_id: 168 }]
+   *   },
+   *   ...
+   * ]
+   */
   const [selectedServices, setSelectedServices] = useState([]);
+  // useful debug
+  // console.log("selectedServices", selectedServices);
 
-  // Load service categories and services
+  // Load service categories when entering step 2 or 3
   useEffect(() => {
     if (step === 2 || step === 3) {
       loadServices();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
+  // --- New API loader (vendor services with packages) ---
   const loadServices = async () => {
     try {
       setServiceLoading(true);
-      const response = await axios.get("/api/user/servicesbycategories");
-      console.log("Loaded services:", response.data);
+      const response = await axios.get("/api/vendor/serviceswithpackages");
+      // expected: { services: [ { serviceCategoryId, categoryName, services: [ { serviceId, title, packages: [ { package_id, packageName, sub_packages:[{item_id,itemName}] } ] } ] } ] }
       setServiceCategories(response.data.services || []);
-      console.log("Service categories:", response.data.services);
-      setServiceLoading(false);
     } catch (error) {
-      console.error("Error loading services:", error);
+      console.error(error);
       toast.error("Failed to load services");
+    } finally {
       setServiceLoading(false);
     }
   };
 
   const handleNextStep = () => {
-    if (step === 1) {
-      if (!validateStep1()) return;
-    } else if (step === 2) {
-      if (!validateStep2()) return;
-    }
-
+    if (step === 1 && !validateStep1()) return;
+    if (step === 2 && !validateStep2()) return;
     setStep(step + 1);
   };
 
-  const handlePrevStep = () => {
-    setStep(step - 1);
-  };
+  const handlePrevStep = () => setStep(step - 1);
 
   const validateStep1 = () => {
     if (!vendorType) {
       toast.error("Please select vendor type");
       return false;
     }
-
     if (vendorType === "individual") {
       if (!name || !email || !phone || !password) {
         toast.error("Please fill all required fields");
@@ -100,53 +107,81 @@ const Register = () => {
         return false;
       }
     }
-
     return true;
   };
 
   const validateStep2 = () => {
-    if (selectedServices.length === 0) {
-      toast.error("Please select at least one service");
+    // Make sure at least one sub-package is selected
+    if (!selectedServices || selectedServices.length === 0) {
+      toast.error("Please select at least one item from packages");
       return false;
     }
 
+    // Ensure each selected package has at least one sub_package and a location
+    for (const pkg of selectedServices) {
+      if (!pkg.sub_packages || pkg.sub_packages.length === 0) {
+        toast.error(
+          "Each selected package must have at least one sub-package selected"
+        );
+        return false;
+      }
+      if (!pkg.serviceLocation || pkg.serviceLocation.trim() === "") {
+        toast.error(
+          "Please provide service location for each selected package"
+        );
+        return false;
+      }
+    }
     return true;
   };
 
-  const toggleService = (serviceId, categoryId) => {
-    console.log("Toggling:", { serviceId, categoryId });
+  // If package entry doesn't exist, create it.
+  const toggleSubPackage = (packageId, itemId) => {
+    setSelectedServices((prev) => {
+      const next = JSON.parse(JSON.stringify(prev || []));
+      const pkgIndex = next.findIndex((p) => p.package_id === packageId);
 
-    const exists = selectedServices.some((s) => s.serviceId === serviceId);
-
-    if (exists) {
-      setSelectedServices(
-        selectedServices.filter((s) => s.serviceId !== serviceId)
-      );
-    } else {
-      setSelectedServices([
-        ...selectedServices,
-        {
-          serviceId,
-          serviceCategoryId: categoryId,
-          serviceLocation: "",
-        },
-      ]);
-    }
+      if (pkgIndex === -1) {
+        // add new package with the selected sub_package and empty location
+        return [
+          ...next,
+          {
+            package_id: packageId,
+            serviceLocation: "",
+            sub_packages: [{ item_id: itemId }],
+          },
+        ];
+      } else {
+        const pkg = next[pkgIndex];
+        const subIndex = pkg.sub_packages.findIndex(
+          (s) => s.item_id === itemId
+        );
+        if (subIndex === -1) {
+          // add sub-package
+          pkg.sub_packages.push({ item_id: itemId });
+        } else {
+          pkg.sub_packages.splice(subIndex, 1);
+          // if no more sub_packages, remove the package entirely
+          if (pkg.sub_packages.length === 0) {
+            next.splice(pkgIndex, 1);
+          }
+        }
+        return next;
+      }
+    });
   };
 
-  const updateServiceLocation = (serviceId, location) => {
-    setSelectedServices(
-      selectedServices.map((service) =>
-        service.serviceId === serviceId
-          ? { ...service, serviceLocation: location }
-          : service
+  // Update serviceLocation for a package
+  const updatePackageLocation = (packageId, location) => {
+    setSelectedServices((prev) =>
+      (prev || []).map((p) =>
+        p.package_id === packageId ? { ...p, serviceLocation: location } : p
       )
     );
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateStep2()) return;
 
     const formData = new FormData();
@@ -168,14 +203,11 @@ const Register = () => {
       formData.append("googleBusinessProfileLink", googleBusinessLink);
     }
 
-    console.log("Submitting registration with data:", selectedServices);
-    formData.append("services", JSON.stringify(selectedServices));
+    formData.append("packages", JSON.stringify(selectedServices));
 
     setLoading(true);
-
     try {
       const result = await register(formData);
-
       if (result.success) {
         toast.success(
           "Registration successful! Please wait for admin approval."
@@ -185,583 +217,489 @@ const Register = () => {
         toast.error(result.error || "Registration failed");
       }
     } catch (error) {
+      console.error(error);
       toast.error("An unexpected error occurred");
-      console.error("Registration error:", error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div
-            className={`flex-1 ${step >= 1 ? "text-primary" : "text-gray-300"}`}
-          >
-            <div className="flex items-center">
-              <div
-                className={`rounded-full h-8 w-8 flex items-center justify-center border-2 ${
-                  step >= 1
-                    ? "border-primary bg-primary text-white"
-                    : "border-gray-300"
-                }`}
-              >
-                1
-              </div>
-              <span className="ml-2 text-sm font-medium">Basic Info</span>
-            </div>
-          </div>
-          <div
-            className={`h-1 flex-1 mx-2 ${
-              step >= 2 ? "bg-primary" : "bg-gray-200"
-            }`}
-          ></div>
-          <div
-            className={`flex-1 ${step >= 2 ? "text-primary" : "text-gray-300"}`}
-          >
-            <div className="flex items-center">
-              <div
-                className={`rounded-full h-8 w-8 flex items-center justify-center border-2 ${
-                  step >= 2
-                    ? "border-primary bg-primary text-white"
-                    : "border-gray-300"
-                }`}
-              >
-                2
-              </div>
-              <span className="ml-2 text-sm font-medium">Services</span>
-            </div>
-          </div>
-          <div
-            className={`h-1 flex-1 mx-2 ${
-              step >= 3 ? "bg-primary" : "bg-gray-200"
-            }`}
-          ></div>
-          <div
-            className={`flex-1 ${step >= 3 ? "text-primary" : "text-gray-300"}`}
-          >
-            <div className="flex items-center">
-              <div
-                className={`rounded-full h-8 w-8 flex items-center justify-center border-2 ${
-                  step >= 3
-                    ? "border-primary bg-primary text-white"
-                    : "border-gray-300"
-                }`}
-              >
-                3
-              </div>
-              <span className="ml-2 text-sm font-medium">Confirm</span>
-            </div>
-          </div>
-        </div>
+    <div className="bg-white rounded-lg shadow-xl max-w-4xl mx-auto p-4">
+      <div className="text-center">
+        <img
+          className="w-full h-10 object-contain"
+          src="/homiqly-logo.png"
+          alt="logo"
+        />
       </div>
+      <p className="text-center text-gray-600 font-semibold">
+        Vendor Panel Registration
+      </p>
 
-      {step === 1 && (
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">
-            Basic Information
-          </h2>
-          <div className="space-y-6">
-            <div>
-              <label
-                htmlFor="vendorType"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Vendor Type*
-              </label>
-              <select
-                id="vendorType"
-                value={vendorType}
-                onChange={(e) => setVendorType(e.target.value)}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-primary focus:border-primary rounded-md"
-              >
-                <option value="">Select Vendor Type</option>
-                <option value="individual">Individual</option>
-                <option value="company">Company</option>
-              </select>
-            </div>
-
-            {vendorType === "individual" && (
-              <>
-                <div>
-                  <label
-                    htmlFor="name"
-                    className="block text-sm font-medium text-gray-700"
+      <div className="flex flex-col justify-center items-center px-4">
+        <div className="w-full max-w-3xl  rounded-2xl p-8 bg-white">
+          {/* Stepper (unchanged) */}
+          <div className="flex justify-between mb-8">
+            {["Basic Info", "Services", "Confirm"].map((label, index) => {
+              const stepNum = index + 1;
+              return (
+                <div key={label} className="flex flex-col items-center flex-1">
+                  <div
+                    className={`w-10 h-10 flex items-center justify-center rounded-full border-2 ${
+                      step >= stepNum
+                        ? "bg-primary border-primary text-white"
+                        : "border-gray-300 text-gray-400"
+                    }`}
                   >
-                    Full Name*
-                  </label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiUser className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                      placeholder="John Doe"
-                    />
+                    {stepNum}
                   </div>
+                  <p
+                    className={`mt-2 text-sm ${
+                      step >= stepNum
+                        ? "text-primary font-medium"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {label}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Step 1 (unchanged) */}
+          {step === 1 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-6">
+                Basic Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Vendor Type*
+                  </label>
+                  <select
+                    value={vendorType}
+                    onChange={(e) => setVendorType(e.target.value)}
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm focus:ring-primary focus:border-primary"
+                  >
+                    <option value="">Select Vendor Type</option>
+                    <option value="individual">Individual</option>
+                    <option value="company">Company</option>
+                  </select>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Email*
-                  </label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiMail className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
+                {vendorType === "individual" && (
+                  <>
+                    <InputField
+                      id="name"
+                      icon={<FiUser />}
+                      label="Full Name*"
+                      value={name}
+                      onChange={setName}
+                      placeholder="John Doe"
+                      autoComplete="name"
+                    />
+                    <InputField
                       id="email"
+                      icon={<FiMail />}
+                      label="Email*"
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                      onChange={setEmail}
                       placeholder="john@example.com"
+                      autoComplete="email"
                     />
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="phone"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Phone*
-                  </label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiPhone className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
+                    <InputField
                       id="phone"
+                      icon={<FiPhone />}
+                      label="Phone*"
                       type="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                      onChange={setPhone}
                       placeholder="+91 9876543210"
+                      autoComplete="tel"
                     />
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Password*
-                  </label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiLock className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
+                    <InputField
                       id="password"
+                      icon={<FiLock />}
+                      label="Password*"
                       type="password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                      onChange={setPassword}
                       placeholder="••••••••"
+                      autoComplete="new-password"
                     />
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="resume"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Resume (PDF)
-                  </label>
-                  <input
-                    id="resume"
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => setResume(e.target.files[0])}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                  />
-                </div>
-              </>
-            )}
-
-            {vendorType === "company" && (
-              <>
-                <div>
-                  <label
-                    htmlFor="companyName"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Company Name*
-                  </label>
-                  <input
-                    id="companyName"
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                    placeholder="ABC Company"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="contactPerson"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Contact Person*
-                  </label>
-                  <input
-                    id="contactPerson"
-                    type="text"
-                    value={contactPerson}
-                    onChange={(e) => setContactPerson(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                    placeholder="John Doe"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="companyEmail"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Company Email*
-                  </label>
-                  <input
-                    id="companyEmail"
-                    type="email"
-                    value={companyEmail}
-                    onChange={(e) => setCompanyEmail(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                    placeholder="info@company.com"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="companyPhone"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Company Phone*
-                  </label>
-                  <input
-                    id="companyPhone"
-                    type="tel"
-                    value={companyPhone}
-                    onChange={(e) => setCompanyPhone(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                    placeholder="+91 9876543210"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="companyAddress"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Company Address*
-                  </label>
-                  <textarea
-                    id="companyAddress"
-                    rows="3"
-                    value={companyAddress}
-                    onChange={(e) => setCompanyAddress(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                    placeholder="123 Business Street, City, State, Zip"
-                  ></textarea>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="googleBusinessLink"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Google Business Profile Link
-                  </label>
-                  <input
-                    id="googleBusinessLink"
-                    type="url"
-                    value={googleBusinessLink}
-                    onChange={(e) => setGoogleBusinessLink(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                    placeholder="https://business.google.com/..."
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleNextStep}
-                className="flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-              >
-                Next
-                <FiChevronRight className="ml-2" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {step === 2 && (
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">
-            Select Services
-          </h2>
-
-          {serviceLoading ? (
-            <div className="flex justify-center py-8">
-              <FiLoader className="animate-spin h-8 w-8 text-primary" />
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
-                {serviceCategories.map((category, index) => (
-                  <div key={index} className="mb-6">
-                    <h3 className="font-medium text-gray-800 mb-2 bg-gray-100 p-2 rounded">
-                      {category.categoryName}
-                    </h3>
-                    <div className="space-y-2 pl-2">
-                      {category.services.map((service) => {
-                        const isSelected = selectedServices.some(
-                          (s) => s.serviceId === service.serviceId
-                        );
-                        return (
-                          <div key={service.serviceId}>
-                            <div className="flex items-center">
-                              <input
-                                type="checkbox"
-                                id={`service_${service.serviceId}`}
-                                checked={isSelected}
-                                onChange={() =>
-                                  toggleService(
-                                    service.serviceId,
-                                    service.serviceCategoryId
-                                  )
-                                }
-                                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                              />
-                              <label
-                                htmlFor={`service_${service.serviceId}`}
-                                className="ml-2 text-sm text-gray-700"
-                              >
-                                {service.title}
-                              </label>
-                            </div>
-
-                            {isSelected && (
-                              <div className="mt-2 ml-6">
-                                <label
-                                  htmlFor={`location_${service.serviceId}`}
-                                  className="block text-xs font-medium text-gray-500"
-                                >
-                                  Service Location
-                                </label>
-                                <input
-                                  type="text"
-                                  id={`location_${service.serviceId}`}
-                                  value={
-                                    selectedServices.find(
-                                      (s) => s.serviceId === service.serviceId
-                                    )?.serviceLocation || ""
-                                  }
-                                  onChange={(e) =>
-                                    updateServiceLocation(
-                                      service.serviceId,
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="e.g., Mumbai, Delhi, Bangalore"
-                                  className="mt-1 block w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                    <div className="md:col-span-2">
+                      <label
+                        htmlFor="resume"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Resume (PDF)
+                      </label>
+                      <input
+                        id="resume"
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => setResume(e.target.files?.[0] || null)}
+                        className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm focus:ring-primary focus:border-primary"
+                      />
                     </div>
-                  </div>
-                ))}
+                  </>
+                )}
+
+                {vendorType === "company" && (
+                  <>
+                    <InputField
+                      id="companyName"
+                      label="Company Name*"
+                      value={companyName}
+                      onChange={setCompanyName}
+                      placeholder="ABC Company"
+                    />
+                    <InputField
+                      id="contactPerson"
+                      label="Contact Person*"
+                      value={contactPerson}
+                      onChange={setContactPerson}
+                      placeholder="John Doe"
+                    />
+                    <InputField
+                      id="companyEmail"
+                      label="Company Email*"
+                      type="email"
+                      value={companyEmail}
+                      onChange={setCompanyEmail}
+                      placeholder="info@company.com"
+                    />
+                    <InputField
+                      id="companyPhone"
+                      label="Company Phone*"
+                      type="tel"
+                      value={companyPhone}
+                      onChange={setCompanyPhone}
+                      placeholder="+91 9876543210"
+                    />
+                    <div className="md:col-span-2">
+                      <label
+                        htmlFor="companyAddress"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Company Address*
+                      </label>
+                      <textarea
+                        id="companyAddress"
+                        rows={3}
+                        value={companyAddress}
+                        onChange={(e) => setCompanyAddress(e.target.value)}
+                        className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm focus:ring-primary focus:border-primary"
+                        placeholder="123 Business Street, City, State, Zip"
+                      ></textarea>
+                    </div>
+                    <InputField
+                      id="googleBusinessLink"
+                      label="Google Business Profile Link"
+                      value={googleBusinessLink}
+                      onChange={setGoogleBusinessLink}
+                      placeholder="https://business.google.com/..."
+                    />
+                  </>
+                )}
               </div>
 
-              <div className="flex justify-between">
-                <button
-                  type="button"
-                  onClick={handlePrevStep}
-                  className="flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                >
-                  <FiChevronLeft className="mr-2" />
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  className="flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                >
-                  Next
-                  <FiChevronRight className="ml-2" />
-                </button>
+              <div className="flex justify-end mt-6">
+                <PrimaryButton onClick={handleNextStep}>
+                  Next <FiChevronRight className="ml-2" />
+                </PrimaryButton>
               </div>
             </div>
           )}
-        </div>
-      )}
 
-      {step === 3 && (
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">
-            Confirm Registration
-          </h2>
-
-          <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <h3 className="font-medium text-gray-800 mb-2">
-              Vendor Information
-            </h3>
-            <div className="space-y-2">
-              <p>
-                <span className="font-medium">Vendor Type:</span>{" "}
-                {vendorType === "individual" ? "Individual" : "Company"}
-              </p>
-
-              {vendorType === "individual" ? (
-                <>
-                  <p>
-                    <span className="font-medium">Name:</span> {name}
-                  </p>
-                  <p>
-                    <span className="font-medium">Email:</span> {email}
-                  </p>
-                  <p>
-                    <span className="font-medium">Phone:</span> {phone}
-                  </p>
-                  <p>
-                    <span className="font-medium">Resume:</span>{" "}
-                    {resume ? resume.name : "Not provided"}
-                  </p>
-                </>
+          {/* --- Step 2: SHOW CATEGORY -> SERVICE -> PACKAGE -> SUB_PACKAGES + per-package serviceLocation --- */}
+          {step === 2 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-6">
+                Select Packages & Sub-Packages
+              </h2>
+              {serviceLoading ? (
+                <div className="flex justify-center py-8">
+                  <FiLoader className="animate-spin h-8 w-8 text-primary" />
+                </div>
               ) : (
-                <>
-                  <p>
-                    <span className="font-medium">Company Name:</span>{" "}
-                    {companyName}
-                  </p>
-                  <p>
-                    <span className="font-medium">Contact Person:</span>{" "}
-                    {contactPerson}
-                  </p>
-                  <p>
-                    <span className="font-medium">Company Email:</span>{" "}
-                    {companyEmail}
-                  </p>
-                  <p>
-                    <span className="font-medium">Company Phone:</span>{" "}
-                    {companyPhone}
-                  </p>
-                  <p>
-                    <span className="font-medium">Company Address:</span>{" "}
-                    {companyAddress}
-                  </p>
-                </>
-              )}
-            </div>
+                <div className="space-y-6 max-h-96 overflow-y-auto pr-2">
+                  {serviceCategories.map((category) => (
+                    <div
+                      key={category.serviceCategoryId}
+                      className="bg-gray-50 p-4 rounded-lg"
+                    >
+                      <h3 className="font-semibold text-gray-800 mb-2">
+                        {category.categoryName}
+                      </h3>
 
-            <h3 className="font-medium text-gray-800 mt-4 mb-2">
-              Selected Services
-            </h3>
-            <div className="space-y-2">
-              {selectedServices.map((service) => {
-                const category = serviceCategories.find(
-                  (c) => c.serviceCategoryId === service.serviceCategoryId
+                      {category.services.map((service) => (
+                        <div key={service.serviceId} className="ml-4 mb-4">
+                          <h4 className="font-medium text-gray-700">
+                            {service.title}
+                          </h4>
 
-                );
-                const serviceItem = category?.services.find(
-                  (s) => s.serviceId === service.serviceId
+                          {Array.isArray(service.packages) &&
+                            service.packages.map((pkg) => {
+                              // is any sub-package selected for this package?
+                              const pkgSelected = selectedServices.find(
+                                (p) => p.package_id === pkg.package_id
+                              );
+                              return (
+                                <div
+                                  key={pkg.package_id}
+                                  className="ml-6 mt-2 border-l pl-4 border-gray-300"
+                                >
+                                  <p className="font-medium text-gray-600">
+                                    {pkg.packageName}
+                                  </p>
 
-                );
+                                  {/* sub-packages checkboxes */}
+                                  {Array.isArray(pkg.sub_packages) &&
+                                    pkg.sub_packages.map((sub) => {
+                                      const isChecked = !!(
+                                        pkgSelected &&
+                                        pkgSelected.sub_packages.some(
+                                          (s) => s.item_id === sub.item_id
+                                        )
+                                      );
+                                      return (
+                                        <label
+                                          key={sub.item_id}
+                                          className="flex items-center mt-1"
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={() =>
+                                              toggleSubPackage(
+                                                pkg.package_id,
+                                                sub.item_id
+                                              )
+                                            }
+                                            className="h-4 w-4 text-primary border-gray-300 rounded"
+                                          />
+                                          <span className="ml-2 text-sm">
+                                            {sub.itemName}
+                                          </span>
+                                        </label>
+                                      );
+                                    })}
 
-                return (
-                  <div key={service.serviceId} className="flex items-start">
-                    <FiCheck className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                    <div>
-                      <p className="font-medium">{serviceItem?.title}</p>
-                      <p className="text-sm text-gray-500">
-                        Category: {category?.categoryName}
-                        {service.serviceLocation && ` • Location: ${service.serviceLocation}`}
-                      </p>
+                                  {/* serviceLocation input - visible when package has any selection, or always (here we show if selected; it's clearer) */}
+                                  {pkgSelected ? (
+                                    <div className="mt-2">
+                                      <input
+                                        type="text"
+                                        value={pkgSelected.serviceLocation}
+                                        onChange={(e) =>
+                                          updatePackageLocation(
+                                            pkg.package_id,
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder="Service Location (e.g., rajkot)"
+                                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm focus:ring-primary focus:border-primary"
+                                      />
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <div className="flex items-center">
-              <input
-                id="terms"
-                name="terms"
-                type="checkbox"
-                required
-                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-              />
-              <label
-                htmlFor="terms"
-                className="ml-2 block text-sm text-gray-700"
-              >
-                I confirm that all the information provided is accurate and I
-                agree to the terms and conditions.
-              </label>
-            </div>
-          </div>
-
-          <div className="flex justify-between">
-            <button
-              type="button"
-              onClick={handlePrevStep}
-              className="flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-            >
-              <FiChevronLeft className="mr-2" />
-              Previous
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={loading}
-              className="flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <FiLoader className="animate-spin -ml-1 mr-2 h-4 w-4" />
-                  Registering...
-                </>
-              ) : (
-                "Complete Registration"
+                  ))}
+                </div>
               )}
-            </button>
-          </div>
-        </div>
-      )}
 
-      <div className="mt-6 text-center">
-        <p className="text-sm text-gray-600">
-          Already have an account?{" "}
-          <Link
-            to="/vendor/login"
-            className="font-medium text-primary hover:text-primary-dark"
-          >
-            Login here
-          </Link>
-        </p>
+              <div className="flex justify-between mt-6">
+                <SecondaryButton onClick={handlePrevStep}>
+                  <FiChevronLeft className="mr-2" /> Previous
+                </SecondaryButton>
+                <PrimaryButton onClick={handleNextStep}>
+                  Next <FiChevronRight className="ml-2" />
+                </PrimaryButton>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Confirmation (updated to display packages with their serviceLocation + selected sub-packages) */}
+          {step === 3 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-6">
+                Confirm Registration
+              </h2>
+              <div className="bg-gray-50 p-4 rounded-lg mb-6 space-y-4">
+                <h3 className="font-medium text-gray-800">
+                  Vendor Information
+                </h3>
+                {vendorType === "individual" ? (
+                  <ul className="text-sm space-y-1">
+                    <li>
+                      <b>Name:</b> {name}
+                    </li>
+                    <li>
+                      <b>Email:</b> {email}
+                    </li>
+                    <li>
+                      <b>Phone:</b> {phone}
+                    </li>
+                    <li>
+                      <b>Resume:</b> {resume ? resume.name : "Not provided"}
+                    </li>
+                  </ul>
+                ) : (
+                  <ul className="text-sm space-y-1">
+                    <li>
+                      <b>Company Name:</b> {companyName}
+                    </li>
+                    <li>
+                      <b>Contact Person:</b> {contactPerson}
+                    </li>
+                    <li>
+                      <b>Email:</b> {companyEmail}
+                    </li>
+                    <li>
+                      <b>Phone:</b> {companyPhone}
+                    </li>
+                    <li>
+                      <b>Address:</b> {companyAddress}
+                    </li>
+                  </ul>
+                )}
+
+                <h3 className="font-medium text-gray-800">Selected Packages</h3>
+                <div className="space-y-2">
+                  {selectedServices.map((pkg) => {
+                    // find full details for display
+                    const pkgDetails = serviceCategories
+                      .flatMap((c) => c.services || [])
+                      .flatMap((s) => s.packages || [])
+                      .find((p) => p.package_id === pkg.package_id);
+
+                    return (
+                      <div key={pkg.package_id} className="flex items-start">
+                        <FiCheck className="text-green-500 mt-1 mr-2" />
+                        <div>
+                          <p className="font-medium text-sm">
+                            {pkgDetails?.packageName ||
+                              `Package ID: ${pkg.package_id}`}
+                          </p>
+                          <p className="text-xs text-gray-500 mb-1">
+                            <b>Location:</b>{" "}
+                            {pkg.serviceLocation || "Not provided"}
+                          </p>
+                          <ul className="ml-4 list-disc text-xs text-gray-500">
+                            {pkg.sub_packages.map((sub) => {
+                              const subDetails = pkgDetails?.sub_packages?.find(
+                                (s) => s.item_id === sub.item_id
+                              );
+                              return (
+                                <li key={sub.item_id}>
+                                  {subDetails?.itemName ||
+                                    `Item ID: ${sub.item_id}`}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex justify-between">
+                <SecondaryButton onClick={handlePrevStep}>
+                  <FiChevronLeft className="mr-2" /> Previous
+                </SecondaryButton>
+                <PrimaryButton onClick={handleSubmit} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <FiLoader className="animate-spin mr-2" /> Registering...
+                    </>
+                  ) : (
+                    "Complete Registration"
+                  )}
+                </PrimaryButton>
+              </div>
+            </div>
+          )}
+
+          <p className="mt-6 text-center text-sm text-gray-600">
+            Already have an account?{" "}
+            <Link
+              to="/vendor/login"
+              className="text-primary font-medium hover:underline"
+            >
+              Login here
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
 };
+
+/* Reusable Input Field – fixed padding (no dynamic Tailwind class) */
+const InputField = ({
+  id,
+  icon,
+  label,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+}) => {
+  const paddingClass = icon ? "pl-10" : "pl-3";
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700">
+        {label}
+      </label>
+      <div className="relative mt-1">
+        {icon && (
+          <span className="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+            {icon}
+          </span>
+        )}
+        <input
+          id={id}
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          className={`w-full ${paddingClass} pr-3 py-2 rounded-md border border-gray-300 bg-white shadow-sm focus:ring-primary focus:border-primary`}
+        />
+      </div>
+    </div>
+  );
+};
+
+/* Local button components – consistent styles & behavior */
+const PrimaryButton = ({ className = "", children, ...props }) => (
+  <button
+    className={`flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition disabled:opacity-50 ${className}`}
+    {...props}
+  >
+    {children}
+  </button>
+);
+
+const SecondaryButton = ({ className = "", children, ...props }) => (
+  <button
+    className={`flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition ${className}`}
+    {...props}
+  >
+    {children}
+  </button>
+);
 
 export default Register;

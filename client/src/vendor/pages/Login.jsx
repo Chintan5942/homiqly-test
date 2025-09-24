@@ -1,48 +1,61 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useVendorAuth } from '../contexts/VendorAuthContext';
-import { toast } from 'react-toastify';
-import { FiMail, FiLock, FiLoader } from 'react-icons/fi';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useVendorAuth } from "../contexts/VendorAuthContext";
+import { toast } from "react-toastify";
+import { FiMail, FiLock, FiLoader } from "react-icons/fi";
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useVendorAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
-      toast.error('Please enter both email and password');
+      toast.error("Please enter both email and password");
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       const result = await login(email, password);
-      
+
       if (result.success) {
-        toast.success('Login successful!');
-        navigate('/vendor/dashboard');
+        toast.success("Login successful!");
+        navigate("/vendor/dashboard");
       } else {
-        toast.error(result.error || 'Login failed');
+        toast.error(result.error || "Login failed");
       }
     } catch (error) {
-      toast.error('An unexpected error occurred');
-      console.error('Login error:', error);
+      toast.error("An unexpected error occurred");
+      console.error("Login error:", error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
+    <div className="bg-white rounded-lg shadow-xl max-w-md mx-auto p-6">
+      <div className="text-center">
+        <img
+          className="w-full h-10 object-contain"
+          src="/homiqly-logo.png"
+          alt="logo"
+        />
+      </div>
+      <p className="mb-8 text-center text-gray-600 font-semibold">
+        Vendor Panel Login
+      </p>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="email"
+            className="block text-sm font-medium text-gray-700"
+          >
             Email
           </label>
           <div className="mt-1 relative rounded-md shadow-sm">
@@ -64,7 +77,10 @@ const Login = () => {
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="password"
+            className="block text-sm font-medium text-gray-700"
+          >
             Password
           </label>
           <div className="mt-1 relative rounded-md shadow-sm">
@@ -93,13 +109,19 @@ const Login = () => {
               type="checkbox"
               className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
             />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+            <label
+              htmlFor="remember-me"
+              className="ml-2 block text-sm text-gray-700"
+            >
               Remember me
             </label>
           </div>
 
           <div className="text-sm">
-            <Link to="/vendor/forgot-password" className="font-medium text-primary hover:text-primary-dark">
+            <Link
+              to="/vendor/forgot-password"
+              className="font-medium text-primary hover:text-primary-dark"
+            >
               Forgot your password?
             </Link>
           </div>
@@ -117,7 +139,7 @@ const Login = () => {
                 Logging in...
               </>
             ) : (
-              'Sign in'
+              "Sign in"
             )}
           </button>
         </div>
@@ -125,8 +147,11 @@ const Login = () => {
 
       <div className="mt-6 text-center">
         <p className="text-sm text-gray-600">
-          Don't have an account?{' '}
-          <Link to="/vendor/register" className="font-medium text-primary hover:text-primary-dark">
+          Don't have an account?{" "}
+          <Link
+            to="/vendor/register"
+            className="font-medium text-primary hover:text-primary-dark"
+          >
             Register here
           </Link>
         </p>

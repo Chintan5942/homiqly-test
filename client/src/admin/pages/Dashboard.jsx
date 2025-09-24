@@ -20,6 +20,7 @@ import {
 } from "chart.js";
 import { Link } from "react-router-dom";
 import Loader from "../../components/Loader";
+import LoadingSlider from "../../shared/components/LoadingSpinner";
 
 // Register ChartJS components
 ChartJS.register(
@@ -112,7 +113,7 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return <Loader />;
+    return <LoadingSlider />;
   }
 
   if (error) {
@@ -164,7 +165,7 @@ const Dashboard = () => {
           <div>
             <p className="text-sm text-gray-500">Total Revenue</p>
             <p className="text-2xl font-semibold">
-              ₹{stats.total_revenue || 0}
+              ${stats.total_revenue || 0}
             </p>
           </div>
         </div>

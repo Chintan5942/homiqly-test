@@ -2,7 +2,10 @@ const express = require("express")
 const cors = require("cors")
 const path = require("path")
 const { db, testConnection } = require("./config/db")
-
+const bodyParser = require("body-parser");
+const app = express();
+const stripeController = require("./controller/stripeController");
+require("./controller/reminder")
 // Import routes
 const userAuthRoutes = require("./routes/userAuthRoutes")
 const adminAuthRoutes = require("./routes/adminAuthRoutes")
@@ -21,17 +24,29 @@ const contractorRoutes = require("./routes/contractorRoutes")
 const employeeRoutes = require("./routes/employeeRoutes")
 const analyticsRoutes = require("./routes/analyticsRoutes")
 const notificationRoutes = require("./routes/notificationRoutes")
-const paymentRoutes = require("./routes/paymentRoutes")
+const stripeRoutes = require("./routes/stripeRoutes")
 const ratingRoutes = require("./routes/ratingRoutes")
+const settingsRoutes = require("./routes/settingsRoutes")
+const ticketRoutes = require("./routes/ticketRoutes")
+const paymentRoutes = require("./routes/paymentRoutes")
+const notificationGetRoutes = require("./routes/notificationGetRoutes");
 
-const app = express();
 const PORT = process.env.PORT || 8000
 
 app.use(cors({
-    origin: "*", // allows all origins
+    origin: "*",
 }));
 
+// 🟢 Stripe webhook (must come FIRST and use raw parser)
+app.post(
+    "/api/payment/stripe/webhook",
+    express.raw({ type: "application/json" }),
+    stripeController.stripeWebhook
+);
+
+app.use("/public", express.static("public"));
 app.use(express.json())
+app.use(bodyParser.json());
 
 // API Routes
 app.use("/api/user", userAuthRoutes)
@@ -49,19 +64,22 @@ app.use("/api/cart", addToCartService)
 app.use("/api/supplykit", supplykitRoutes)
 app.use("/api/contractor", contractorRoutes)
 app.use("/api/employee", employeeRoutes)
+app.use("/api/payment", stripeRoutes)
 app.use("/api/analytics", analyticsRoutes)
 app.use("/api/notification", notificationRoutes)
-app.use("/api/payment", paymentRoutes)
+app.use("/api/settings", settingsRoutes)
 app.use("/api/rating", ratingRoutes)
-
+app.use("/api/payment", paymentRoutes)
+app.use("/api", ticketRoutes)
+app.use("/api/notifications", notificationGetRoutes)
 
 // Serve Vite build
 app.use(express.static(path.join(__dirname, 'client/dist')));
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
-    res.status(200).json({ 
-        status: "OK", 
+    res.status(200).json({
+        status: "OK",
         message: "Homiqly Backend is running",
         timestamp: new Date().toISOString(),
     });
@@ -72,21 +90,21 @@ app.get("/api/health/db", async (req, res) => {
     try {
         const isConnected = await testConnection();
         if (isConnected) {
-            res.status(200).json({ 
-                status: "OK", 
+            res.status(200).json({
+                status: "OK",
                 message: "Database connection successful",
                 timestamp: new Date().toISOString()
             });
         } else {
-            res.status(500).json({ 
-                status: "ERROR", 
+            res.status(500).json({
+                status: "ERROR",
                 message: "Database connection failed",
                 timestamp: new Date().toISOString()
             });
         }
     } catch (error) {
-        res.status(500).json({ 
-            status: "ERROR", 
+        res.status(500).json({
+            status: "ERROR",
             message: "Database connection error",
             error: error.message,
             timestamp: new Date().toISOString()
@@ -95,14 +113,14 @@ app.get("/api/health/db", async (req, res) => {
 });
 
 // Serve React app for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/dist/index.html'));
-});
+// app.get('*', (req, res) => {
+//     res.sendFile(path.join(__dirname, 'client/dist/index.html'));
+// });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).json({ 
+    res.status(500).json({
         error: "Something went wrong!",
         message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
     });
@@ -110,10 +128,9 @@ app.use((err, req, res, next) => {
 
 // Start server with proper database connection check
 app.listen(PORT, async () => {
-    console.log(`🚀 Homiqly Backend Server starting on port ${PORT}`);
     console.log(`📊 Health check available at: http://localhost:${PORT}/api/health`);
-    console.log(`🗄️  Database health check at: http://localhost:${PORT}/api/health/db`);
-    
+    console.log(`🗄️  Database health check at: http://localhost:${PORT}/api/health/db`)
+
     // Test database connection
     const isConnected = await testConnection();
     if (isConnected) {

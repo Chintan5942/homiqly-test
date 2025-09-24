@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useEmployeesAuth } from "../contexts/EmployeesAuthContext";
-import { FiHelpCircle, FiMenu, FiX } from "react-icons/fi";
+import { FiHelpCircle, FiList, FiMenu, FiUser, FiX } from "react-icons/fi";
 import {
   FiHome,
   FiUsers,
@@ -16,6 +16,7 @@ import {
   FiBell,
 } from "react-icons/fi";
 import { HeaderMenu } from "../../shared/components/Header";
+import NotificationIcon from "../components/NotificationIcon";
 
 const DashboardLayout = () => {
   const { currentUser, logout } = useEmployeesAuth();
@@ -55,11 +56,26 @@ const DashboardLayout = () => {
     //   name: "Packages",
     //   icon: <FiShoppingBag className="w-5 h-5" />,
     // },
-    // {
-    //   path: "/employees/bookings",
-    //   name: "Bookings",
-    //   icon: <FiCalendar className="w-5 h-5" />,
-    // },
+    {
+      path: "/employees/bookings",
+      name: "Bookings",
+      icon: <FiCalendar className="w-5 h-5" />,
+    },
+    {
+      path: "/employees/profile",
+      name: "Profile",
+      icon: <FiUser className="w-5 h-5" />,
+    },
+    {
+      path: "/employees/calendar",
+      name: "Calendar",
+      icon: <FiCalendar className="w-5 h-5" />,
+    },
+    {
+      path: "/employees/workhistory",
+      name: "Work History",
+      icon: <FiList className="w-5 h-5" />,
+    },
     // {
     //   path: "/employees/supply-kits",
     //   name: "Supply Kits",
@@ -166,13 +182,16 @@ const DashboardLayout = () => {
               </h1>
             </div>
 
-            <HeaderMenu
-              userName={currentUser?.name || "Employees User"}
-              userRole={currentUser?.role || "Employees"}
-              onLogout={handleLogout}
-              profilePath="/employees/profile"
-              settingsPath="/employees/settings"
-            />
+            <div className="flex items-center space-x-4">
+              <HeaderMenu
+                userName={currentUser?.name || "Employees User"}
+                userRole={currentUser?.role || "Employees"}
+                onLogout={handleLogout}
+                profilePath="/employees/profile"
+                settingsPath="/employees/settings"
+              />
+              <NotificationIcon />
+            </div>
           </div>
 
           {/* Mobile menu */}
