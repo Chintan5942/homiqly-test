@@ -411,7 +411,7 @@ const Register = () => {
                       id="googleBusinessLink"
                       label="Google Business Profile Link"
                       value={googleBusinessLink}
-                      onChange={setGoogleBusinessLink}
+                      onChange={(e) => setGoogleBusinessLink(e.target.value)}
                       placeholder="https://business.google.com/..."
                     />
                   </>
