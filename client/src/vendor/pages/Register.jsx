@@ -399,14 +399,13 @@ const Register = () => {
                       placeholder="+91 9876543210"
                     />
                     <div className="md:col-span-2">
-                      <FormSelect
+                      <FormInput
                         label="Company Address*"
                         id="companyAddress"
-                        rows={3}
                         value={companyAddress}
                         onChange={(e) => setCompanyAddress(e.target.value)}
                         placeholder="123 Business Street, City, State, Zip"
-                      ></FormSelect>
+                      />
                     </div>
                     <FormInput
                       id="googleBusinessLink"
