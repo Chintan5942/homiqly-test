@@ -6,13 +6,16 @@ import { Card } from "../../shared/components/Card";
 import { Button, IconButton } from "../../shared/components/Button";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import ProfileEditModal from "../../vendor/components/Modals/ProfileEditModal";
-import { 
-  Edit, 
-  User, 
+import {
+  Edit,
+  User,
   Trash,
   Calendar,
   Package,
   BadgeCheck,
+  LinkIcon,
+  AlertCircle,
+  Pencil,
 } from "lucide-react";
 
 const Profile = () => {
@@ -30,13 +33,30 @@ const Profile = () => {
 
   // Set consistent height when tab changes
   useEffect(() => {
-    // Small delay to ensure DOM is updated
     const timer = setTimeout(() => {
       setContentHeight("auto");
     }, 100);
-    
     return () => clearTimeout(timer);
   }, [activeTab]);
+
+  const formatDate = (iso) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const isExpired = (iso) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    return d.getTime() < now.getTime();
+  };
 
   const fetchVendorProfile = async () => {
     try {
@@ -132,7 +152,9 @@ const Profile = () => {
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           {/* Navigation Tabs with Edit Button */}
           <div className="flex justify-center mb-8">
-            <div className="w-full max-w-7xl"> {/* Increased to match service section */}
+            <div className="w-full max-w-7xl">
+              {" "}
+              {/* Increased to match service section */}
               <div className="border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   {/* Tabs */}
@@ -159,6 +181,17 @@ const Profile = () => {
                       <Package className="inline w-4 h-4 mr-2" />
                       Services Offered
                     </button>
+                    <button
+                      onClick={() => setActiveTab("certificates")}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-all duration-200 flex items-center ${
+                        activeTab === "certificates"
+                          ? "border-green-500 text-green-600"
+                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      }`}
+                    >
+                      <BadgeCheck className="inline w-4 h-4 mr-2" />{" "}
+                      Certificates
+                    </button>
                   </nav>
 
                   {/* Edit Button */}
@@ -167,7 +200,7 @@ const Profile = () => {
                       onClick={() => setIsEditModalOpen(true)}
                       variant="primary"
                       size="sm"
-                      icon={<Edit className="w-4 h-4" />}
+                      icon={<Pencil className="w-4 h-4" />}
                     >
                       Edit Profile
                     </Button>
@@ -179,8 +212,8 @@ const Profile = () => {
 
           {/* Main Content Area with Consistent Width */}
           <div className="flex justify-center">
-            <div className="w-full max-w-7xl"> {/* Consistent max-width */}
-              
+            <div className="w-full max-w-7xl">
+              {" "}
               {/* Profile Tab */}
               {activeTab === "profile" && (
                 <div className="transition-all duration-300 ease-in-out">
@@ -217,11 +250,14 @@ const Profile = () => {
                               Member Since
                             </div>
                             <div className="text-sm text-gray-600">
-                              {new Date(profile?.created_at).toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              })}
+                              {new Date(profile?.created_at).toLocaleDateString(
+                                "en-US",
+                                {
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric",
+                                }
+                              )}
                             </div>
                           </div>
                         </div>
@@ -244,24 +280,42 @@ const Profile = () => {
                           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             {/* Personal Info */}
                             <div className="space-y-1">
-                              <label className="text-sm font-medium text-gray-500">Full Name</label>
-                              <p className="text-gray-900">{profile?.name || "Not provided"}</p>
-                            </div>
-                            
-                            <div className="space-y-1">
-                              <label className="text-sm font-medium text-gray-500">Email Address</label>
-                              <p className="text-gray-900">{profile?.email || "Not provided"}</p>
-                            </div>
-                            
-                            <div className="space-y-1">
-                              <label className="text-sm font-medium text-gray-500">Phone Number</label>
-                              <p className="text-gray-900">{profile?.phone || "Not provided"}</p>
-                            </div>
-                            
-                            <div className="space-y-1">
-                              <label className="text-sm font-medium text-gray-500">Date of Birth</label>
+                              <label className="text-sm font-medium text-gray-500">
+                                Full Name
+                              </label>
                               <p className="text-gray-900">
-                                {profile?.birthDate ? new Date(profile.birthDate).toLocaleDateString() : "Not provided"}
+                                {profile?.name || "Not provided"}
+                              </p>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-sm font-medium text-gray-500">
+                                Email Address
+                              </label>
+                              <p className="text-gray-900">
+                                {profile?.email || "Not provided"}
+                              </p>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-sm font-medium text-gray-500">
+                                Phone Number
+                              </label>
+                              <p className="text-gray-900">
+                                {profile?.phone || "Not provided"}
+                              </p>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-sm font-medium text-gray-500">
+                                Date of Birth
+                              </label>
+                              <p className="text-gray-900">
+                                {profile?.birthDate
+                                  ? new Date(
+                                      profile.birthDate
+                                    ).toLocaleDateString()
+                                  : "Not provided"}
                               </p>
                             </div>
 
@@ -269,24 +323,41 @@ const Profile = () => {
                             {profile?.vendorType === "company" && (
                               <>
                                 <div className="space-y-1">
-                                  <label className="text-sm font-medium text-gray-500">Contact Person</label>
-                                  <p className="text-gray-900">{profile?.contactPerson || "Not provided"}</p>
-                                </div>
-                                
-                                <div className="space-y-1">
-                                  <label className="text-sm font-medium text-gray-500">Google Business Profile</label>
-                                  <p className="text-gray-900 truncate">
-                                    {profile?.googleBusinessProfileLink ? (
-                                      <a href={profile.googleBusinessProfileLink} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-700">
-                                        {profile.googleBusinessProfileLink}
-                                      </a>
-                                    ) : "Not provided"}
+                                  <label className="text-sm font-medium text-gray-500">
+                                    Contact Person
+                                  </label>
+                                  <p className="text-gray-900">
+                                    {profile?.contactPerson || "Not provided"}
                                   </p>
                                 </div>
-                                
+
+                                <div className="space-y-1">
+                                  <label className="text-sm font-medium text-gray-500">
+                                    Google Business Profile
+                                  </label>
+                                  <p className="text-gray-900 truncate">
+                                    {profile?.googleBusinessProfileLink ? (
+                                      <a
+                                        href={profile.googleBusinessProfileLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-green-600 hover:text-green-700"
+                                      >
+                                        {profile.googleBusinessProfileLink}
+                                      </a>
+                                    ) : (
+                                      "Not provided"
+                                    )}
+                                  </p>
+                                </div>
+
                                 <div className="space-y-1 md:col-span-2">
-                                  <label className="text-sm font-medium text-gray-500">Company Address</label>
-                                  <p className="text-gray-900">{profile?.companyAddress || "Not provided"}</p>
+                                  <label className="text-sm font-medium text-gray-500">
+                                    Company Address
+                                  </label>
+                                  <p className="text-gray-900">
+                                    {profile?.companyAddress || "Not provided"}
+                                  </p>
                                 </div>
                               </>
                             )}
@@ -295,13 +366,21 @@ const Profile = () => {
                             {profile?.vendorType === "individual" && (
                               <>
                                 <div className="space-y-1 md:col-span-2">
-                                  <label className="text-sm font-medium text-gray-500">Address</label>
-                                  <p className="text-gray-900">{profile?.address || "Not provided"}</p>
+                                  <label className="text-sm font-medium text-gray-500">
+                                    Address
+                                  </label>
+                                  <p className="text-gray-900">
+                                    {profile?.address || "Not provided"}
+                                  </p>
                                 </div>
-                                
+
                                 <div className="space-y-1 md:col-span-2">
-                                  <label className="text-sm font-medium text-gray-500">Additional Information</label>
-                                  <p className="text-gray-900">{profile?.otherInfo || "Not provided"}</p>
+                                  <label className="text-sm font-medium text-gray-500">
+                                    Additional Information
+                                  </label>
+                                  <p className="text-gray-900">
+                                    {profile?.otherInfo || "Not provided"}
+                                  </p>
                                 </div>
                               </>
                             )}
@@ -336,7 +415,10 @@ const Profile = () => {
                           <p className="mb-6 text-gray-600">
                             You haven't added any services to your profile.
                           </p>
-                          <Button variant="primary" className="text-white bg-green-600 border-green-600 hover:bg-green-700">
+                          <Button
+                            variant="primary"
+                            className="text-white bg-green-600 border-green-600 hover:bg-green-700"
+                          >
                             Add Your First Service
                           </Button>
                         </div>
@@ -353,7 +435,9 @@ const Profile = () => {
                                   <div className="h-48 overflow-hidden">
                                     <img
                                       src={service.package_media}
-                                      alt={service.package_name || "Service image"}
+                                      alt={
+                                        service.package_name || "Service image"
+                                      }
                                       className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                                     />
                                   </div>
@@ -361,7 +445,9 @@ const Profile = () => {
                                 <div className="absolute top-4 right-4">
                                   <IconButton
                                     onClick={() =>
-                                      deleteVendorService(service.vendor_packages_id)
+                                      deleteVendorService(
+                                        service.vendor_packages_id
+                                      )
                                     }
                                     variant="lightDanger"
                                     size="sm"
@@ -393,34 +479,41 @@ const Profile = () => {
                                   service.sub_packages.length > 0 && (
                                     <div className="mt-4">
                                       <div className="space-y-3">
-                                        {service.sub_packages.map((sub, sIdx) => (
-                                          <div
-                                            key={sIdx}
-                                            className="flex items-start gap-3 p-3 transition-colors duration-200 rounded-lg bg-gray-50 hover:bg-green-50"
-                                          >
-                                            {sub.sub_package_media && (
-                                              <div className="flex-shrink-0 w-16 h-16 overflow-hidden border rounded-lg">
-                                                <img
-                                                  src={sub.sub_package_media}
-                                                  alt={sub.sub_package_name || "Sub-package"}
-                                                  className="object-cover w-full h-full"
-                                                />
+                                        {service.sub_packages.map(
+                                          (sub, sIdx) => (
+                                            <div
+                                              key={sIdx}
+                                              className="flex items-start gap-3 p-3 transition-colors duration-200 rounded-lg bg-gray-50 hover:bg-green-50"
+                                            >
+                                              {sub.sub_package_media && (
+                                                <div className="flex-shrink-0 w-16 h-16 overflow-hidden border rounded-lg">
+                                                  <img
+                                                    src={sub.sub_package_media}
+                                                    alt={
+                                                      sub.sub_package_name ||
+                                                      "Sub-package"
+                                                    }
+                                                    className="object-cover w-full h-full"
+                                                  />
+                                                </div>
+                                              )}
+                                              <div className="flex-1 min-w-0">
+                                                {sub.sub_package_name && (
+                                                  <h6 className="text-sm font-medium text-gray-900">
+                                                    {sub.sub_package_name}
+                                                  </h6>
+                                                )}
+                                                {sub.sub_package_description && (
+                                                  <p className="mt-1 text-xs text-gray-600 line-clamp-2">
+                                                    {
+                                                      sub.sub_package_description
+                                                    }
+                                                  </p>
+                                                )}
                                               </div>
-                                            )}
-                                            <div className="flex-1 min-w-0">
-                                              {sub.sub_package_name && (
-                                                <h6 className="text-sm font-medium text-gray-900">
-                                                  {sub.sub_package_name}
-                                                </h6>
-                                              )}
-                                              {sub.sub_package_description && (
-                                                <p className="mt-1 text-xs text-gray-600 line-clamp-2">
-                                                  {sub.sub_package_description}
-                                                </p>
-                                              )}
                                             </div>
-                                          </div>
-                                        ))}
+                                          )
+                                        )}
                                       </div>
                                     </div>
                                   )}
@@ -429,6 +522,148 @@ const Profile = () => {
                           ))}
                         </div>
                       )}
+                    </div>
+                  </Card>
+                </div>
+              )}
+              {activeTab === "certificates" && (
+                <div className="transition-all duration-300 ease-in-out">
+                  <Card className="border-0 shadow-lg">
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center">
+                          <BadgeCheck className="w-6 h-6 mr-2 text-gray-700" />
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Certificates
+                          </h3>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        {/* Police Clearance */}
+                        <div>
+                          <label className="block mb-2 text-sm font-medium text-gray-500">
+                            Police Clearance
+                          </label>
+                          {profile?.policeClearance ? (
+                            <a
+                              href={profile.policeClearance}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-3 py-1 text-sm font-medium text-green-700 bg-green-100 rounded-full hover:bg-green-200 transition-colors"
+                            >
+                              <LinkIcon className="w-4 h-4 mr-1" />
+                              Open Police Clearance
+                            </a>
+                          ) : (
+                            <div className="inline-flex items-center px-3 py-1 text-sm text-gray-600 bg-gray-100 rounded-full">
+                              <AlertCircle className="w-4 h-4 mr-1" />
+                              Not uploaded
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Business License */}
+                        <div>
+                          <label className="block mb-2 text-sm font-medium text-gray-500">
+                            Business License
+                          </label>
+                          {profile?.businessLicense ? (
+                            <a
+                              href={profile.businessLicense}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-3 py-1 text-sm font-medium text-green-700 bg-green-100 rounded-full hover:bg-green-200 transition-colors"
+                            >
+                              <LinkIcon className="w-4 h-4 mr-1" />
+                              Open Business License
+                            </a>
+                          ) : (
+                            <div className="inline-flex items-center px-3 py-1 text-sm text-gray-600 bg-gray-100 rounded-full">
+                              <AlertCircle className="w-4 h-4 mr-1" />
+                              Not uploaded
+                            </div>
+                          )}
+                          {/* Expiry */}
+                          <div className="mt-3 text-sm">
+                            <span className="text-gray-500">Expiry:&nbsp;</span>
+                            {profile?.businessLicenseExpireDate ? (
+                              <>
+                                <span className="text-gray-900">
+                                  {formatDate(
+                                    profile.businessLicenseExpireDate
+                                  )}
+                                </span>
+                                <span
+                                  className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    isExpired(profile.businessLicenseExpireDate)
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-emerald-100 text-emerald-700"
+                                  }`}
+                                >
+                                  {isExpired(profile.businessLicenseExpireDate)
+                                    ? "Expired"
+                                    : "Valid"}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-gray-600">—</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Certificate of Expertise */}
+                        <div>
+                          <label className="block mb-2 text-sm font-medium text-gray-500">
+                            Certificate of Expertise
+                          </label>
+                          {profile?.certificateOfExpertise ? (
+                            <a
+                              href={profile.certificateOfExpertise}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-3 py-1 text-sm font-medium text-green-700 bg-green-100 rounded-full hover:bg-green-200 transition-colors"
+                            >
+                              <LinkIcon className="w-4 h-4 mr-1" />
+                              Open Certificate of Expertise
+                            </a>
+                          ) : (
+                            <div className="inline-flex items-center px-3 py-1 text-sm text-gray-600 bg-gray-100 rounded-full">
+                              <AlertCircle className="w-4 h-4 mr-1" />
+                              Not uploaded
+                            </div>
+                          )}
+
+                          <div>
+                            {profile?.certificateOfExpertiseExpireDate ? (
+                              <>
+                                <span className="text-gray-900">
+                                  {formatDate(
+                                    profile.certificateOfExpertiseExpireDate
+                                  )}
+                                </span>
+                                <span
+                                  className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    isExpired(
+                                      profile.certificateOfExpertiseExpireDate
+                                    )
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-emerald-100 text-emerald-700"
+                                  }`}
+                                >
+                                  {isExpired(
+                                    profile.certificateOfExpertiseExpireDate
+                                  )
+                                    ? "Expired"
+                                    : "Valid"}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-gray-600">—</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </Card>
                 </div>

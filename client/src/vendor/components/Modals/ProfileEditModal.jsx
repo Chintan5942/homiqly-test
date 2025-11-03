@@ -10,12 +10,12 @@ import {
   FormSelect,
   FormCheckbox,
 } from "../../../shared/components/Form";
-import { 
-  X, 
-  Save, 
-  User, 
-  Mail, 
-  Phone, 
+import {
+  X,
+  Save,
+  User,
+  Mail,
+  Phone,
   MapPin,
   Building,
   Globe,
@@ -24,7 +24,9 @@ import {
   Lock,
   Eye,
   EyeOff,
-  Pencil
+  Pencil,
+  CheckCheck,
+  BadgeCheck,
 } from "lucide-react";
 import Modal from "../../../shared/components/Modal/Modal";
 
@@ -32,7 +34,7 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
   const [activeSection, setActiveSection] = useState("profile");
   const [updating, setUpdating] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     name: profile?.name || "",
     email: profile?.email || "",
@@ -43,26 +45,23 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
     googleBusinessProfileLink: profile?.googleBusinessProfileLink || "",
     otherInfo: profile?.otherInfo || "",
     birthDate: profile?.birthDate?.slice(0, 10) || "",
+    policeClearance: null,
+    certificateOfExpertise: null,
+    certificateOfExpertiseExpireDate: "",
+    businessLicense: null,
+    businessLicenseExpireDate: "",
   });
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
-  
+
   const [showPassword, setShowPassword] = useState({
     current: false,
     new: false,
-    confirm: false
-  });
-
-  const [generalSettings, setGeneralSettings] = useState({
-    theme: 'light',
-    language: 'en',
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true
+    confirm: false,
   });
 
   if (!isOpen) return null;
@@ -74,17 +73,9 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
-    setPasswordData(prev => ({
+    setPasswordData((prev) => ({
       ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleGeneralChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setGeneralSettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value,
     }));
   };
 
@@ -93,12 +84,25 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
       setProfileImage(e.target.files[0]);
     }
   };
-  
+
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     try {
       setUpdating(true);
       const data = new FormData();
+
+      if (formData.businessLicense && !formData.businessLicenseExpireDate) {
+        toast.error("Business license expire date is required");
+        return;
+      }
+
+      if (
+        formData.certificateOfExpertise &&
+        !formData.certificateOfExpertiseExpireDate
+      ) {
+        toast.error("Certificate of expertise expire date is required");
+        return;
+      }
 
       Object.entries(formData).forEach(([key, value]) => {
         if (value) data.append(key, value);
@@ -126,54 +130,43 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
 
   const changePassword = async (e) => {
     e.preventDefault();
-    
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error("Passwords do not match");
       return;
     }
-    
+
     if (passwordData.newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters long');
+      toast.error("Password must be at least 6 characters long");
       return;
     }
-    
+
     setUpdating(true);
-    
+
     try {
       const response = await api.put("/api/vendor/changepassword", {
         currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword
+        newPassword: passwordData.newPassword,
       });
-      
-      toast.success('Password changed successfully');
+
+      toast.success("Password changed successfully");
       setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       });
     } catch (error) {
       console.error("Error changing password:", error);
-      toast.error(error.response?.data?.message || 'Failed to change password');
+      toast.error(error.response?.data?.message || "Failed to change password");
     } finally {
       setUpdating(false);
     }
   };
 
-  const saveGeneralSettings = (e) => {
-    e.preventDefault();
-    setUpdating(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      toast.success('Settings saved successfully');
-      setUpdating(false);
-    }, 1000);
-  };
-
   const togglePasswordVisibility = (field) => {
-    setShowPassword(prev => ({
+    setShowPassword((prev) => ({
       ...prev,
-      [field]: !prev[field]
+      [field]: !prev[field],
     }));
   };
 
@@ -213,6 +206,18 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
             >
               <Lock className="w-4 h-4 mr-3" />
               Change Password
+            </button>
+
+            <button
+              onClick={() => setActiveSection("certificates")}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activeSection === "certificates"
+                  ? "bg-white text-green-700 shadow-sm border border-gray-200"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-white"
+              }`}
+            >
+              <BadgeCheck className="w-4 h-4 mr-3" />
+              Certificates
             </button>
           </nav>
         </div>
@@ -467,6 +472,105 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
                   className="text-white bg-green-600 border-green-600 hover:bg-green-700"
                 >
                   Change Password
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {activeSection === "certificates" && (
+            <form onSubmit={handleProfileSubmit}>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-1 mt-4">
+                {/* Police Clearance */}
+                <div>
+                  <FormFileInput
+                    label="Police Clearance"
+                    name="policeClearance"
+                    accept="image/*,application/pdf"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        policeClearance: e.target.files[0],
+                      })
+                    }
+                  />
+                </div>
+
+                {/* Certificate of Expertise */}
+                <div>
+                  <FormFileInput
+                    label="Certificate of Expertise"
+                    name="certificateOfExpertise"
+                    accept="image/*,application/pdf"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        certificateOfExpertise: e.target.files[0],
+                      })
+                    }
+                  />
+                  {formData.certificateOfExpertise && (
+                    <div>
+                      <FormInput
+                        type="date"
+                        label="Certificate of Expertise Expiry Date"
+                        name="certificateOfExpertiseExpireDate"
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            certificateOfExpertiseExpireDate: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Business License */}
+                <div>
+                  <FormFileInput
+                    label="Business License"
+                    name="businessLicense"
+                    accept="image/*,application/pdf"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        businessLicense: e.target.files[0],
+                      })
+                    }
+                  />
+                </div>
+
+                {/* Business License Expiry Date — only required if license uploaded */}
+                {formData.businessLicense && (
+                  <div>
+                    <FormInput
+                      type="date"
+                      label="Business License Expiry Date"
+                      name="businessLicenseExpireDate"
+                      required={!!formData.businessLicense}
+                      value={formData.businessLicenseExpireDate || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          businessLicenseExpireDate: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end pt-6 space-x-4 ">
+                <Button type="button" variant="outline" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={updating}
+                  icon={<Save className="w-5 h-5" />}
+                  className="text-white bg-green-600 border-green-600 hover:bg-green-700"
+                >
+                  Save Profile Changes
                 </Button>
               </div>
             </form>

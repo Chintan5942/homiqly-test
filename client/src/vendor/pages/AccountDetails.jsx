@@ -12,6 +12,10 @@ import {
   BanknoteIcon,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { CustomFileInput } from "../../shared/components/CustomFileInput";
+import FormInput from "../../shared/components/Form/FormInput";
+import { FormFileInput, FormSelect } from "../../shared/components/Form";
+import { ImagePreview } from "../../shared/components/ImagePreview";
 
 const AccountDetails = () => {
   const vendorData = localStorage.getItem("vendorData")
@@ -44,7 +48,7 @@ const AccountDetails = () => {
 
   const transferTypes = [
     { value: "e_transfer", label: "Interac E-Transfer" },
-    { value: "bank_transfer", label: "Bank Transfer" },
+    // { value: "bank_transfer", label: "Bank Transfer" },
   ];
 
   // Fetch account details
@@ -80,7 +84,14 @@ const AccountDetails = () => {
     const { name, value } = e.target;
 
     // Numeric restrictions
-    if (["institution_number", "transit_number", "account_number", "interac_phone"].includes(name)) {
+    if (
+      [
+        "institution_number",
+        "transit_number",
+        "account_number",
+        "interac_phone",
+      ].includes(name)
+    ) {
       let filtered = value.replace(/\D/g, ""); // only digits
 
       // length restrictions
@@ -148,7 +159,7 @@ const AccountDetails = () => {
   const renderField = (label, name, type = "text", placeholder = "") => (
     <div className="space-y-1">
       <label className="text-sm font-semibold text-gray-700">{label}</label>
-      <Input
+      <FormInput
         type={type}
         name={name}
         value={formData[name] || ""}
@@ -156,29 +167,40 @@ const AccountDetails = () => {
         disabled={!editing}
         placeholder={placeholder}
         className="w-full"
-        inputMode={["institution_number", "transit_number", "account_number", "interac_phone"].includes(name) ? "numeric" : "text"}
-        pattern={["institution_number", "transit_number", "account_number", "interac_phone"].includes(name) ? "[0-9]*" : undefined}
+        inputMode={
+          [
+            "institution_number",
+            "transit_number",
+            "account_number",
+            "interac_phone",
+          ].includes(name)
+            ? "numeric"
+            : "text"
+        }
+        pattern={
+          [
+            "institution_number",
+            "transit_number",
+            "account_number",
+            "interac_phone",
+          ].includes(name)
+            ? "[0-9]*"
+            : undefined
+        }
       />
     </div>
   );
 
   const renderDropdown = (label, name, options) => (
     <div className="space-y-1">
-      <label className="text-sm font-semibold text-gray-700">{label}</label>
-      <select
+      <FormSelect
+        label={label}
         name={name}
         value={formData[name] || ""}
         onChange={handleChange}
         disabled={!editing}
-        className="w-full p-3 border border-gray-300 rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      >
-        <option value="">Select {label}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        options={options}
+      />
     </div>
   );
 
@@ -186,14 +208,24 @@ const AccountDetails = () => {
     if (vendorType === "individual") {
       return (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {renderField("Full Legal Name", "legal_name", "text", "Name as on ID")}
+          {renderField(
+            "Full Legal Name",
+            "legal_name",
+            "text",
+            "Name as on ID"
+          )}
           {renderField("Date of Birth", "dob", "date")}
         </div>
       );
     } else if (vendorType === "company") {
       return (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {renderField("Business Name", "business_name", "text", "Registered business name")}
+          {renderField(
+            "Business Name",
+            "business_name",
+            "text",
+            "Registered business name"
+          )}
           {/* {renderField("Legal Entity Name", "legal_name", "text", "Legal name")} */}
         </div>
       );
@@ -203,32 +235,57 @@ const AccountDetails = () => {
 
   const renderFileUpload = () => (
     <div className="space-y-1">
-      <label className="text-sm font-semibold text-gray-700">
-        Government ID (Upload)
-      </label>
-      <input
-        type="file"
+      <FormFileInput
+        label="Government ID (Upload)"
         name="government_id"
         onChange={handleFileChange}
         disabled={!editing}
         accept=".jpg,.jpeg,.png,.pdf"
-        className="w-full p-2 bg-white border border-gray-300 rounded-lg file:mr-3 file:py-2 file:px-4 file:border-0 file:rounded-md file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 disabled:opacity-70"
+        onRemove={() => setFormData({ ...formData, government_id: "" })}
       />
-      {formData.government_id && !governmentIdFile && (
-        <p className="text-xs text-gray-600">
-          Current file: {formData.government_id.split("/").pop()}
-        </p>
-      )}
+
+      <div className="flex items-center justify-between text-xs">
+        {formData.government_id && !governmentIdFile && (
+          <p className=" text-gray-600">
+            Current file: {formData.government_id.split("/").pop()}
+          </p>
+        )}
+        {formData.government_id.length > 0 && (
+          <div className="flex items-center mb-2 space-x-2">
+            <a
+              href={formData.government_id}
+              target="_blank"
+              className="text-blue-500 underline"
+            >
+              Government ID
+            </a>
+          </div>
+        )}
+      </div>
     </div>
   );
 
   const renderTransferType = () => (
     <div className="space-y-4">
-      {renderDropdown("Preferred Transfer Type", "preferred_transfer_type", transferTypes)}
+      {renderDropdown(
+        "Preferred Transfer Type",
+        "preferred_transfer_type",
+        transferTypes
+      )}
       {formData.preferred_transfer_type === "e_transfer" && (
         <div className="grid grid-cols-1 gap-4 p-4 rounded-lg md:grid-cols-2 bg-blue-50">
-          {renderField("Interac Email", "interac_email", "email", "email@example.com")}
-          {renderField("Interac Phone (Numbers Only)", "interac_phone", "tel", "e.g. 4165551234")}
+          {renderField(
+            "Interac Email",
+            "interac_email",
+            "email",
+            "email@example.com"
+          )}
+          {renderField(
+            "Interac Phone (Numbers Only)",
+            "interac_phone",
+            "tel",
+            "e.g. 4165551234"
+          )}
         </div>
       )}
     </div>
@@ -252,7 +309,9 @@ const AccountDetails = () => {
                   <BanknoteIcon className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Bank Account Details</h2>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Bank Account Details
+                  </h2>
                   <p className="text-sm text-gray-600">
                     {account
                       ? "Your bank account is verified and ready for payouts."
@@ -261,7 +320,10 @@ const AccountDetails = () => {
                 </div>
               </div>
               {account && !editing && (
-                <Button onClick={() => setEditing(true)} className="bg-blue-600 hover:bg-blue-700">
+                <Button
+                  onClick={() => setEditing(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
                   Edit Details
                 </Button>
               )}
@@ -270,7 +332,9 @@ const AccountDetails = () => {
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="text-blue-600 animate-spin" size={32} />
-                <span className="ml-3 text-gray-600">Loading account details...</span>
+                <span className="ml-3 text-gray-600">
+                  Loading account details...
+                </span>
               </div>
             ) : (
               <>
@@ -278,15 +342,47 @@ const AccountDetails = () => {
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
                     <Building2 className="w-5 h-5 text-gray-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Bank Information</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Bank Information
+                    </h3>
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {renderField("Account Holder Name", "account_holder_name", "text", "Legal name on bank account")}
-                    {renderField("Bank Name", "bank_name", "text", "e.g. Royal Bank of Canada")}
-                    {renderField("Institution Number (3 digits)", "institution_number", "text", "e.g. 004")}
-                    {renderField("Transit Number (5 digits)", "transit_number", "text", "e.g. 12345")}
-                    {renderField("Account Number (7–12 digits)", "account_number", "text", "e.g. 1234567")}
-                    {renderField("Bank Address (optional)", "bank_address", "text", "Branch address")}
+                    {renderField(
+                      "Account Holder Name",
+                      "account_holder_name",
+                      "text",
+                      "Legal name on bank account"
+                    )}
+                    {renderField(
+                      "Bank Name",
+                      "bank_name",
+                      "text",
+                      "e.g. Royal Bank of Canada"
+                    )}
+                    {renderField(
+                      "Institution Number (3 digits)",
+                      "institution_number",
+                      "text",
+                      "e.g. 004"
+                    )}
+                    {renderField(
+                      "Transit Number (5 digits)",
+                      "transit_number",
+                      "text",
+                      "e.g. 12345"
+                    )}
+                    {renderField(
+                      "Account Number (7–12 digits)",
+                      "account_number",
+                      "text",
+                      "e.g. 1234567"
+                    )}
+                    {renderField(
+                      "Bank Address (optional)",
+                      "bank_address",
+                      "text",
+                      "Branch address"
+                    )}
                   </div>
                 </section>
 
@@ -294,13 +390,20 @@ const AccountDetails = () => {
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
                     <Mail className="w-5 h-5 text-gray-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Contact Information
+                    </h3>
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {renderField("Email Address", "email", "email", "vendor@example.com")}
+                    {renderField(
+                      "Email Address",
+                      "email",
+                      "email",
+                      "vendor@example.com"
+                    )}
                   </div>
                 </section>
-              
+
                 {/* Vendor Info */}
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
@@ -318,7 +421,9 @@ const AccountDetails = () => {
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
                     <Shield className="w-5 h-5 text-gray-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Identity Verification</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Identity Verification
+                    </h3>
                   </div>
                   {renderFileUpload()}
                 </section>
@@ -327,7 +432,9 @@ const AccountDetails = () => {
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
                     <BanknoteIcon className="w-5 h-5 text-gray-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Transfer Preferences</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Transfer Preferences
+                    </h3>
                   </div>
                   {renderTransferType()}
                 </section>
