@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import moment from "moment-timezone";
 import {
   ArrowLeft,
   ArrowRight,
@@ -26,51 +27,58 @@ const HOURS = Array.from(
   (_, i) => `${String(i).padStart(2, "0")}:00`
 );
 
+// Timezone configuration
+const TIMEZONE = "America/Denver"; // Mountain Time (UTC-7)
+const getMoment = (date = null) => moment.tz(date || new Date(), TIMEZONE);
+const toMountainTime = (date) => getMoment(date).toDate();
+const fromMountainTime = (date) => getMoment(date).local().toDate();
+
 /* ---------- Small Utils ---------- */
-const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
-const endOfMonth = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
+const startOfMonth = (d) => {
+  const mt = getMoment(d).startOf('month');
+  return mt.toDate();
+};
+const endOfMonth = (d) => {
+  const mt = getMoment(d).endOf('month');
+  return mt.toDate();
+};
 const startOfWeek = (d) => {
-  const s = new Date(d);
-  s.setDate(d.getDate() - d.getDay());
-  s.setHours(0, 0, 0, 0);
-  return s;
+  const mt = getMoment(d).startOf('week');
+  return mt.toDate();
 };
 const endOfWeek = (d) => {
-  const e = startOfWeek(d);
-  e.setDate(e.getDate() + 6);
-  e.setHours(23, 59, 59, 999);
-  return e;
+  const mt = getMoment(d).endOf('week');
+  return mt.toDate();
 };
-const isSameDay = (a, b) => a.toDateString() === b.toDateString();
-const toDateKey = (d) => new Date(d).toDateString();
+const isSameDay = (a, b) => {
+  const mtA = getMoment(a);
+  const mtB = getMoment(b);
+  return mtA.isSame(mtB, 'day');
+};
+const toDateKey = (d) => getMoment(d).format('YYYY-MM-DD');
 
 const inRange = (date, s, e) => {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const S = new Date(s),
-    E = new Date(e);
-  const sd = new Date(S.getFullYear(), S.getMonth(), S.getDate());
-  const ed = new Date(E.getFullYear(), E.getMonth(), E.getDate());
-  return d >= sd && d <= ed;
+  const mtDate = getMoment(date).startOf('day');
+  const mtStart = getMoment(s).startOf('day');
+  const mtEnd = getMoment(e).startOf('day');
+  return mtDate.isBetween(mtStart, mtEnd, 'day', '[]');
 };
 
-/* ---------- NEW: Date helpers to block past dates ---------- */
+/* ---------- Date helpers for Mountain Time ---------- */
 const toInputDate = (d) => {
-  const dt = new Date(d);
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth() + 1).padStart(2, "0");
-  const day = String(dt.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`; // <input type="date"> friendly
+  return getMoment(d).format('YYYY-MM-DD');
 };
 const todayISO = () => {
-  const t = new Date();
-  t.setHours(0, 0, 0, 0);
-  return toInputDate(t);
+  return getMoment().format('YYYY-MM-DD');
 };
 const clampToTodayISO = (iso) => {
-  // Return iso if it's today or later; otherwise today
-  return iso && iso >= todayISO() ? iso : todayISO();
+  const today = todayISO();
+  return iso && iso >= today ? iso : today;
 };
-const isPastISO = (iso) => iso < todayISO();
+const isPastISO = (iso) => {
+  const today = todayISO();
+  return iso < today;
+};
 
 /* ---------- Status UI (Tailwind classes, no inline colors) ---------- */
 const statusUI = (s) => {
@@ -110,7 +118,7 @@ const Calendar = () => {
   const [loadingAvail, setLoadingAvail] = useState(false);
   const [error, setError] = useState(null);
 
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(toMountainTime(new Date()));
   const [viewMode, setViewMode] = useState("month");
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedBookings, setSelectedBookings] = useState([]);
@@ -263,17 +271,17 @@ const Calendar = () => {
   const monthMatrix = useMemo(() => {
     const ms = startOfMonth(currentDate),
       me = endOfMonth(currentDate);
-    const start = new Date(ms);
-    start.setDate(start.getDate() - start.getDay());
-    const end = new Date(me);
-    end.setDate(end.getDate() + (6 - end.getDay()));
-    const weeks = [],
-      it = new Date(start);
-    while (it <= end) {
+    const start = getMoment(ms).startOf('week');
+    const end = getMoment(me).endOf('week');
+    
+    const weeks = [];
+    const it = start.clone();
+    
+    while (it.isBefore(end) || it.isSame(end, 'day')) {
       const w = [];
       for (let i = 0; i < 7; i++) {
-        w.push(new Date(it));
-        it.setDate(it.getDate() + 1);
+        w.push(it.toDate());
+        it.add(1, 'day');
       }
       weeks.push(w);
     }
@@ -283,19 +291,17 @@ const Calendar = () => {
   const weekDays = useMemo(() => {
     const s = startOfWeek(currentDate);
     return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(s);
-      d.setDate(s.getDate() + i);
-      return d;
+      const d = getMoment(s).add(i, 'days');
+      return d.toDate();
     });
   }, [currentDate]);
 
   const bookingsByDay = useMemo(() => {
     const map = {};
     bookings.forEach((b) => {
-      const d = new Date(
-        b.bookingDate || b.date || b.dateBooked || b.booking_date
-      );
-      const k = toDateKey(d);
+      const rawDate = b.bookingDate || b.date || b.dateBooked || b.booking_date;
+      const d = getMoment(rawDate);
+      const k = d.format('YYYY-MM-DD');
       (map[k] ||= []).push(b);
     });
     Object.keys(map).forEach((k) =>
@@ -318,48 +324,45 @@ const Calendar = () => {
   /* ---------- Interactions ---------- */
   const handleDateClick = (date) => {
     setSelectedDate(date);
-    setSelectedBookings(bookingsByDay[toDateKey(date)] || []);
+    const key = getMoment(date).format('YYYY-MM-DD');
+    setSelectedBookings(bookingsByDay[key] || []);
   };
 
   const handlePreviousPeriod = () => {
-    const d = new Date(currentDate);
-    if (viewMode === "month") d.setMonth(d.getMonth() - 1);
-    else if (viewMode === "week") d.setDate(d.getDate() - 7);
-    else d.setDate(d.getDate() - 1);
-    setCurrentDate(d);
+    let newDate;
+    if (viewMode === "month") {
+      newDate = getMoment(currentDate).subtract(1, 'month').toDate();
+    } else if (viewMode === "week") {
+      newDate = getMoment(currentDate).subtract(1, 'week').toDate();
+    } else {
+      newDate = getMoment(currentDate).subtract(1, 'day').toDate();
+    }
+    setCurrentDate(newDate);
   };
 
   const handleNextPeriod = () => {
-    const d = new Date(currentDate);
-    if (viewMode === "month") d.setMonth(d.getMonth() + 1);
-    else if (viewMode === "week") d.setDate(d.getDate() + 7);
-    else d.setDate(d.getDate() + 1);
-    setCurrentDate(d);
+    let newDate;
+    if (viewMode === "month") {
+      newDate = getMoment(currentDate).add(1, 'month').toDate();
+    } else if (viewMode === "week") {
+      newDate = getMoment(currentDate).add(1, 'week').toDate();
+    } else {
+      newDate = getMoment(currentDate).add(1, 'day').toDate();
+    }
+    setCurrentDate(newDate);
   };
 
-  const handleToday = () => setCurrentDate(new Date());
+  const handleToday = () => setCurrentDate(toMountainTime(new Date()));
 
   /* ---------- Header ---------- */
   const renderHeader = () => {
-    const fmt = (o) => currentDate.toLocaleDateString("en-US", o);
+    const currentMoment = getMoment(currentDate);
     const title =
       viewMode === "month"
-        ? fmt({ month: "long", year: "numeric" })
+        ? currentMoment.format('MMMM YYYY')
         : viewMode === "week"
-        ? `${startOfWeek(currentDate).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          })} - ${endOfWeek(currentDate).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}`
-        : fmt({
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          });
+        ? `${getMoment(startOfWeek(currentDate)).format('MMM D')} - ${getMoment(endOfWeek(currentDate)).format('MMM D, YYYY')}`
+        : currentMoment.format('dddd, MMMM D, YYYY');
 
     return (
       <div className="flex flex-col items-center justify-between sm:flex-row pb-7">
@@ -379,7 +382,7 @@ const Calendar = () => {
           </button>
           <button
             onClick={handleToday}
-            className="px-3 py-1 ml-3 text-xs sm:text-sm text-emerald-700 rounded-full bg-emerald-50 hover:bg-emerald-100"
+            className="px-3 py-1 ml-3 text-xs rounded-full sm:text-sm text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
           >
             Today
           </button>
@@ -400,9 +403,11 @@ const Calendar = () => {
           ))}
         </div>
         <div className="flex items-center gap-2 mt-4 sm:mt-0">
+          <div className="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded">
+            MT: {getMoment().format('YYYY-MM-DD HH:mm')}
+          </div>
           <Button
             onClick={() => {
-              // If user has selected a past date, we still clamp to today
               const base = selectedDate
                 ? toInputDate(selectedDate)
                 : toInputDate(new Date());
@@ -441,10 +446,11 @@ const Calendar = () => {
         {monthMatrix.map((week, wIdx) => (
           <div key={wIdx} className="grid grid-cols-7">
             {week.map((day) => {
-              const key = toDateKey(day);
+              const dayMoment = getMoment(day);
+              const key = dayMoment.format('YYYY-MM-DD');
               const dayBookings = bookingsByDay[key] || [];
-              const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-              const isToday = isSameDay(day, new Date());
+              const isCurrentMonth = dayMoment.month() === getMoment(currentDate).month();
+              const isToday = dayMoment.isSame(getMoment(), 'day');
               const dayAvs = availabilitiesForDate(day);
               const isAvailable = dayAvs.length > 0;
 
@@ -472,7 +478,7 @@ const Calendar = () => {
                           : "text-gray-300"
                       }`}
                     >
-                      {day.getDate()}
+                      {dayMoment.date()}
                     </div>
                     <div className="flex items-center gap-1">
                       {dayAvs.slice(0, 2).map((av) => (
@@ -534,22 +540,23 @@ const Calendar = () => {
         <div />
         <div className="grid grid-cols-7 border-b bg-gray-50">
           {weekDays.map((d) => {
+            const dayMoment = getMoment(d);
             const dayAvs = availabilitiesForDate(d);
-            const isToday = isSameDay(d, new Date());
+            const isToday = dayMoment.isSame(getMoment(), 'day');
             return (
               <div
-                key={d.toISOString()}
+                key={dayMoment.format()}
                 className={`py-2 text-sm font-medium text-center ${
                   isToday ? "border-emerald-300" : ""
                 } ${dayAvs.length ? "bg-emerald-50" : ""}`}
               >
-                <div>{d.toLocaleDateString("en-US", { weekday: "short" })}</div>
+                <div>{dayMoment.format('ddd')}</div>
                 <div
                   className={`text-xs ${
                     isToday ? "font-bold text-emerald-700" : "text-gray-500"
                   }`}
                 >
-                  {d.getDate()}
+                  {dayMoment.date()}
                 </div>
                 {dayAvs.length > 0 && (
                   <div className="flex items-center justify-center gap-1 mt-1">
@@ -583,10 +590,11 @@ const Calendar = () => {
 
         <div className="grid grid-cols-7 divide-x">
           {weekDays.map((d) => {
-            const key = toDateKey(d);
+            const dayMoment = getMoment(d);
+            const key = dayMoment.format('YYYY-MM-DD');
             const dayBookings = bookingsByDay[key] || [];
             const dayAvs = availabilitiesForDate(d);
-            const isToday = isSameDay(d, new Date());
+            const isToday = dayMoment.isSame(getMoment(), 'day');
 
             return (
               <div
@@ -612,7 +620,7 @@ const Calendar = () => {
                         <div
                           className={`p-2 text-xs border rounded shadow-sm w-full ${sc.wrap}`}
                         >
-                          <div className="font-semibold flex items-center gap-2">
+                          <div className="flex items-center gap-2 font-semibold">
                             <span
                               className={`inline-block w-2.5 h-2.5 rounded-full ${sc.dot}`}
                             />
@@ -643,11 +651,12 @@ const Calendar = () => {
 
   /* ---------- Day View ---------- */
   const renderDayMain = () => {
-    const key = toDateKey(currentDate);
+    const dayMoment = getMoment(currentDate);
+    const key = dayMoment.format('YYYY-MM-DD');
     const dayBookings = bookingsByDay[key] || [];
     const dayAvs = availabilitiesForDate(currentDate);
     const isAvailable = !!dayAvs.length;
-    const isToday = isSameDay(currentDate, new Date());
+    const isToday = dayMoment.isSame(getMoment(), 'day');
 
     return (
       <div
@@ -661,12 +670,7 @@ const Calendar = () => {
           }`}
         >
           <h3 className="text-lg font-semibold text-gray-800">
-            {currentDate.toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}
+            {dayMoment.format('dddd, MMMM D, YYYY')}
           </h3>
           {isAvailable && (
             <div className="mt-1 text-sm text-emerald-700">
@@ -679,7 +683,7 @@ const Calendar = () => {
               {dayAvs.map((a) => (
                 <div
                   key={a.vendor_availability_id}
-                  className="flex items-center gap-2 px-3 py-1 text-sm rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200"
+                  className="flex items-center gap-2 px-3 py-1 text-sm border rounded-full bg-emerald-100 text-emerald-700 border-emerald-200"
                 >
                   <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-600" />
                   <div className="text-xs">
@@ -701,7 +705,7 @@ const Calendar = () => {
               {dayAvs.map((a) => (
                 <div
                   key={a.vendor_availability_id}
-                  className="flex items-center justify-between p-3 rounded bg-emerald-50 border border-emerald-200"
+                  className="flex items-center justify-between p-3 border rounded bg-emerald-50 border-emerald-200"
                 >
                   <div>
                     <div className="text-sm font-medium text-emerald-700">
@@ -785,6 +789,7 @@ const Calendar = () => {
         </div>
       );
 
+    const selectedMoment = getMoment(selectedDate);
     const isAvailable = hasAvailability(selectedDate);
 
     return (
@@ -792,12 +797,7 @@ const Calendar = () => {
         <div className="flex items-start justify-between mb-2">
           <div>
             <h3 className="text-lg font-semibold">
-              {selectedDate.toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {selectedMoment.format('dddd, MMMM D, YYYY')}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
               {selectedBookings.length} booking
@@ -837,7 +837,7 @@ const Calendar = () => {
                 });
                 setShowCreateModal(true);
               }}
-              className="px-2 py-1 text-xs text-emerald-700 rounded bg-emerald-50 hover:bg-emerald-100"
+              className="px-2 py-1 text-xs rounded text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
             >
               Add
             </button>
@@ -853,13 +853,13 @@ const Calendar = () => {
                 .map((a) => (
                   <div
                     key={a.vendor_availability_id}
-                    className="flex items-start justify-between p-3 rounded border bg-emerald-50/50 border-emerald-100"
+                    className="flex items-start justify-between p-3 border rounded bg-emerald-50/50 border-emerald-100"
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-emerald-700">
                         {a.startTime} - {a.endTime}
                       </div>
-                      <div className="text-xs text-emerald-700 truncate">
+                      <div className="text-xs truncate text-emerald-700">
                         {a.startDate}{" "}
                         {a.startDate !== a.endDate && `→ ${a.endDate}`}
                       </div>
@@ -902,7 +902,7 @@ const Calendar = () => {
                         key={b.booking_id || b.bookingId}
                         className={`flex items-start justify-between px-2 py-3 border rounded `}
                       >
-                        <div className="min-w-0 flex gap-2 items-center">
+                        <div className="flex items-center min-w-0 gap-2">
                           <span
                             className={`inline-block w-2.5 h-2.5 rounded-full`}
                           />
@@ -1244,7 +1244,7 @@ const Calendar = () => {
                   <div className="font-medium text-gray-800">
                     Delete a specific date range
                   </div>
-                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 mt-2 sm:grid-cols-2">
                     <div>
                       <label className="block text-xs text-gray-600">
                         Start date (inside range)
@@ -1292,7 +1292,7 @@ const Calendar = () => {
               </label>
 
               {deleteBookedDates.length > 0 && (
-                <div className="flex items-start gap-2 p-3 text-sm border rounded bg-yellow-50 border-yellow-200">
+                <div className="flex items-start gap-2 p-3 text-sm border border-yellow-200 rounded bg-yellow-50">
                   <AlertCircle className="mt-0.5 text-yellow-600" size={18} />
                   <div className="text-yellow-800">
                     <div className="font-medium">

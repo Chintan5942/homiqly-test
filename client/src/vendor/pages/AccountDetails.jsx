@@ -47,12 +47,6 @@ const AccountDetails = () => {
     { value: "bank_transfer", label: "Bank Transfer" },
   ];
 
-  const canadianBanks = [
-    { value: "RBC", label: "Royal Bank of Canada (RBC)" },
-    { value: "TD", label: "Toronto-Dominion Bank (TD)" },
-    { value: "Scotiabank", label: "Scotiabank" },
-  ];
-
   // Fetch account details
   const fetchAccount = async () => {
     try {
@@ -200,7 +194,7 @@ const AccountDetails = () => {
       return (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {renderField("Business Name", "business_name", "text", "Registered business name")}
-          {renderField("Legal Entity Name", "legal_name", "text", "Legal name")}
+          {/* {renderField("Legal Entity Name", "legal_name", "text", "Legal name")} */}
         </div>
       );
     }
@@ -288,7 +282,7 @@ const AccountDetails = () => {
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {renderField("Account Holder Name", "account_holder_name", "text", "Legal name on bank account")}
-                    {renderDropdown("Bank Name", "bank_name", canadianBanks)}
+                    {renderField("Bank Name", "bank_name", "text", "e.g. Royal Bank of Canada")}
                     {renderField("Institution Number (3 digits)", "institution_number", "text", "e.g. 004")}
                     {renderField("Transit Number (5 digits)", "transit_number", "text", "e.g. 12345")}
                     {renderField("Account Number (7–12 digits)", "account_number", "text", "e.g. 1234567")}
@@ -306,7 +300,7 @@ const AccountDetails = () => {
                     {renderField("Email Address", "email", "email", "vendor@example.com")}
                   </div>
                 </section>
-
+              
                 {/* Vendor Info */}
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
