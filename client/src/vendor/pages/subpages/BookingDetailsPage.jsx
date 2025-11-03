@@ -10,7 +10,14 @@ import { Button } from "../../../shared/components/Button";
 import axios from "axios";
 import { toast } from "react-toastify";
 import RatingModal from "../../../employees/components/Modals/RatingModal";
-import { Calendar, Clock, Mail, MapPin, Phone, User as UserIcon } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Mail,
+  MapPin,
+  Phone,
+  User as UserIcon,
+} from "lucide-react";
 
 // Version: v2 — expands addons / preferences / consents so vendors see them clearly
 
@@ -262,7 +269,7 @@ const BookingDetailsPage = () => {
                     <div className="">
                       <div className="text-right">
                         <div className="text-sm font-semibold">
-                          ${pkg.totalPrice ?? booking.payment_amount ?? "N/A"}
+                          {/* ${pkg.totalPrice ?? booking.payment_amount ?? "N/A"} */}
                         </div>
                       </div>
                     </div>
@@ -307,7 +314,7 @@ const BookingDetailsPage = () => {
                         </div>
 
                         <div className="text-right text-sm text-gray-700">
-                          <div>${item.price ?? "0.00"}</div>
+                          {/* <div>${item.price ?? "0.00"}</div> */}
                           <div className="text-xs text-gray-400">
                             Qty: {item.quantity ?? 1}
                           </div>
@@ -345,7 +352,7 @@ const BookingDetailsPage = () => {
                                     {addon.quantity
                                       ? `×${addon.quantity} `
                                       : ""}
-                                    {addon.price ? `$${addon.price}` : ""}
+                                    {/* {addon.price ? `$${addon.price}` : ""} */}
                                   </div>
                                 </li>
                               ))}
@@ -375,9 +382,9 @@ const BookingDetailsPage = () => {
                                     {pref.preferenceValue}
                                   </div>
                                   <div className="text-xs text-gray-500">
-                                    {pref.preferencePrice
+                                    {/* {pref.preferencePrice
                                       ? `$${pref.preferencePrice}`
-                                      : ""}
+                                      : ""} */}
                                   </div>
                                 </li>
                               ))}
@@ -489,7 +496,7 @@ const BookingDetailsPage = () => {
                   <div className="flex items-center gap-2">
                     <PaymentBadge status={booking.payment_status} />
                     <span className="text-sm text-gray-700 capitalize">
-                      {booking.payment_status}
+                      {/* {booking.payment_status} */}
                     </span>
                   </div>
                   <div className="text-sm font-semibold">
