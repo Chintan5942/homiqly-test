@@ -308,7 +308,7 @@ const BookingDetailsPage = () => {
                               {item.itemName || item.item_name}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {item.timeRequired || item.time_required || ""}
+                              {`${item.timeRequired}/Min` || ""}
                             </div>
                           </div>
                         </div>

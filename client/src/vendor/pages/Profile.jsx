@@ -376,10 +376,10 @@ const Profile = () => {
 
                                 <div className="space-y-1 md:col-span-2">
                                   <label className="text-sm font-medium text-gray-500">
-                                    Additional Information
+                                    About me
                                   </label>
                                   <p className="text-gray-900">
-                                    {profile?.otherInfo || "Not provided"}
+                                    {profile?.aboutMe || "Not provided"}
                                   </p>
                                 </div>
                               </>

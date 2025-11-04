@@ -43,7 +43,7 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
     companyAddress: profile?.companyAddress || "",
     contactPerson: profile?.contactPerson || "",
     googleBusinessProfileLink: profile?.googleBusinessProfileLink || "",
-    otherInfo: profile?.otherInfo || "",
+    aboutMe: profile?.aboutMe || "",
     birthDate: profile?.birthDate?.slice(0, 10) || "",
     policeClearance: null,
     certificateOfExpertise: null,
@@ -345,12 +345,12 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <FormTextarea
-                          label="Additional Information"
-                          name="otherInfo"
-                          value={formData.otherInfo}
+                        <FormInput
+                          maxLength={30}
+                          label="About me"
+                          name="aboutMe"
+                          value={formData.aboutMe}
                           onChange={handleInputChange}
-                          rows={3}
                           placeholder="Any additional information about your services"
                         />
                       </div>

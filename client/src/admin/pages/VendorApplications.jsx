@@ -117,7 +117,7 @@ const VendorApplications = () => {
           {/* Filters and Actions */}
           <div className="flex flex-col items-stretch w-full gap-3 md:w-auto sm:flex-row sm:items-end sm:gap-4">
             {/* Status Select */}
-            <div className="w-full sm:w-40">
+            {/* <div className="w-full sm:w-40">
               <FormSelect
                 id="status"
                 label="Status"
@@ -132,7 +132,7 @@ const VendorApplications = () => {
                 dropdownDirection="auto"
                 className="w-full"
               />
-            </div>
+            </div> */}
 
             {/* Action Buttons */}
             <div className="flex items-center justify-end space-x-2">
