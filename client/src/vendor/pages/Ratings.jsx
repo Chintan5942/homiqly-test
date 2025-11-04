@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { formatDate } from "../../shared/utils/dateUtils";
-import { FormSelect } from "../../shared/components/Form";
+import { FormInput, FormSelect } from "../../shared/components/Form";
 import { Star, User, Calendar } from "lucide-react";
 
 // Avatar fallback component
@@ -18,6 +18,8 @@ const Ratings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("all");
 
   useEffect(() => {
     fetchRatings();
@@ -41,9 +43,36 @@ const Ratings = () => {
 
   const handleFilterChange = (e) => setFilter(e.target.value);
 
-  const filteredRatings = ratings.filter((rating) =>
-    filter === "all" ? true : rating.rating === parseInt(filter)
-  );
+  const filteredRatings = ratings.filter((rating) => {
+    const matchesRating =
+      filter === "all" ? true : rating.rating === parseInt(filter);
+
+    const q = search.trim().toLowerCase();
+    const matchesSearch = q
+      ? (rating.user_name || "").toLowerCase().includes(q) ||
+        (rating.serviceName || "").toLowerCase().includes(q)
+      : true;
+
+    const matchesService =
+      serviceFilter === "all"
+        ? true
+        : (rating.serviceName || "").trim().toLowerCase() === serviceFilter;
+
+    return matchesRating && matchesSearch && matchesService;
+  });
+
+  const serviceOptions = useMemo(() => {
+    const names = Array.from(
+      new Set(
+        (ratings || []).map((r) => (r.serviceName || "").trim()).filter(Boolean)
+      )
+    ).sort();
+
+    return [
+      { value: "all", label: "All Services" },
+      ...names.map((n) => ({ value: n.toLowerCase(), label: n })),
+    ];
+  }, [ratings]);
 
   const renderStars = (rating) => (
     <div className="flex">
@@ -136,31 +165,47 @@ const Ratings = () => {
       </div>
 
       {/* Reviews + Filter */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="flex flex-col md:flex-row justify-between items-center p-4 border-b bg-gray-50 gap-3">
+      <div className="bg-white rounded-lg">
+        <div className="flex flex-col md:flex-row justify-between items-center p-4 bg-gray-50 gap-3">
           <h3 className="text-lg font-semibold text-gray-800">
             Customer Reviews
           </h3>
-          <FormSelect
-            value={filter}
-            onChange={handleFilterChange}
-            options={[
-              { value: "all", label: "All Ratings" },
-              { value: "5", label: "5 Stars" },
-              { value: "4", label: "4 Stars" },
-              { value: "3", label: "3 Stars" },
-              { value: "2", label: "2 Stars" },
-              { value: "1", label: "1 Star" },
-            ]}
-            className="md:w-48 w-full"
-            aria-label="Filter by rating"
-          />
+
+          <div className="flex w-full md:w-auto gap-3">
+            <FormInput
+              placeholder="Search reviews..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full md:w-64"
+            />
+
+            <FormSelect
+              value={serviceFilter}
+              onChange={(e) => setServiceFilter(e.target.value)}
+              options={serviceOptions}
+              className="md:w-56 w-full"
+              aria-label="Filter by service"
+            />
+
+            <FormSelect
+              value={filter}
+              onChange={handleFilterChange}
+              options={[
+                { value: "all", label: "All Ratings" },
+                { value: "5", label: "5 Stars" },
+                { value: "4", label: "4 Stars" },
+                { value: "3", label: "3 Stars" },
+                { value: "2", label: "2 Stars" },
+                { value: "1", label: "1 Star" },
+              ]}
+              className="md:w-40 w-full"
+              aria-label="Filter by rating"
+            />
+          </div>
         </div>
 
         {filteredRatings.length > 0 ? (
-          <ul
-            className=" grid grid-cols-2  "
-          >
+          <ul className=" grid grid-cols-2  ">
             {filteredRatings.map((rating) => (
               <li
                 key={rating.rating_id}

@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 
 const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
   const [groupedPackages, setGroupedPackages] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
@@ -18,6 +18,7 @@ const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
 
   useEffect(() => {
     const fetchPackages = async () => {
+      setLoading(true);
       try {
         const response = await api.get("/api/admin/getpackages");
         const rawData = Array.isArray(response.data)

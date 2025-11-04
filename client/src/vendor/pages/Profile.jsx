@@ -391,7 +391,6 @@ const Profile = () => {
                   </div>
                 </div>
               )}
-
               {/* Services Tab */}
               {activeTab === "services" && (
                 <div className="transition-all duration-300 ease-in-out">
@@ -466,11 +465,6 @@ const Profile = () => {
                                         {service.package_name}
                                       </h4>
                                     )}
-                                    {service.package_id != null && (
-                                      <p className="text-sm text-gray-500">
-                                        Package ID: {service.package_id}
-                                      </p>
-                                    )}
                                   </div>
                                 </div>
 
@@ -483,7 +477,7 @@ const Profile = () => {
                                           (sub, sIdx) => (
                                             <div
                                               key={sIdx}
-                                              className="flex items-start gap-3 p-3 transition-colors duration-200 rounded-lg bg-gray-50 hover:bg-green-50"
+                                              className="flex items-start gap-3 p-3 transition-colors duration-200 rounded-lg bg-gray-50  "
                                             >
                                               {sub.sub_package_media && (
                                                 <div className="flex-shrink-0 w-16 h-16 overflow-hidden border rounded-lg">

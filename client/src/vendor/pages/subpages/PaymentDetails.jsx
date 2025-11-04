@@ -166,10 +166,10 @@ const PaymentDetails = () => {
             </p>
           </div>
 
-          <div>
+          {/* <div>
             <p className="text-sm text-gray-500">Service ID</p>
             <p className="font-medium text-gray-900">#{payment.package_id ?? payment.service_id ?? "—"}</p>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -188,17 +188,17 @@ const PaymentDetails = () => {
             <p className="text-lg font-medium text-gray-900">
               {payment.packageName ?? "—"}
             </p>
-            <p className="mt-1 text-sm text-gray-500">
+            {/* <p className="mt-1 text-sm text-gray-500">
               Service ID: #{payment.package_id ?? payment.service_id ?? "—"}
-            </p>
+            </p> */}
             <p className="text-sm text-gray-500">
               Price: {formattedPayout}
             </p>
-            {payment.platform_fee_percentage && (
+            {/* {payment.platform_fee_percentage && (
               <p className="mt-1 text-sm text-gray-500">
                 Platform Fee: {payment.platform_fee_percentage}%
               </p>
-            )}
+            )} */}
           </div>
         </div>
       </div>
@@ -213,14 +213,14 @@ const PaymentDetails = () => {
             <p className="text-sm text-gray-500">Name</p>
             <p className="font-medium text-gray-900">{payment.user_name ?? payment.user_fullname ?? "-"}</p>
           </div>
-          <div>
+          {/* <div>
             <p className="text-sm text-gray-500">Email</p>
             <p className="font-medium text-gray-900">{payment.user_email ?? "-"}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Phone</p>
             <p className="font-medium text-gray-900">{payment.user_phone ?? "-"}</p>
-          </div>
+          </div> */}
         </div>
       </div>
 
