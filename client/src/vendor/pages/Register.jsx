@@ -4,10 +4,15 @@ import { useVendorAuth } from "../contexts/VendorAuthContext";
 import { toast } from "react-toastify";
 import axios from "axios";
 import Button from "../../shared/components/Button/Button";
-import { FormInput, FormSelect } from "../../shared/components/Form";
+import {
+  FormOption,
+  FormInput,
+  FormSelect,
+} from "../../shared/components/Form";
 import {
   ArrowLeft,
   ArrowRight,
+  BadgeCheck,
   Loader,
   Lock,
   Mail,
@@ -44,6 +49,15 @@ const Register = () => {
   // City selection (global for this vendor)
   const [cities, setCities] = useState([]);
   const [selectedCity, setSelectedCity] = useState("");
+
+  const expertiseOptions = [
+    "Hairstylist",
+    "Nail technician",
+    "Makeup artist",
+    "Aesthetician/Esthetician",
+  ];
+
+  const [expertise, setExpertise] = useState("");
 
   // Load service categories when entering step 2 or 3
   useEffect(() => {
@@ -122,6 +136,10 @@ const Register = () => {
         return false;
       }
     }
+    if (!expertise) {
+      toast.error("Please select your expertise");
+      return false;
+    }
     return true;
   };
 
@@ -199,6 +217,7 @@ const Register = () => {
       formData.append("phone", phone);
       formData.append("password", password);
       formData.append("aboutme", aboutme);
+      formData.append("expertise", expertise);
       if (resume) formData.append("resume", resume);
     } else {
       formData.append("companyName", companyName);
@@ -360,8 +379,29 @@ const Register = () => {
                         onChange={(e) => setAboutme(e.target.value)}
                         placeholder="About Me"
                         autoComplete="aboutme"
-                        maxLength={30}
+                        maxLength={100}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="expertise"
+                        className="block mb-1 text-sm font-medium text-gray-700"
+                      >
+                        Expertise
+                      </label>
+                      {expertiseOptions.map((opt) => (
+                        <FormOption
+                          key={opt}
+                          // Mainlabel="Expertise"
+                          // type="radio"
+                          name="expertise"
+                          value={opt}
+                          label={opt}
+                          checked={expertise === opt}
+                          onChange={(e) => setExpertise(e.target.value)}
+                          icon={<BadgeCheck className="w-5 h-5" />}
+                        />
+                      ))}
                     </div>
                   </>
                 )}
@@ -619,6 +659,12 @@ const Register = () => {
                               </button>
                             ) : null}
                           </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Expertise</p>
+                          <p className="text-sm font-medium text-gray-800">
+                            {expertise}
+                          </p>
                         </div>
                       </>
                     ) : (

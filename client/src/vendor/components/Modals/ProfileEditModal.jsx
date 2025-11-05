@@ -7,8 +7,7 @@ import {
   FormInput,
   FormTextarea,
   FormFileInput,
-  FormSelect,
-  FormCheckbox,
+  FormOption,
 } from "../../../shared/components/Form";
 import {
   X,
@@ -43,6 +42,7 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
     companyAddress: profile?.companyAddress || "",
     contactPerson: profile?.contactPerson || "",
     googleBusinessProfileLink: profile?.googleBusinessProfileLink || "",
+    expertise: profile?.expertise || "",
     aboutMe: profile?.aboutMe || "",
     birthDate: profile?.birthDate?.slice(0, 10) || "",
     policeClearance: null,
@@ -169,6 +169,13 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
       [field]: !prev[field],
     }));
   };
+
+  const expertiseOptions = [
+    "Hairstylist",
+    "Nail technician",
+    "Makeup artist",
+    "Aesthetician/Esthetician",
+  ];
 
   return (
     /* Replace the entire previous fixed modal markup with this: */
@@ -346,13 +353,40 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
                       </div>
                       <div className="md:col-span-2">
                         <FormInput
-                          maxLength={30}
+                          maxLength={100}
                           label="About me"
                           name="aboutMe"
                           value={formData.aboutMe}
                           onChange={handleInputChange}
                           placeholder="Any additional information about your services"
                         />
+                      </div>
+                      <div className="space-y-1">
+                        <label
+                          className="block mb-1 text-sm font-medium text-gray-700"
+                          htmlFor="expertise"
+                        >
+                          Expertise
+                        </label>
+                        {expertiseOptions.map((opt) => (
+                          <FormOption
+                            key={opt}
+                            type="checkbox"
+                            name="expertise"
+                            value={opt}
+                            checked={formData.expertise.includes(opt)}
+                            onChange={(e) => {
+                              const { checked } = e.target;
+                              setFormData((prev) => ({
+                                ...prev,
+                                expertise: checked
+                                  ? [...prev.expertise, opt]
+                                  : prev.expertise.filter((x) => x !== opt),
+                              }));
+                            }}
+                            label={opt}
+                          />
+                        ))}
                       </div>
                     </>
                   )}
