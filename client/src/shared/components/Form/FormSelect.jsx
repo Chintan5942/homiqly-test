@@ -78,7 +78,10 @@ const FormSelect = ({
       } else {
         // For up direction, we need to calculate based on actual content height
         // Since we don't know the exact height, we'll use the max height
-        top = rect.top + scrollY - Math.min(dropdownMaxHeight, normOptions.length * 40); // Estimate 40px per item
+        top =
+          rect.top +
+          scrollY -
+          Math.min(dropdownMaxHeight, normOptions.length * 40); // Estimate 40px per item
         // If top goes above document (negative), clamp to 0
         if (top < 0) top = 0;
       }
@@ -115,8 +118,14 @@ const FormSelect = ({
     if (open) {
       document.addEventListener("mousedown", handleOutsideClick);
       // Use passive: true for better performance on scroll events
-      window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
-      document.addEventListener("scroll", handleScroll, { passive: true, capture: true });
+      window.addEventListener("scroll", handleScroll, {
+        passive: true,
+        capture: true,
+      });
+      document.addEventListener("scroll", handleScroll, {
+        passive: true,
+        capture: true,
+      });
     }
 
     return () => {
@@ -139,7 +148,7 @@ const FormSelect = ({
       const spaceAbove = rect.top;
 
       let dir = resolvedDirection;
-      
+
       // Recalculate direction if auto
       if (dropdownDirection === "auto") {
         if (spaceBelow >= dropdownMaxHeight) dir = "down";
@@ -154,7 +163,10 @@ const FormSelect = ({
       if (dir === "down") {
         top = rect.bottom + scrollY;
       } else {
-        top = rect.top + scrollY - Math.min(dropdownMaxHeight, normOptions.length * 40);
+        top =
+          rect.top +
+          scrollY -
+          Math.min(dropdownMaxHeight, normOptions.length * 40);
         if (top < 0) top = 0;
       }
 
@@ -167,7 +179,13 @@ const FormSelect = ({
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [open, resolvedDirection, dropdownDirection, dropdownMaxHeight, normOptions.length]);
+  }, [
+    open,
+    resolvedDirection,
+    dropdownDirection,
+    dropdownMaxHeight,
+    normOptions.length,
+  ]);
 
   // Keyboard handlers for accessibility
   useEffect(() => {
@@ -179,11 +197,13 @@ const FormSelect = ({
           const next = i + 1;
           return next >= normOptions.length ? 0 : next;
         });
-        
+
         // Scroll highlighted item into view
         setTimeout(() => {
-          const highlightedItem = listRef.current?.querySelector('[data-highlighted="true"]');
-          highlightedItem?.scrollIntoView({ block: 'nearest' });
+          const highlightedItem = listRef.current?.querySelector(
+            '[data-highlighted="true"]'
+          );
+          highlightedItem?.scrollIntoView({ block: "nearest" });
         }, 0);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
@@ -191,11 +211,13 @@ const FormSelect = ({
           const next = i - 1;
           return next < 0 ? normOptions.length - 1 : next;
         });
-        
+
         // Scroll highlighted item into view
         setTimeout(() => {
-          const highlightedItem = listRef.current?.querySelector('[data-highlighted="true"]');
-          highlightedItem?.scrollIntoView({ block: 'nearest' });
+          const highlightedItem = listRef.current?.querySelector(
+            '[data-highlighted="true"]'
+          );
+          highlightedItem?.scrollIntoView({ block: "nearest" });
         }, 0);
       } else if (e.key === "Enter") {
         e.preventDefault();
@@ -211,11 +233,11 @@ const FormSelect = ({
         setOpen(false);
       }
     };
-    
+
     if (open) {
       document.addEventListener("keydown", onKey);
     }
-    
+
     return () => document.removeEventListener("keydown", onKey);
   }, [open, highlightIndex, normOptions]);
 
@@ -279,9 +301,13 @@ const FormSelect = ({
           aria-labelledby={id || name}
           onClick={toggleOpen}
           disabled={disabled}
-          className={`w-full text-left text-sm py-2.5 pr-3 outline-none bg-transparent flex items-center gap-2 ${
+          className={`w-full text-left text-sm py-2 pr-3 outline-none bg-transparent flex items-center gap-2 ${
             icon ? "pl-2" : "px-3"
-          } ${disabled ? "text-gray-400 cursor-not-allowed" : "text-gray-900 cursor-pointer"}`}
+          } ${
+            disabled
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-gray-900 cursor-pointer"
+          }`}
         >
           <span className="flex-1 text-sm truncate">
             {selectedOption ? (
@@ -291,7 +317,7 @@ const FormSelect = ({
             )}
           </span>
 
-          <span className="flex-shrink-0 ml-2 text-gray-400 select-none">
+          <span className="flex-shrink-0 ml-3 text-gray-400 select-none">
             {/* chevron */}
             <svg
               className={`w-4 h-4 transform transition-transform duration-200 ${
@@ -320,71 +346,70 @@ const FormSelect = ({
         createPortal(
           <div
             ref={listRef}
-            className="fixed z-50 overflow-hidden bg-white border border-gray-200 rounded-lg shadow-lg"
+            className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg overflow-auto"
             style={{
               top: dropdownPos.top,
               left: dropdownPos.left,
               width: dropdownPos.width,
               maxHeight: dropdownMaxHeight,
-              minWidth: dropdownPos.width, // Ensure minimum width matches trigger
+              minWidth: dropdownPos.width,
             }}
             role="listbox"
             aria-labelledby={id || name}
             tabIndex={-1}
             data-direction={resolvedDirection}
           >
-            <div className="max-h-full overflow-auto">
-              {normOptions.length === 0 ? (
-                <div 
-                  className="px-4 py-3 text-sm text-center text-gray-500"
-                  role="option"
-                >
-                  No options available
-                </div>
-              ) : (
-                <ul className="py-1">
-                  {normOptions.map((opt, idx) => {
-                    const active = String(opt.value) === String(value);
-                    const highlighted = idx === highlightIndex;
-                    return (
-                      <li
-                        key={String(opt.value) + "-" + idx}
-                        role="option"
-                        aria-selected={active}
-                        data-highlighted={highlighted}
-                        className={`cursor-pointer select-none px-4 py-2 text-sm transition-colors duration-150 w-auto${
-                          active
-                            ? "bg-blue-50 text-green-600 font-medium"
-                            : "text-gray-800"
-                        } ${
-                          highlighted ? "bg-gray-100" : ""
-                        } hover:bg-gray-100 active:bg-gray-200`}
-                        onMouseEnter={() => setHighlightIndex(idx)}
-                        onMouseLeave={() => setHighlightIndex(-1)}
-                        onClick={() => handleItemClick(opt.value)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="truncate">{opt.label}</span>
-                          {active && (
-                            <svg
-                              className="flex-shrink-0 w-4 h-4 ml-2 text-green-600"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+            {normOptions.length === 0 ? (
+              <div
+                className="px-4 py-3 text-sm text-center text-gray-500"
+                role="option"
+              >
+                No options available
+              </div>
+            ) : (
+              <ul className="py-1 max-h-full overflow-auto">
+                {/* optional but recommended */}
+                {normOptions.map((opt, idx) => {
+                  const active = String(opt.value) === String(value);
+                  const highlighted = idx === highlightIndex;
+                  return (
+                    <li
+                      key={String(opt.value) + "-" + idx}
+                      role="option"
+                      aria-selected={active}
+                      data-highlighted={highlighted}
+                      className={`cursor-pointer select-none px-4 py-2 text-sm transition-colors duration-150 w-auto${
+                        active
+                          ? "bg-blue-50 text-green-600 font-medium"
+                          : "text-gray-800"
+                      } ${
+                        highlighted ? "bg-gray-100" : ""
+                      } hover:bg-gray-100 active:bg-gray-200`}
+                      onMouseEnter={() => setHighlightIndex(idx)}
+                      onMouseLeave={() => setHighlightIndex(-1)}
+                      onClick={() => handleItemClick(opt.value)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="truncate">{opt.label}</span>
+                        {active && (
+                          <svg
+                            className="flex-shrink-0 w-4 h-4 ml-2 text-green-600"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>,
           document.body
         )}

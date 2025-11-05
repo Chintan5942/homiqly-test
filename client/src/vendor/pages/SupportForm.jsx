@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import api from "../../lib/axiosConfig";
-import { jwtDecode } from "jwt-decode";
 import { FormInput, FormTextarea } from "../../shared/components/Form";
 import { Button } from "../../shared/components/Button";
 import { toast } from "react-toastify";
@@ -12,43 +11,44 @@ const SupportForm = () => {
     message: "",
   });
   const [loading, setLoading] = useState(false);
-  const [tickets, setTickets] = useState([]); // ✅ store tickets
+  const [tickets, setTickets] = useState([]);
 
-  // ✅ Fetch vendor tickets
+  // Fetch vendor tickets and name on mount
   const fetchVendor = async () => {
     try {
       const res = await api.get("/api/vendor");
-      if (res.data?.tickets) {
-        setTickets(res.data.tickets);
-        if (res.data.tickets.length > 0) {
-          const vendor = res.data.tickets[0];
-          setForm((prev) => ({
-            ...prev,
-            name: vendor.vendor_name || "",
-          }));
-        }
-      }
+      const vendorTickets = res.data?.tickets || [];
+      setTickets(vendorTickets);
     } catch (err) {
       console.error("Failed to fetch vendor:", err);
       toast.error("Failed to load vendor details.");
     }
   };
+
   useEffect(() => {
     fetchVendor();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!form.name.trim() || !form.subject.trim() || !form.message.trim()) {
+      toast.error("Please fill all required fields.");
+      return;
+    }
+
     setLoading(true);
     try {
       await api.post("/api/contact", form);
       toast.success("Ticket sent successfully!");
       setForm({ name: "", subject: "", message: "" });
-      fetchVendor();
+      await fetchVendor(); // await to ensure tickets refresh after submit
     } catch (error) {
       toast.error("Failed to send ticket. Please try again.");
     } finally {
@@ -59,27 +59,35 @@ const SupportForm = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-8">
       {/* Support Form */}
-      <form onSubmit={handleSubmit} className="max-w-lg mx-auto space-y-4">
+      <form
+        onSubmit={handleSubmit}
+        className="max-w-lg mx-auto space-y-4"
+        noValidate
+      >
         <FormInput
+          id="name"
           name="name"
           value={form.name}
           onChange={handleChange}
           placeholder="Your Name"
-          required
+          label="Name"
         />
         <FormInput
+          id="subject"
           name="subject"
           value={form.subject}
           onChange={handleChange}
           placeholder="Subject"
-          required
+          label="Subject"
         />
         <FormTextarea
+          id="message"
           name="message"
           value={form.message}
           onChange={handleChange}
           placeholder="Describe your issue"
           required
+          label="Message"
         />
         <div className="flex justify-end">
           <Button type="submit" disabled={loading}>
@@ -99,7 +107,6 @@ const SupportForm = () => {
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
                 Vendor Name
               </th>
-
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
                 Subject
               </th>
@@ -137,14 +144,16 @@ const SupportForm = () => {
                     </span>
                   </td>
                   <td className="px-4 py-2 text-sm">
-                    {new Date(ticket.created_at).toLocaleString()}
+                    {ticket.created_at
+                      ? new Date(ticket.created_at).toLocaleString()
+                      : "-"}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
                 <td
-                  colSpan="6"
+                  colSpan={6}
                   className="px-4 py-4 text-center text-gray-500 text-sm"
                 >
                   No tickets found

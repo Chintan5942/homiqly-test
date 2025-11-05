@@ -6,7 +6,7 @@ import VendorDetailsModal from "../components/Modals/VendorDetailsModal";
 import { Button } from "../../shared/components/Button";
 import { FormInput, FormSelect } from "../../shared/components/Form";
 import Pagination from "../../shared/components/Pagination";
-import { RefreshCcw, Search } from "lucide-react";
+import { RefreshCcw, RotateCcw, Search } from "lucide-react";
 
 const Vendors = () => {
   const [vendors, setVendors] = useState([]);
@@ -28,10 +28,14 @@ const Vendors = () => {
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(searchTerm.trim());
-      setPage(1); // reset to first page when search changes
     }, 500);
     return () => clearTimeout(t);
   }, [searchTerm]);
+
+  // When search/filter changes, reset page
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filter]);
 
   // fetchVendors uses current page, limit, debouncedSearch and filter
   const fetchVendors = useCallback(async () => {
@@ -39,27 +43,17 @@ const Vendors = () => {
       setLoading(true);
       setError(null);
 
-      const params = {
-        page,
-        limit,
-      };
-
-      // Add search if present
+      const params = { page, limit };
       if (debouncedSearch) params.search = debouncedSearch;
-
-      // Map UI filter to API status param if your API expects it:
-      // assuming API expects something like status=0|1|2 or not sending parameter for 'all'
       if (filter === "pending") params.status = 0;
       else if (filter === "approved") params.status = 1;
       else if (filter === "rejected") params.status = 2;
 
       const response = await axios.get("/api/admin/getvendors", { params });
-
-      // adapt to your response shape
       const respData = response.data || {};
       setVendors(respData.data || []);
       setPage(respData.page || page);
-      setLimit(respData.limit || limit);
+      // setLimit(respData.limit || limit);
       setTotalPages(respData.totalPages || 1);
       setTotal(respData.total || (respData.totalCount ?? 0));
       setLoading(false);
@@ -70,10 +64,11 @@ const Vendors = () => {
     }
   }, [page, limit, debouncedSearch, filter]);
 
-  // Fetch whenever page, limit, debouncedSearch or filter changes
+  // Only run when truly needed
   useEffect(() => {
     fetchVendors();
-  }, [fetchVendors]);
+  }, [fetchVendors, page, limit, debouncedSearch, filter]);
+
 
   const handleApproveVendor = async (vendorId, status) => {
     try {
@@ -131,56 +126,41 @@ const Vendors = () => {
 
   return (
     <div className="p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800">Vendor Management</h2>
-        
-        <div className="flex items-center space-x-2">
-          <div className="hidden mr-2 text-sm text-gray-600 md:block">
-            Page {page} of {totalPages}
-          </div>
+      <h2 className="text-2xl font-bold text-gray-800">Vendor Management</h2>
 
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex-1 min-w-[200px]">
+          <FormInput
+            icon={<Search />}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search vendor by name, email or company"
+            aria-label="Search vendors"
+          />
+        </div>
+
+        <div>
+          <FormSelect
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            options={[
+              { value: "all", label: "All Vendors" },
+              { value: "pending", label: "Pending" },
+              { value: "approved", label: "Approved" },
+              { value: "rejected", label: "Rejected" },
+            ]}
+            aria-label="Filter vendors by status"
+          />
+        </div>
+
+        <div>
           <Button
-            className="h-9"
             onClick={fetchVendors}
-            variant="outline"
-            icon={<RefreshCcw className="w-4 h-4 mr-2" />}
+            variant="lightInherit"
+            icon={<RefreshCcw className="w-4 h-4" />}
           >
             Refresh
           </Button>
-        </div>
-      </div>
-
-      {/* Search and Filter Controls */}
-      <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center w-full gap-3 md:w-auto">
-          <div className="flex-1 min-w-0 md:max-w-xs">
-            <FormInput
-              icon={<Search />}
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search vendor by name, email or company"
-              className="w-full"
-              aria-label="Search vendors"
-            />
-          </div>
-
-          <div className="w-full sm:w-56">
-            <FormSelect
-              value={filter}
-              onChange={(e) => {
-                setFilter(e.target.value);
-                setPage(1); // reset to first page on filter change
-              }}
-              options={[
-                { value: "all", label: "All Vendors" },
-                { value: "pending", label: "Pending" },
-                { value: "approved", label: "Approved" },
-                { value: "rejected", label: "Rejected" },
-              ]}
-              aria-label="Filter vendors by status"
-            />
-          </div>
         </div>
       </div>
 
@@ -205,7 +185,10 @@ const Vendors = () => {
             keepVisibleOnSinglePage={true}
             totalRecords={total}
             limit={limit}
-            onLimitChange={(n) => { setLimit(n); setPage(1); }}
+            onLimitChange={(n) => {
+              setLimit(n);
+              setPage(1);
+            }}
             renderLimitSelect={({ value, onChange, options }) => (
               <FormSelect
                 id="limit"
@@ -213,7 +196,10 @@ const Vendors = () => {
                 dropdownDirection="auto"
                 value={value}
                 onChange={(e) => onChange(Number(e.target.value))}
-                options={options.map((v) => ({ value: v, label: `${v} / page` }))}
+                options={options.map((v) => ({
+                  value: v,
+                  label: `${v}`,
+                }))}
               />
             )}
             pageSizeOptions={[5, 10, 20, 50]}

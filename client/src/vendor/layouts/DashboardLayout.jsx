@@ -4,7 +4,19 @@ import { useVendorAuth } from "../contexts/VendorAuthContext";
 import { HeaderMenu } from "../../shared/components/Header";
 import NotificationIcon from "../components/NotificationIcon";
 import api from "../../lib/axiosConfig"; // ✅ your axios instance
-import { Calendar, CreditCard, HelpCircle, Home, Loader, Loader2, Menu, ShoppingBag, Star, User, X } from "lucide-react";
+import {
+  Calendar,
+  CreditCard,
+  HelpCircle,
+  Home,
+  Loader,
+  Loader2,
+  Menu,
+  ShoppingBag,
+  Star,
+  User,
+  X,
+} from "lucide-react";
 
 const DashboardLayout = () => {
   const { currentUser, logout } = useVendorAuth();
@@ -103,7 +115,13 @@ const DashboardLayout = () => {
 
   const getPageTitle = () => {
     const currentPath = location.pathname;
-    const menuItem = menuItems.find((item) => item.path === currentPath);
+
+    // Try to find menu item where currentPath starts with its path
+    const menuItem = menuItems.find(
+      (item) =>
+        currentPath === item.path || currentPath.startsWith(item.path + "/")
+    );
+
     return menuItem ? menuItem.name : "Dashboard";
   };
 
@@ -130,7 +148,7 @@ const DashboardLayout = () => {
     <div className="flex h-screen bg-background">
       {/* Mobile overlay */}
       {mobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden"
           onClick={closeMobileMenu}
         />
@@ -141,13 +159,23 @@ const DashboardLayout = () => {
         className={`bg-background text-text-primary fixed inset-y-0 left-0 z-10 transform transition-all duration-300 ease-in-out lg:static lg:inset-0 ${
           sidebarOpen ? "w-64" : "w-20"
         } ${
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          mobileMenuOpen
+            ? "translate-x-0"
+            : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className={`px-6 py-8 border-b border-white/10 ${!sidebarOpen && 'px-4'}`}>
-            <div className={`flex items-center ${!sidebarOpen ? 'justify-center' : 'justify-between'}`}>
+          <div
+            className={`px-6 py-8 border-b border-white/10 ${
+              !sidebarOpen && "px-4"
+            }`}
+          >
+            <div
+              className={`flex items-center ${
+                !sidebarOpen ? "justify-center" : "justify-between"
+              }`}
+            >
               {sidebarOpen ? (
                 <>
                   <h2 className="text-2xl font-bold">Homiqly</h2>
@@ -173,10 +201,10 @@ const DashboardLayout = () => {
                       location.pathname === item.path
                         ? "bg-primary-light/15 text-primary"
                         : "border-transparent text-text-muted hover:bg-backgroundTertiary/50 hover:text-text-primary"
-                    } ${!sidebarOpen ? 'justify-center px-4' : ''}`}
+                    } ${!sidebarOpen ? "justify-center px-4" : ""}`}
                     title={!sidebarOpen ? item.name : ""}
                   >
-                    <span className={`${sidebarOpen ? 'mr-3' : ''}`}>
+                    <span className={`${sidebarOpen ? "mr-3" : ""}`}>
                       {item.icon}
                     </span>
                     {sidebarOpen && item.name}
@@ -201,7 +229,7 @@ const DashboardLayout = () => {
               >
                 <Menu className="w-6 h-6 " />
               </button>
-              
+
               {/* Mobile menu toggle */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -213,7 +241,7 @@ const DashboardLayout = () => {
                   <Menu className="w-6 h-6" />
                 )}
               </button>
-              
+
               <h1 className="ml-4 text-xl font-semibold text-gray-800">
                 {getPageTitle()}
               </h1>

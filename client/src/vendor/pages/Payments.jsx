@@ -29,7 +29,7 @@ const Payments = () => {
   });
 
   const [totalPages, setTotalPages] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalBookings, setTotalBookings] = useState(0);
 
   // modal state for apply payout
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -86,18 +86,18 @@ const Payments = () => {
       setStats({
         totalPayout: computedTotalPayout,
         totalBookings:
-          resp.totalBookings ?? resp.totalRecords ?? payouts.length,
+          resp.totalBookings ?? resp.totalBookings ?? payouts.length,
         pendingPayout: computedPendingPayout,
         paidPayout: resp.paidPayout ?? 0,
       });
-
+      
       // pagination meta (from API if present)
       setTotalPages(
         resp.totalPages ??
-        Math.max(1, Math.ceil((resp.totalRecords ?? payouts.length) / limit))
+        Math.max(1, Math.ceil((resp.totalBookings ?? payouts.length) / limit))
       );
-      setTotalRecords(
-        resp.totalRecords ?? resp.totalBookings ?? payouts.length
+      setTotalBookings(
+        resp.totalBookings ?? resp.totalBookings ?? payouts.length
       );
 
       setLoading(false);
@@ -283,6 +283,7 @@ const Payments = () => {
                 { value: "pending", label: "Pending" },
                 { value: "paid", label: "Paid" },
                 { value: "completed", label: "Completed" },
+                { value: "hold", label: "Hold" },
               ]}
             />
           </div>
@@ -357,7 +358,7 @@ const Payments = () => {
             onPageChange={(p) => setPage(p)}
             disabled={loading}
             keepVisibleOnSinglePage={true}
-            totalRecords={totalRecords}
+            totalBookings={totalBookings}
             limit={limit}
             onLimitChange={(n) => { setLimit(n); setPage(1); }}
             renderLimitSelect={({ value, onChange, options }) => (

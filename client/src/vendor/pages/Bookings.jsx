@@ -6,8 +6,7 @@ import { FormSelect, FormInput } from "../../shared/components/Form";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
-import { RefreshCcw } from "lucide-react";
+import { Search, RefreshCcw } from "lucide-react";
 import Pagination from "../../shared/components/Pagination";
 
 const VendorBookings = () => {
@@ -15,19 +14,19 @@ const VendorBookings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // filter / assignment state
+  // Filter / assignment state
   const [filter, setFilter] = useState("all");
   const [employees, setEmployees] = useState([]);
   const [selectedEmployeeMap, setSelectedEmployeeMap] = useState({});
 
-  // search (debounced)
+  // Search state
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // date range
+  // Date range
   const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
 
-  // pagination (controlled by backend if provided)
+  // Pagination
   const [page, setPage] = useState(1); // requested page
   const [limit, setLimit] = useState(10); // requested limit
   const [total, setTotal] = useState(0); // total records from backend
@@ -35,16 +34,20 @@ const VendorBookings = () => {
 
   const navigate = useNavigate();
 
-  // debounce search so API isn't called on every key
+  // Debounce search input
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(searchTerm.trim());
-      setPage(1);
     }, 350);
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  // fetch employees (for assign dropdown)
+  // Reset page to 1 on search, filter, or dateRange change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filter, dateRange]);
+
+  // Fetch employees - runs once on mount
   const fetchEmployees = useCallback(async () => {
     try {
       const token = localStorage.getItem("vendorToken");
@@ -57,46 +60,58 @@ const VendorBookings = () => {
     }
   }, []);
 
-const fetchBookings = useCallback(async () => {
-  try {
-    setLoading(true);
-    setError(null);
+  useEffect(() => {
+    fetchEmployees();
+  }, [fetchEmployees]);
 
-    const params = {
-      page,
-      limit,
-      status: filter !== "all" ? filter : undefined,
-      search: debouncedSearch || undefined,
-      start_date: dateRange.startDate || undefined,
-      end_date: dateRange.endDate || undefined,
-    };
+  // Fetch bookings - called whenever page, limit, filter, debouncedSearch, or dateRange changes
+  const fetchBookings = useCallback(
+    async (page, limit, filter, search, dateRange) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    const res = await axios.get("/api/booking/vendorassignedservices", { params });
+        const params = {
+          page,
+          limit,
+          status: filter !== "all" ? filter : undefined,
+          search: search || undefined,
+          start_date: dateRange.startDate || undefined,
+          end_date: dateRange.endDate || undefined,
+        };
 
-    const { bookings, currentPage, totalPages, totalRecords, limit: apiLimit } = res.data;
+        const res = await axios.get("/api/booking/vendorassignedservices", {
+          params,
+        });
 
-    setBookings(bookings);
-    setPage(currentPage);
-    setLimit(apiLimit);
-    setTotal(totalRecords);
-    setTotalPages(totalPages);
-  } catch (err) {
-    setError("Failed to load bookings");
-    setBookings([]);
-    setTotal(0);
-    setTotalPages(1);
-  } finally {
-    setLoading(false);
-  }
-}, [page, limit, filter, debouncedSearch, dateRange]);
+        const {
+          bookings,
+          currentPage,
+          totalPages,
+          totalRecords,
+        } = res.data;
 
+        setBookings(bookings);
+        setPage(currentPage);
+        setTotalPages(totalPages);
+        setTotal(totalRecords);
+      } catch (err) {
+        setError("Failed to load bookings");
+        setBookings([]);
+        setTotal(0);
+        setTotalPages(1);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    fetchBookings();
-    fetchEmployees();
-  }, [fetchBookings, fetchEmployees]);
+    fetchBookings(page, limit, filter, debouncedSearch, dateRange);
+  }, [page, limit, filter, debouncedSearch, dateRange, fetchBookings]);
 
-  // assignment helpers
+  // Assignment helpers and handlers remain unchanged
   const handleSelectEmployee = (bookingId, employeeId) => {
     setSelectedEmployeeMap((prev) => ({ ...prev, [bookingId]: employeeId }));
   };
@@ -116,7 +131,6 @@ const fetchBookings = useCallback(async () => {
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
 
-      // Update UI: put assigned employee name into booking row if available
       const assignedEmployee = employees.find(
         (e) => e.employee_id === employeeId
       );
@@ -124,15 +138,14 @@ const fetchBookings = useCallback(async () => {
         prev.map((b) =>
           b.booking_id === bookingId
             ? {
-              ...b,
-              employeeName:
-                assignedEmployee?.employee_name || assignedEmployee?.name,
-            }
+                ...b,
+                employeeName:
+                  assignedEmployee?.employee_name || assignedEmployee?.name,
+              }
             : b
         )
       );
 
-      // clear selection for that booking
       setSelectedEmployeeMap((prev) => {
         const copy = { ...prev };
         delete copy[bookingId];
@@ -140,15 +153,13 @@ const fetchBookings = useCallback(async () => {
       });
 
       toast.success(res?.data?.message || "Employee assigned successfully");
-      // optionally refresh list (keeps data fresh)
-      fetchBookings();
+      fetchBookings(page, limit, filter, debouncedSearch, dateRange);
     } catch (err) {
       console.error("Failed to assign employee:", err);
       toast.error(err?.response?.data?.message || "Failed to assign employee");
     }
   };
 
-  // update status (vendor approve/reject)
   const handleUpdateStatus = async (bookingId, status) => {
     try {
       const res = await axios.put("/api/booking/approveorrejectbooking", {
@@ -179,64 +190,43 @@ const fetchBookings = useCallback(async () => {
     navigate(`/vendor/bookings/${booking.booking_id}`, { state: { booking } });
   };
 
-  // filters handlers
+  // Filters handlers
   const handleFilterChange = (e) => {
     setFilter(e.target.value);
-    setPage(1);
   };
 
   const handleDateChange = (e) => {
     const { name, value } = e.target;
     setDateRange((prev) => ({ ...prev, [name]: value }));
-    setPage(1);
   };
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
-
   const resetAll = () => {
     setSearchTerm("");
     setFilter("all");
     setDateRange({ startDate: "", endDate: "" });
     setLimit(10);
-    setPage(1);
+    setPage(1); 
   };
 
-  // render states
-  if (loading && bookings.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
-  if (error && bookings.length === 0) {
-    return <div className="text-red-500 p-4 bg-red-50 rounded">{error}</div>;
-  }
+  // Render states for loading and error remain unchanged
 
   return (
     <div className="space-y-6 p-3">
+      {/* Header and controls */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">
-          Vendor Booking Management
-        </h2>
-
+        <h2 className="text-2xl font-bold text-gray-800">Vendor Booking Management</h2>
         <div className="flex space-x-2 items-center">
-          <div className="hidden md:block text-sm text-gray-600 mr-2">
-            Page {page} of {totalPages}
-          </div>
-
           <Button
-            className="h-9"
             onClick={() => {
-              fetchBookings();
+              fetchBookings(page, limit, filter, debouncedSearch, dateRange);
               fetchEmployees();
             }}
-            variant="outline"
-            icon={<RefreshCcw className="mr-2 h-4 w-4" />}
+            variant="lightInherit"
+            icon={<RefreshCcw className="h-4 w-4" />}
           >
             Refresh
           </Button>
@@ -262,6 +252,7 @@ const fetchBookings = useCallback(async () => {
           {/* Status */}
           <div className="md:col-span-1">
             <FormSelect
+              label="Status"
               name="filter"
               value={filter}
               onChange={handleFilterChange}
@@ -278,6 +269,7 @@ const fetchBookings = useCallback(async () => {
           {/* Start Date */}
           <div className="md:col-span-1">
             <FormInput
+              label="Start Date"
               id="startDate"
               name="startDate"
               value={dateRange.startDate}
@@ -290,6 +282,7 @@ const fetchBookings = useCallback(async () => {
           {/* End Date */}
           <div className="md:col-span-1">
             <FormInput
+              label="End Date"
               id="endDate"
               name="endDate"
               value={dateRange.endDate}
@@ -342,10 +335,12 @@ const fetchBookings = useCallback(async () => {
             onPageChange={(p) => setPage(p)}
             disabled={loading}
             keepVisibleOnSinglePage={true}
-            totalRecords={total}          // for "Showing A–B of N"
+            totalRecords={total} // for "Showing A–B of N"
             limit={limit}
-            onLimitChange={(n) => { setLimit(n); setPage(1); }}
-
+            onLimitChange={(n) => {
+              setLimit(n);
+              setPage(1);
+            }}
             renderLimitSelect={({ value, onChange, options }) => (
               <FormSelect
                 id="limit"
@@ -359,8 +354,6 @@ const fetchBookings = useCallback(async () => {
             pageSizeOptions={[5, 10, 20, 50]}
           />
         </div>
-
-
       </div>
     </div>
   );

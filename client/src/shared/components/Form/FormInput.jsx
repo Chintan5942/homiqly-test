@@ -48,9 +48,9 @@ const FormInput = ({
             onBlur={() => setTouched(true)} // Mark field as touched
             placeholder={placeholder}
             disabled={disabled}
-            className={`w-full outline-none text-sm placeholder-gray-400 rounded-lg bg-transparent py-1.5 ${
+            className={`w-full outline-none text-sm placeholder-gray-400 rounded-lg bg-transparent py-2 ${
               icon ? "pl-2 pr-4" : "px-4"
-            } ${disabled ? "text-gray-400 bg-gray-50" : "text-gray-900"}`}
+            } ${disabled ? "text-gray-400 bg-gray-50 cursor-not-allowed" : "text-gray-900"}`}
             {...rest}
           />
         </div>

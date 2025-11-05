@@ -51,8 +51,7 @@ export default function Pagination({
 
   className = "",
 }) {
-  const show =
-    keepVisibleOnSinglePage ? true : (totalPages && totalPages > 1);
+  const show = keepVisibleOnSinglePage ? true : totalPages && totalPages > 1;
 
   if (!show) return null;
 
@@ -71,9 +70,7 @@ export default function Pagination({
   const startIdx = hasSummary
     ? Math.min((safePage - 1) * limit + 1, totalRecords)
     : null;
-  const endIdx = hasSummary
-    ? Math.min(safePage * limit, totalRecords)
-    : null;
+  const endIdx = hasSummary ? Math.min(safePage * limit, totalRecords) : null;
 
   // Default fallback <select> if user didn't provide a custom FormSelect
   const DefaultSelect = ({ value, onChange, options }) => (
@@ -113,11 +110,12 @@ export default function Pagination({
               <strong>{totalRecords}</strong> entries
             </>
           ) : (
-            <>Page {safePage} of {totalPages || 1}</>
+            <>
+              Page {safePage} of {totalPages || 1}
+            </>
           )}
         </div>
-
-        {/* Page size dropdown (optional) */}
+        {/* // Always show page size select, never adjust */}
         {typeof onLimitChange === "function" && Number.isFinite(limit) && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Rows:</span>
@@ -177,7 +175,9 @@ export default function Pagination({
 
         <button
           className={`${btnBase} ${ghost}`}
-          onClick={() => onPageChange?.(Math.min((totalPages || 1), safePage + 1))}
+          onClick={() =>
+            onPageChange?.(Math.min(totalPages || 1, safePage + 1))
+          }
           disabled={allDisabled || safePage === (totalPages || 1)}
           aria-label="Next page"
         >

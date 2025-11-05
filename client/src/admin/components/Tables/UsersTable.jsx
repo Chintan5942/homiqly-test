@@ -70,6 +70,7 @@ const UsersTable = ({ users, isLoading, onViewUser, onEditUser, onDelete }) => {
               onEditUser(row);
             }}
             tooltip="Edit user"
+            variant="ghost"
           />
           <IconButton
             icon={<Trash className="w-4 h-4" />}

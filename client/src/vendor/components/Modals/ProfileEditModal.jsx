@@ -47,9 +47,13 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
     birthDate: profile?.birthDate?.slice(0, 10) || "",
     policeClearance: null,
     certificateOfExpertise: null,
-    certificateOfExpertiseExpireDate: "",
     businessLicense: null,
-    businessLicenseExpireDate: "",
+    certificateOfExpertiseExpireDate: profile?.certificateOfExpertiseExpireDate
+      ? profile.certificateOfExpertiseExpireDate.slice(0, 10)
+      : "",
+    businessLicenseExpireDate: profile?.businessLicenseExpireDate
+      ? profile.businessLicenseExpireDate.slice(0, 10)
+      : "",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -69,6 +73,27 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const UploadedInfo = ({ url, label, extra }) => {
+    if (!url) return null;
+    return (
+      <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-2.5 py-1">
+        <CheckCheck className="w-4 h-4 text-green-600" />
+        <span className="text-sm text-green-800">{label} uploaded</span>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm underline hover:no-underline"
+        >
+          View
+        </a>
+        {extra ? (
+          <span className="text-sm text-green-800">• {extra}</span>
+        ) : null}
+      </div>
+    );
   };
 
   const handlePasswordChange = (e) => {
@@ -280,6 +305,7 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
                     required
                   />
                   <FormInput
+                    disabled
                     label="Email Address"
                     name="email"
                     type="email"
@@ -516,44 +542,68 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
               <div className="grid grid-cols-1 gap-6 md:grid-cols-1 mt-4">
                 {/* Police Clearance */}
                 <div>
+                  <label className="block mb-1 text-sm font-medium text-gray-700">
+                    Police Clearance
+                  </label>
                   <FormFileInput
-                    label="Police Clearance"
                     name="policeClearance"
                     accept="image/*,application/pdf"
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        policeClearance: e.target.files[0],
+                        policeClearance: e.target.files?.[0] || null,
                       })
                     }
+                  />
+                  {/* Show status if already uploaded */}
+                  <UploadedInfo
+                    url={profile?.policeClearance}
+                    label="Police Clearance"
                   />
                 </div>
 
                 {/* Certificate of Expertise */}
                 <div>
+                  <label className="block mb-1 text-sm font-medium text-gray-700">
+                    Certificate of Expertise
+                  </label>
                   <FormFileInput
-                    label="Certificate of Expertise"
                     name="certificateOfExpertise"
                     accept="image/*,application/pdf"
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        certificateOfExpertise: e.target.files[0],
+                        certificateOfExpertise: e.target.files?.[0] || null,
                       })
                     }
                   />
-                  {formData.certificateOfExpertise && (
-                    <div>
+                  <UploadedInfo
+                    url={profile?.certificateOfExpertise}
+                    label="Certificate of Expertise"
+                    extra={
+                      formData.certificateOfExpertiseExpireDate ? (
+                        <>
+                          Expires on {formData.certificateOfExpertiseExpireDate}
+                        </>
+                      ) : undefined
+                    }
+                  />
+                  {/* Only require date if a NEW file is picked */}
+                  {(formData.certificateOfExpertise ||
+                    formData.certificateOfExpertiseExpireDate) && (
+                    <div className="mt-3">
                       <FormInput
                         type="date"
                         label="Certificate of Expertise Expiry Date"
                         name="certificateOfExpertiseExpireDate"
+                        value={formData.certificateOfExpertiseExpireDate}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
                             certificateOfExpertiseExpireDate: e.target.value,
                           })
                         }
+                        required={!!formData.certificateOfExpertise}
                       />
                     </div>
                   )}
@@ -561,38 +611,50 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
 
                 {/* Business License */}
                 <div>
+                  <label className="block mb-1 text-sm font-medium text-gray-700">
+                    Business License
+                  </label>
                   <FormFileInput
-                    label="Business License"
                     name="businessLicense"
                     accept="image/*,application/pdf"
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        businessLicense: e.target.files[0],
+                        businessLicense: e.target.files?.[0] || null,
                       })
+                    }
+                  />
+                  <UploadedInfo
+                    url={profile?.businessLicense}
+                    label="Business License"
+                    extra={
+                      formData.businessLicenseExpireDate ? (
+                        <>Expires on {formData.businessLicenseExpireDate}</>
+                      ) : undefined
                     }
                   />
                 </div>
 
-                {/* Business License Expiry Date — only required if license uploaded */}
-                {formData.businessLicense && (
+                {(formData.businessLicense ||
+                  formData.businessLicenseExpireDate) && (
                   <div>
                     <FormInput
                       type="date"
                       label="Business License Expiry Date"
                       name="businessLicenseExpireDate"
-                      required={!!formData.businessLicense}
-                      value={formData.businessLicenseExpireDate || ""}
+                      value={formData.businessLicenseExpireDate}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
                           businessLicenseExpireDate: e.target.value,
                         })
                       }
+                      required={!!formData.businessLicense}
                     />
                   </div>
                 )}
               </div>
+
               <div className="flex justify-end pt-6 space-x-4 ">
                 <Button type="button" variant="outline" onClick={onClose}>
                   Cancel

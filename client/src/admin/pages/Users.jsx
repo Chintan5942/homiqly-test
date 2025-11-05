@@ -9,7 +9,7 @@ import FormSelect from "../../shared/components/Form/FormSelect";
 import Pagination from "../../shared/components/Pagination";
 import UniversalDeleteModal from "../../shared/components/Modal/UniversalDeleteModal";
 import Modal from "../../shared/components/Modal/Modal";
-import { Edit, Pencil, RefreshCcw, Search } from "lucide-react";
+import { Edit, Pencil, RefreshCcw, RotateCcw, Search } from "lucide-react";
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -224,12 +224,8 @@ const Users = () => {
     });
   };
 
-  // NOTE: we now rely on server-side search/pagination; keep client-side filtering only for interim UX if desired.
-  // Here, we show the server-provided users list and still allow local text filter on top if you prefer:
   const filteredUsers = useMemo(() => {
     const term = (debouncedSearch || "").trim().toLowerCase();
-    // Because we're querying server with search, it's safe to return the server data directly.
-    // However, keep this in case you want to further locally filter the single page.
     if (!term) return users;
     return users.filter((u) => {
       const first = (u.firstName || "").toLowerCase();
@@ -251,39 +247,27 @@ const Users = () => {
 
   return (
     <div className="p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800">
-          Admin User Management
-        </h2>
-        
-        <div className="flex items-center space-x-2">
-          <div className="hidden mr-2 text-sm text-gray-600 md:block">
-            Page {page} of {totalPages}
-          </div>
-
-          <Button
-            className="h-9"
-            onClick={() => fetchUsers({ page: 1, limit })}
-            variant="outline"
-            icon={<RefreshCcw className="w-4 h-4 mr-2" />}
-          >
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <h2 className="text-2xl font-bold text-gray-800">
+        Admin User Management
+      </h2>
 
       {/* Search Controls */}
-      <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center w-full gap-3 md:w-auto">
-          <div className="flex-1 min-w-0 md:max-w-xs">
-            <FormInput
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by first name, last name or email..."
-              icon={<Search />}
-            />
-          </div>
+      <div className="flex items-center justify-between w-full gap-3 md:w-auto">
+        <div className="flex-1 min-w-0 md:max-w-sm">
+          <FormInput
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by first name, last name or email..."
+            icon={<Search />}
+          />
         </div>
+        <Button
+          onClick={() => fetchUsers({ page: 1, limit })}
+          variant="lightInherit"
+          icon={<RotateCcw className="w-4 h-4 mr-2" />}
+        >
+          Refresh
+        </Button>
       </div>
 
       {loading ? (
@@ -304,7 +288,7 @@ const Users = () => {
           />
 
           {/* Pagination */}
-          <div className="flex flex-col items-center justify-between gap-3 mt-4 sm:flex-row">
+          <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
             <Pagination
               page={page}
               totalPages={totalPages}
@@ -313,7 +297,10 @@ const Users = () => {
               keepVisibleOnSinglePage={true}
               totalRecords={totalUsers}
               limit={limit}
-              onLimitChange={(n) => { setLimit(n); setPage(1); }}
+              onLimitChange={(n) => {
+                setLimit(n);
+                setPage(1);
+              }}
               renderLimitSelect={({ value, onChange, options }) => (
                 <FormSelect
                   id="limit"
@@ -321,7 +308,7 @@ const Users = () => {
                   dropdownDirection="auto"
                   value={value}
                   onChange={(e) => onChange(Number(e.target.value))}
-                  options={options.map((v) => ({ value: v, label: `${v} / page` }))}
+                  options={options.map((v) => ({ value: v, label: `${v}` }))}
                 />
               )}
               pageSizeOptions={[5, 10, 20, 50]}

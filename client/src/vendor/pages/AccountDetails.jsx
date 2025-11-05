@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../../lib/axiosConfig";
 import Card from "../../shared/components/Card/Card";
-import Input from "../../shared/components/Form/FormInput";
+// import Input from "../../shared/components/Form/FormInput";
 import Button from "../../shared/components/Button/Button";
 import {
   Loader2,
@@ -241,7 +241,7 @@ const AccountDetails = () => {
         onChange={handleFileChange}
         disabled={!editing}
         accept=".jpg,.jpeg,.png,.pdf"
-        onRemove={() => setFormData({ ...formData, government_id: "" })}
+        // onRemove={() => setFormData({ ...formData, government_id: "" })}
       />
 
       <div className="flex items-center justify-between text-xs">
@@ -250,8 +250,8 @@ const AccountDetails = () => {
             Current file: {formData.government_id.split("/").pop()}
           </p>
         )}
-        {formData.government_id.length > 0 && (
-          <div className="flex items-center mb-2 space-x-2">
+        <div className="flex items-center mb-2 space-x-2">
+          {formData.government_id && (
             <a
               href={formData.government_id}
               target="_blank"
@@ -259,8 +259,8 @@ const AccountDetails = () => {
             >
               Government ID
             </a>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

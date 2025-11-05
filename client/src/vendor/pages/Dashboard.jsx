@@ -236,7 +236,7 @@ const Dashboard = () => {
                     className="flex items-center justify-between py-3"
                   >
                     <div>
-                      <p className="font-medium">{booking.userName}</p>
+                      <p className="font-medium">{booking.userName || "N/A"}</p>
                       <p className="text-sm text-gray-500">
                         {booking.serviceName} -{" "}
                         {new Date(booking.bookingDate).toLocaleDateString()}{" "}
