@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import WorkHistoryTable from "../components/Tables/WorkHistoryTable";
 import LoadingSlider from "../../shared/components/LoadingSpinner";
 import { RefreshCcw } from "lucide-react";
 import { Button } from "../../shared/components/Button";
+import api from "../../lib/axiosConfig";
 
 const WorkHistory = () => {
   const [bookings, setBookings] = useState([]);
@@ -16,7 +16,7 @@ const WorkHistory = () => {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/employee/bookinghistory");
+      const response = await api.get("/api/employee/bookinghistory");
       console.log(response.data);
       setBookings(response.data.bookings || []);
     } catch (error) {

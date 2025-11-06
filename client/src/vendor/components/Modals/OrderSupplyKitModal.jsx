@@ -4,7 +4,7 @@ import { Button } from '../../../shared/components/Button';
 import { FormSelect, FormInput } from '../../../shared/components/Form';
 import { Card } from '../../../shared/components/Card';
 import { formatCurrency } from '../../../shared/utils/formatUtils';
-import axios from 'axios';
+import api from '../../../lib/axiosConfig';
 
 const OrderSupplyKitModal = ({ 
   isOpen, 
@@ -26,7 +26,7 @@ const OrderSupplyKitModal = ({
   const loadAvailableSupplyKits = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/supplykit/all');
+      const response = await api.get('/api/supplykit/all');
       setSupplyKits(response.data.supply_kits || []);
       setLoading(false);
     } catch (error) {

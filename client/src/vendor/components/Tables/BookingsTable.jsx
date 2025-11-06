@@ -34,7 +34,7 @@ const BookingsTable = ({
       title: "Customer",
       key: "userName",
       render: (row) => (
-        <div className="text-sm font-medium text-gray-900">{row.userName}</div>
+        <div className="text-sm font-medium text-gray-900">{row.userName || "N/A"}</div>
       ),
     },
     {

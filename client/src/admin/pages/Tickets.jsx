@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useAdminAuth } from "../contexts/AdminAuthContext";
 import api from "../../lib/axiosConfig";
 import TicketsTable from "../components/Tables/TicketsTable"; // Update the path as needed
-import axios from "axios";
 import { toast } from "react-toastify";
 
 const Tickets = () => {
@@ -17,7 +16,7 @@ const Tickets = () => {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/gettickets");
+      const response = await api.get("/api/gettickets");
       console.log("Raw API response:", response.data);
       setTickets(response.data?.tickets || []);
     } catch (error) {
@@ -32,7 +31,7 @@ const Tickets = () => {
 
     try {
       setLoading(true);
-      await axios.delete(`/api/deleteticket/${ticketId}`);
+      await api.delete(`/api/deleteticket/${ticketId}`);
       setTickets((prev) =>
         prev.filter((ticket) => ticket.ticket_id !== ticketId)
       );

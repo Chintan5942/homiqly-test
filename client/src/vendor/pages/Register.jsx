@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useVendorAuth } from "../contexts/VendorAuthContext";
 import { toast } from "react-toastify";
-import axios from "axios";
 import Button from "../../shared/components/Button/Button";
 import {
   FormOption,
@@ -19,6 +18,7 @@ import {
   Phone,
   User,
 } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -79,7 +79,7 @@ const Register = () => {
   const loadServices = async () => {
     try {
       setServiceLoading(true);
-      const response = await axios.get("/api/vendor/serviceswithpackages");
+      const response = await api.get("/api/vendor/serviceswithpackages");
       setServiceCategories(response.data.services || []);
     } catch (error) {
       console.error(error);
@@ -94,7 +94,7 @@ const Register = () => {
     try {
       setCitiesLoading(true);
       // adjust endpoint as your backend provides
-      const response = await axios.get("/api/service/getcity");
+      const response = await api.get("/api/service/getcity");
       console.log(response.data.city);
       // Expecting response.data.cities = [{ id, name }] or similar
       setCities(response.data.city || []);
@@ -338,7 +338,7 @@ const Register = () => {
                       id="email"
                       icon={<Mail />}
                       label="Email*"
-                      type="email"
+                      type="mail"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="john@example.com"
@@ -383,13 +383,15 @@ const Register = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label
-                        htmlFor="expertise"
-                        className="block mb-1 text-sm font-medium text-gray-700"
-                      >
-                        Expertise
-                      </label>
-                      {expertiseOptions.map((opt) => (
+                      <FormSelect
+                        id="expertise"
+                        label="Expertise"
+                        name="expertise"
+                        value={expertise}
+                        onChange={(e) => setExpertise(e.target.value)}
+                        options={expertiseOptions}
+                      />
+                      {/* {expertiseOptions.map((opt) => (
                         <FormOption
                           key={opt}
                           // Mainlabel="Expertise"
@@ -401,7 +403,7 @@ const Register = () => {
                           onChange={(e) => setExpertise(e.target.value)}
                           icon={<BadgeCheck className="w-5 h-5" />}
                         />
-                      ))}
+                      ))} */}
                     </div>
                   </>
                 )}

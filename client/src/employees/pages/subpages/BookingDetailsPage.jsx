@@ -1,6 +1,5 @@
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { Button } from "../../../shared/components/Button";
 import StatusBadge from "../../../shared/components/StatusBadge";
 import { formatDate, formatTime } from "../../../shared/utils/dateUtils";
@@ -9,6 +8,7 @@ import RatingModal from "../../components/Modals/RatingModal";
 import Breadcrumb from "../../../shared/components/Breadcrumb";
 import PaymentBadge from "../../../shared/components/PaymentBadge";
 import { Calendar, Clock, Mail, MapPin, Phone } from "lucide-react";
+import api from "../../../lib/axiosConfig";
 
 // NOTE: UI rework only. All existing functionality (fetching, status updates, rating modal)
 // preserved. This layout focuses on quick access for employees in the field.
@@ -25,7 +25,7 @@ export default function BookingDetailsPage() {
   const fetchBooking = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("/api/employee/getbookingemployee");
+      const res = await api.get("/api/employee/getbookingemployee");
       const bookingsArray = res?.data?.bookings || [];
       const found = bookingsArray.find(
         (b) =>
@@ -54,7 +54,7 @@ export default function BookingDetailsPage() {
 
   const handleUpdateBookingStatus = async (status) => {
     try {
-      const response = await axios.put(`/api/employee/updatebookingstatus`, {
+      const response = await api.put(`/api/employee/updatebookingstatus`, {
         booking_id: bookingId,
         status,
       });

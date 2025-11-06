@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { requestFCMToken } from "../../firebase/firebase";
+import api from "../../lib/axiosConfig";
 
 const VendorAuthContext = createContext();
 
@@ -14,14 +15,26 @@ export const VendorAuthProvider = ({ children }) => {
   const [fcmToken, setFcmToken] = useState("");
 
   useEffect(() => {
-    // Check if vendor is logged in on mount
-    const token = localStorage.getItem("vendorToken");
-    const userData = localStorage.getItem("vendorData");
+    // Check both storages on mount: localStorage (remembered) first, then sessionStorage
+    const token =
+      localStorage.getItem("vendorToken") ||
+      sessionStorage.getItem("vendorToken");
+    const userData =
+      localStorage.getItem("vendorData") ||
+      sessionStorage.getItem("vendorData");
 
     if (token && userData) {
-      setCurrentUser(JSON.parse(userData));
-      setIsAuthenticated(true);
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      try {
+        setCurrentUser(JSON.parse(userData));
+        setIsAuthenticated(true);
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      } catch (err) {
+        // in case parsing fails, clear bad data
+        localStorage.removeItem("vendorData");
+        sessionStorage.removeItem("vendorData");
+        localStorage.removeItem("vendorToken");
+        sessionStorage.removeItem("vendorToken");
+      }
     }
 
     setLoading(false);
@@ -33,22 +46,39 @@ export const VendorAuthProvider = ({ children }) => {
     });
   }, []);
 
-  const login = async (email, password) => {
+  /**
+   * login(email, password, remember)
+   * if remember === true -> store token & userData in localStorage (persists)
+   * if remember === false -> store token & userData in sessionStorage (cleared on tab close)
+   */
+  const login = async (email, password, remember = true) => {
     try {
       setError(null);
 
-      const response = await axios.post("/api/vendor/login", {
+      const response = await api.post("/api/vendor/login", {
         email,
         password,
-        fcmToken, // directly using from state
+        fcmToken, // using state
       });
 
       const { token, vendor_id, vendor_type, name, role } = response.data;
 
       const userData = { vendor_id, vendor_type, name, role };
 
-      localStorage.setItem("vendorToken", token);
-      localStorage.setItem("vendorData", JSON.stringify(userData));
+      // store token & userData based on remember flag
+      if (remember) {
+        localStorage.setItem("vendorToken", token);
+        localStorage.setItem("vendorData", JSON.stringify(userData));
+        // ensure session storage cleared to avoid dual source confusion
+        sessionStorage.removeItem("vendorToken");
+        sessionStorage.removeItem("vendorData");
+      } else {
+        sessionStorage.setItem("vendorToken", token);
+        sessionStorage.setItem("vendorData", JSON.stringify(userData));
+        // ensure local storage cleared to avoid dual source confusion
+        localStorage.removeItem("vendorToken");
+        localStorage.removeItem("vendorData");
+      }
 
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
@@ -68,7 +98,7 @@ export const VendorAuthProvider = ({ children }) => {
   const register = async (formData) => {
     try {
       setError(null);
-      const response = await axios.post("/api/vendor/register", formData, {
+      const response = await api.post("/api/vendor/register", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -84,8 +114,11 @@ export const VendorAuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // clear both storages
     localStorage.removeItem("vendorToken");
     localStorage.removeItem("vendorData");
+    sessionStorage.removeItem("vendorToken");
+    sessionStorage.removeItem("vendorData");
     delete axios.defaults.headers.common["Authorization"];
     setCurrentUser(null);
     setIsAuthenticated(false);
@@ -94,7 +127,7 @@ export const VendorAuthProvider = ({ children }) => {
   const requestPasswordReset = async (email) => {
     try {
       setError(null);
-      await axios.post("/api/vendor/requestreset", { email });
+      await api.post("/api/vendor/requestreset", { email });
       return { success: true };
     } catch (err) {
       setError(err.response?.data?.error || "Failed to send reset code");
@@ -108,7 +141,7 @@ export const VendorAuthProvider = ({ children }) => {
   const verifyResetCode = async (email, resetCode) => {
     try {
       setError(null);
-      const response = await axios.post("/api/vendor/verifyresetcode", {
+      const response = await api.post("/api/vendor/verifyresetcode", {
         email,
         resetCode,
       });
@@ -125,7 +158,7 @@ export const VendorAuthProvider = ({ children }) => {
   const resetPassword = async (token, newPassword) => {
     try {
       setError(null);
-      await axios.post(
+      await api.post(
         "/api/vendor/resetpassword",
         { newPassword },
         { headers: { Authorization: `Bearer ${token}` } }

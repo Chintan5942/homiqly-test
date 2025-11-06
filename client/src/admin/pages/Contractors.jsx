@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 import { Check, Eye, Plus, X } from 'lucide-react';
+import api from '../../lib/axiosConfig';
 
 const Contractors = () => {
   const [contractors, setContractors] = useState([]);
@@ -30,7 +30,7 @@ const Contractors = () => {
   const fetchContractors = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/contractor/all');
+      const response = await api.get('/api/contractor/all');
       setContractors(response.data.contractors || []);
       setLoading(false);
     } catch (error) {
@@ -85,7 +85,7 @@ const Contractors = () => {
         formDataToSend.append('insurance_certificate', formData.insurance_certificate);
       }
       
-      const response = await axios.post('/api/contractor/create', formDataToSend, {
+      const response = await api.post('/api/contractor/create', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -510,7 +510,7 @@ const Contractors = () => {
                   <button
                     onClick={async () => {
                       try {
-                        await axios.put(`/api/contractor/${selectedContractor.contractor_id}/verify`, {
+                        await api.put(`/api/contractor/${selectedContractor.contractor_id}/verify`, {
                           is_verified: true
                         });
                         toast.success('Contractor verified successfully');

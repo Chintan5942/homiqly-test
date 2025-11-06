@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { IconButton } from "../../../shared/components/Button";
 import Loader from "../../../components/Loader";
 import { CheckCircle, X } from "lucide-react";
+import api from "../../../lib/axiosConfig";
 
 const NotificationModal = ({ isOpen, onClose }) => {
   const [notifications, setNotifications] = useState([]);
@@ -16,7 +16,7 @@ const NotificationModal = ({ isOpen, onClose }) => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("/api/notifications/getemployeenotification");
+      const res = await api.get("/api/notifications/getemployeenotification");
       setNotifications(res.data.notifications || []);
     } catch (err) {
       console.error("Failed to fetch notifications", err);
@@ -27,7 +27,7 @@ const NotificationModal = ({ isOpen, onClose }) => {
 
   const handleMarkAsRead = async (notificationId) => {
     try {
-      await axios.patch(`/api/notifications/markasread/${notificationId}`);
+      await api.patch(`/api/notifications/markasread/${notificationId}`);
       // Refresh the list after marking as read
       fetchNotifications();
     } catch (err) {

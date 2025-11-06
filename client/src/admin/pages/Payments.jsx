@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import axios from "axios";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { formatDate } from "../../shared/utils/dateUtils";
 import { formatCurrency } from "../../shared/utils/formatUtils";
@@ -9,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { FormInput, FormSelect } from "../../shared/components/Form";
 import Pagination from "../../shared/components/Pagination";
 import { RefreshCcw, Search } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const Payments = () => {
   const [payments, setPayments] = useState([]);
@@ -72,7 +72,7 @@ const Payments = () => {
         if (qStart) params.startDate = qStart;
         if (qEnd) params.endDate = qEnd;
 
-        const response = await axios.get("/api/admin/getpayments", { params });
+        const response = await api.get("/api/admin/getpayments", { params });
         const data = response.data || {};
 
         // set payments array (common key: payments)
@@ -200,16 +200,12 @@ const Payments = () => {
         <h2 className="text-2xl font-bold text-gray-800">
           Admin Payment History
         </h2>
-        
-        <div className="flex items-center space-x-2">
-          <div className="hidden mr-2 text-sm text-gray-600 md:block">
-            Page {page} of {totalPages}
-          </div>
 
+        <div className="flex items-center space-x-2">
           <Button
             className="h-9"
             onClick={fetchPayments}
-            variant="outline"
+            variant="lightInherit"
             icon={<RefreshCcw className="w-4 h-4 mr-2" />}
           >
             Refresh
@@ -218,7 +214,7 @@ const Payments = () => {
       </div>
 
       {/* Filters */}
-      <div className="p-4 mb-6 bg-white rounded-lg shadow">
+      <div className="">
         <div className="grid items-end grid-cols-1 gap-4 md:grid-cols-6">
           <div className="md:col-span-2">
             <FormInput
@@ -342,7 +338,10 @@ const Payments = () => {
               keepVisibleOnSinglePage={true}
               totalRecords={totalPayments}
               limit={limit}
-              onLimitChange={(n) => { setLimit(n); setPage(1); }}
+              onLimitChange={(n) => {
+                setLimit(n);
+                setPage(1);
+              }}
               renderLimitSelect={({ value, onChange, options }) => (
                 <FormSelect
                   id="limit"
@@ -350,9 +349,12 @@ const Payments = () => {
                   dropdownDirection="auto"
                   value={value}
                   onChange={(e) => onChange(Number(e.target.value))}
-                  options={options.map((v) => ({ value: v, label: `${v} / page` }))}
+                  options={options.map((v) => ({
+                    value: v,
+                    label: `${v} / page`,
+                  }))}
                 />
-              )} 
+              )}
               pageSizeOptions={[5, 10, 20, 50]}
             />
           </div>

@@ -25,7 +25,7 @@ const DashboardLayout = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [vendorType, setVendorType] = useState(null); // ✅ track vendor type
+  const [vendorType, setVendorType] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const handleLogout = () => {
@@ -39,7 +39,7 @@ const DashboardLayout = () => {
       setLoading(true);
       const res = await api.get("/api/vendor/getprofile");
       const profile = res.data.profile;
-      setVendorType(profile.vendorType); // save vendorType
+      setVendorType(profile.vendorType);
     } catch (error) {
       console.error("Failed to fetch profile", error);
     } finally {
@@ -80,7 +80,6 @@ const DashboardLayout = () => {
     },
     // { path: "/vendor/supply-kits", name: "Supply Kits", icon: <FiBox className="w-5 h-5" /> },
 
-    // ✅ Show Employees only if vendorType !== "individual"
     ...(vendorType !== "individual"
       ? [
           {

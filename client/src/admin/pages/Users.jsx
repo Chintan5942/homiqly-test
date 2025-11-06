@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import UsersTable from "../components/Tables/UsersTable"; // Adjust path as needed
@@ -10,6 +9,7 @@ import Pagination from "../../shared/components/Pagination";
 import UniversalDeleteModal from "../../shared/components/Modal/UniversalDeleteModal";
 import Modal from "../../shared/components/Modal/Modal";
 import { Edit, Pencil, RefreshCcw, RotateCcw, Search } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -84,7 +84,7 @@ const Users = () => {
 
         if (qSearch) params.search = qSearch;
 
-        const response = await axios.get("/api/admin/getusers", { params });
+        const response = await api.get("/api/admin/getusers", { params });
         const data = response.data || {};
 
         // Try to read common shapes:
@@ -172,7 +172,7 @@ const Users = () => {
     if (!selectedUser) return;
     try {
       setSubmitting(true);
-      const response = await axios.put(
+      const response = await api.put(
         `/api/admin/editusers/${selectedUser.user_id}`,
         formData
       );
@@ -205,7 +205,7 @@ const Users = () => {
     setDeleteAction(() => async () => {
       try {
         setDeleting(true);
-        await axios.delete(`/api/admin/deleteusers/${userId}`);
+        await api.delete(`/api/admin/deleteusers/${userId}`);
         toast.success("User deleted successfully");
         setUsers((prev) => prev.filter((u) => u.user_id !== userId));
         // if the deleted user is currently open in the view modal, close it

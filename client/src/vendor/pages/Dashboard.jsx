@@ -283,7 +283,7 @@ const Dashboard = () => {
       </div>
 
       {/* Upcoming Bookings */}
-      <div className="p-6 bg-white rounded-lg shadow">
+      <>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Today's Bookings</h2>
           <Link
@@ -294,10 +294,10 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        <div className="p-4 mx-auto border rounded-lg max-w-7xl">
+        <>
           <Calendar />
-        </div>
-      </div>
+        </>
+      </>
     </div>
   );
 };

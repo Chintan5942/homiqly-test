@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import NotificationModal from "./Modals/NotificationModal";
-import axios from "axios";
 import LoadingSlider from "../../shared/components/LoadingSpinner";
 import { Bell } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const NotificationIcon = () => {
   const [open, setOpen] = useState(false);
@@ -10,7 +10,7 @@ const NotificationIcon = () => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await axios.get("/api/notifications/getemployeenotification");
+      const res = await api.get("/api/notifications/getemployeenotification");
       setNotifications(res.data || []);
       // console.log("Fetched notifications:", res.data.notification);
     } catch (err) {

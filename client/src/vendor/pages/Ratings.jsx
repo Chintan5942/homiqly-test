@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
-import axios from "axios";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { formatDate } from "../../shared/utils/dateUtils";
 import { FormInput, FormSelect } from "../../shared/components/Form";
 import { Star, User, Calendar } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 // Avatar fallback component
 const Avatar = ({ name }) => (
@@ -28,10 +28,10 @@ const Ratings = () => {
   const fetchRatings = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/rating/getrating");
+      const response = await api.get("/api/rating/getrating");
       setRatings(response.data.ratings || []);
       setStats({
-        average_rating: response.data.average_rating || 0,
+        average_rating: Math.floor(response.data.average_rating * 10) / 10 || 0,
         total_reviews: response.data.total_reviews || 0,
       });
       setLoading(false);
@@ -50,7 +50,8 @@ const Ratings = () => {
     const q = search.trim().toLowerCase();
     const matchesSearch = q
       ? (rating.user_name || "").toLowerCase().includes(q) ||
-        (rating.serviceName || "").toLowerCase().includes(q)
+        (rating.serviceName || "").toLowerCase().includes(q) ||
+        (rating.review || "").toLowerCase().includes(q)
       : true;
 
     const matchesService =
@@ -165,76 +166,74 @@ const Ratings = () => {
       </div>
 
       {/* Reviews + Filter */}
-      <div className="bg-white rounded-lg">
-        <div className="flex flex-col md:flex-row justify-between items-center p-4 bg-gray-50 gap-3">
-          <h3 className="text-lg font-semibold text-gray-800">
+      <div className=" min-h-[calc(100vh-200px)]">
+        <div className="p-4">
+          <h3 className="text-xl font-semibold text-gray-800">
             Customer Reviews
           </h3>
 
-          <div className="flex w-full md:w-auto gap-3">
+          <div className="flex w-full md:w-auto gap-3 items-center justify-between my-3">
             <FormInput
               placeholder="Search reviews..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full md:w-64"
+              className="w-full max-w-sm"
             />
 
-            <FormSelect
-              value={serviceFilter}
-              onChange={(e) => setServiceFilter(e.target.value)}
-              options={serviceOptions}
-              className="md:w-56 w-full"
-              aria-label="Filter by service"
-            />
+            <div className="flex gap-2">
+              <FormSelect
+                value={serviceFilter}
+                onChange={(e) => setServiceFilter(e.target.value)}
+                options={serviceOptions}
+                className="md:w-48 w-full"
+                aria-label="Filter by service"
+              />
 
-            <FormSelect
-              value={filter}
-              onChange={handleFilterChange}
-              options={[
-                { value: "all", label: "All Ratings" },
-                { value: "5", label: "5 Stars" },
-                { value: "4", label: "4 Stars" },
-                { value: "3", label: "3 Stars" },
-                { value: "2", label: "2 Stars" },
-                { value: "1", label: "1 Star" },
-              ]}
-              className="md:w-40 w-full"
-              aria-label="Filter by rating"
-            />
+              <FormSelect
+                value={filter}
+                onChange={handleFilterChange}
+                options={[
+                  { value: "all", label: "All Ratings" },
+                  { value: "5", label: "5 Stars" },
+                  { value: "4", label: "4 Stars" },
+                  { value: "3", label: "3 Stars" },
+                  { value: "2", label: "2 Stars" },
+                  { value: "1", label: "1 Star" },
+                ]}
+                className="md:w-48 w-full"
+                aria-label="Filter by rating"
+              />
+            </div>
           </div>
         </div>
 
         {filteredRatings.length > 0 ? (
-          <ul className=" grid grid-cols-2  ">
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
             {filteredRatings.map((rating) => (
               <li
                 key={rating.rating_id}
-                className="flex py-6 px-4 gap-4 items-start shadow"
+                className="flex py-6 px-5 bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 items-start"
               >
                 <Avatar name={rating.user_name} />
                 <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-semibold text-gray-900">
-                        {rating.user_name}
-                      </span>
-                      <span className="ml-3 text-xs text-gray-400 flex items-center">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        {formatDate(rating.created_at)}
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-gray-900">
+                      {rating.user_name}
+                    </span>
                     <span>{renderStars(rating.rating)}</span>
                   </div>
-                  <div className="mt-3">
-                    <p className="text-gray-700 mb-2">
-                      {rating.review || "No written review provided."}
-                    </p>
-                    {rating.serviceName && (
-                      <span className="text-xs text-gray-500">
-                        Service: {rating.serviceName.trim()}
-                      </span>
-                    )}
-                  </div>
+                  <span className=" text-xs text-gray-400 mb-2 flex items-center">
+                    <Calendar className="w-3 h-3 mr-1" />
+                    {formatDate(rating.created_at)}
+                  </span>
+                  <p className="text-gray-700 mb-2">
+                    {rating.review || "No written review provided."}
+                  </p>
+                  {rating.serviceName && (
+                    <span className="inline-block text-xs bg-gray-100 rounded px-2 py-1 text-gray-500 mt-1">
+                      Service: {rating.serviceName.trim()}
+                    </span>
+                  )}
                 </div>
               </li>
             ))}

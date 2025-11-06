@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { formatDateForApi } from "../../../shared/utils/dateUtils";
 import FormInput from "../../../shared/components/Form/FormInput";
-import { Button, IconButton } from "../../../shared/components/Button";
+import { Button } from "../../../shared/components/Button";
 import Modal from "../../../shared/components/Modal/Modal";
 import PromosTable from "../../components/Tables/PromosTable";
 import FormSelect from "../../../shared/components/Form/FormSelect";
 import UniversalDeleteModal from "../../../shared/components/Modal/UniversalDeleteModal";
+import api from "../../../lib/axiosConfig";
 
 /**
  * AdminPromoManager (JSX)
@@ -50,7 +50,7 @@ export default function AdminPromoManager() {
   async function fetchPromos() {
     try {
       setLoading(true);
-      const res = await axios.get("/api/getallcodes");
+      const res = await api.get("/api/getallcodes");
       setPromos(res.data || []);
     } catch (err) {
       console.error(err);
@@ -63,7 +63,7 @@ export default function AdminPromoManager() {
   async function fetchAutoStatus() {
     try {
       setAutoLoading(true);
-      const res = await axios.get("/api/getstatuscode");
+      const res = await api.get("/api/getstatuscode");
       const val = res?.data?.enable;
       setAutoEnabled(Number(val) === 1);
     } catch (err) {
@@ -80,7 +80,7 @@ export default function AdminPromoManager() {
     setAutoLoading(true);
     try {
       const payload = { enable: newValue ? 1 : 0 };
-      const res = await axios.patch("/api/changautogeneratecode", payload);
+      const res = await api.patch("/api/changautogeneratecode", payload);
       toast.success(
         res?.data?.message ||
           `Auto-generate welcome code ${newValue ? "enabled" : "disabled"}`
@@ -211,10 +211,10 @@ export default function AdminPromoManager() {
       if (isEditing && currentPromo) {
         const id = currentPromo.promo_id || currentPromo.id;
         if (!id) return toast.error("No promo id to update");
-        await axios.patch(`/api/updatecode/${id}`, payload);
+        await api.patch(`/api/updatecode/${id}`, payload);
         toast.success(`Promo code '${form.code}' updated successfully`);
       } else {
-        await axios.post(`/api/createpromo`, payload);
+        await api.post(`/api/createpromo`, payload);
         toast.success(`Promo code '${form.code}' created successfully`);
       }
 
@@ -243,7 +243,7 @@ export default function AdminPromoManager() {
 
       try {
         setDeleting(true);
-        const res = await axios.delete(`/api/deletecode/${id}`, {
+        const res = await api.delete(`/api/deletecode/${id}`, {
           data: payload,
         });
         toast.success(res?.data?.message || "Promo code deleted successfully");

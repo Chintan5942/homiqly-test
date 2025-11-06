@@ -7,6 +7,7 @@ import { Button } from "../../../shared/components/Button";
 import { FormInput, FormSelect } from "../../../shared/components/Form";
 import { useAdminAuth } from "../../contexts/AdminAuthContext";
 import { Lock } from "lucide-react";
+import api from "../../../lib/axiosConfig";
 
 const GeneralSettings = () => {
   const { currentUser } = useAdminAuth();
@@ -72,7 +73,7 @@ const GeneralSettings = () => {
       //   (k) => payload[k] === undefined && delete payload[k]
       // );
 
-      const res = await axios.patch("/api/admin/changepassword", payload);
+      const res = await api.patch("/api/admin/changepassword", payload);
 
       // Expecting response like: { message: "Admin password changed successfully" }
       toast.success(res?.data?.message || "Password changed successfully");

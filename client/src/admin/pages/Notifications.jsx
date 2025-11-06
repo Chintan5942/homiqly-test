@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import Select from "react-select";
 import Button from "../../shared/components/Button/Button";
 import { FormInput, FormSelect, FormTextarea } from "../../shared/components/Form";
 import { Send } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const Notifications = () => {
   const [loading, setLoading] = useState(false);
@@ -35,7 +35,7 @@ const Notifications = () => {
 
         switch (formData.user_type) {
           case "users":
-            response = await axios.get("/api/notification/getuserslist");
+            response = await api.get("/api/notification/getuserslist");
             users = (response.data.users || []).map((user) => ({
               value: user.user_id.toString(),
               label: user.fullName || `User ${user.user_id}`,
@@ -48,7 +48,7 @@ const Notifications = () => {
               setLoading(false);
               return;
             }
-            response = await axios.get(
+            response = await api.get(
               `/api/notification/getvendorslist?vendor_type=${formData.vendor_type}`
             );
             users = (response.data.vendors || []).map((vendor) => ({
@@ -58,7 +58,7 @@ const Notifications = () => {
             break;
 
           case "employees":
-            response = await axios.get("/api/notification/getemployees");
+            response = await api.get("/api/notification/getemployees");
             users = (response.data.employees || []).map((emp) => ({
               value: emp.employee_id.toString(),
               label: emp.fullName || `Employee ${emp.employee_id}`,
@@ -66,7 +66,7 @@ const Notifications = () => {
             break;
 
           case "admin":
-            response = await axios.get("/api/notification/getadminslist");
+            response = await api.get("/api/notification/getadminslist");
             users = (response.data.admins || []).map((admin) => ({
               value: admin.admin_id.toString(),
               label: admin.name || `Admin ${admin.admin_id}`,
@@ -123,7 +123,7 @@ const Notifications = () => {
 
     try {
       setSubmitting(true);
-      const response = await axios.post("/api/notification/send", payload);
+      const response = await api.post("/api/notification/send", payload);
       if (response.status === 200) {
         toast.success(
           `Notification sent to ${response.data.success_count} recipients`

@@ -4,7 +4,7 @@
  * @param {string} currency - The currency code (default: INR)
  * @returns {string} Formatted currency string
  */
-export const formatCurrency = (amount, currency = "INR") => {
+export const formatCurrency = (amount, currency = "CAD") => {
   if (amount === null || amount === undefined) {
     return "";
   }

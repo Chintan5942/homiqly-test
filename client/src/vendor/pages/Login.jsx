@@ -2,12 +2,15 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useVendorAuth } from "../contexts/VendorAuthContext";
 import { toast } from "react-toastify";
-import { Loader, Lock, Mail } from "lucide-react";
+import { Loader, Lock, Mail, User } from "lucide-react";
+import { FormInput } from "../../shared/components/Form";
+import { Button } from "../../shared/components/Button";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [remember, setRemember] = useState(true);
   const { login } = useVendorAuth();
   const navigate = useNavigate();
 
@@ -22,7 +25,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await login(email, password, remember);
 
       if (result.success) {
         toast.success("Login successful!");
@@ -52,17 +55,10 @@ const Login = () => {
       </p>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Email
-          </label>
-          <div className="mt-1 relative rounded-md shadow-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
+          <div className="mt-1">
+            <FormInput
+              icon={<Mail className="w-4 h-4" />}
+              label="Email"
               id="email"
               name="email"
               type="email"
@@ -70,24 +66,16 @@ const Login = () => {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
               placeholder="vendor@example.com"
             />
           </div>
         </div>
 
         <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Password
-          </label>
-          <div className="mt-1 relative rounded-md shadow-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
+          <div className="mt-1 ">
+            <FormInput
+              icon={<Lock className="w-4 h-4" />}
+              label="Password"
               id="password"
               name="password"
               type="password"
@@ -95,7 +83,6 @@ const Login = () => {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
               placeholder="••••••••"
             />
           </div>
@@ -108,6 +95,8 @@ const Login = () => {
               name="remember-me"
               type="checkbox"
               className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
             />
             <label
               htmlFor="remember-me"
@@ -128,10 +117,11 @@ const Login = () => {
         </div>
 
         <div>
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-primary-dark to-primary hover:from-primary hover:to-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
+            className="w-full "
+            variant="primary"
           >
             {loading ? (
               <>
@@ -141,7 +131,7 @@ const Login = () => {
             ) : (
               "Sign in"
             )}
-          </button>
+          </Button>
         </div>
       </form>
 

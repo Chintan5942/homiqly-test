@@ -24,7 +24,9 @@ const PaymentsTable = ({ payouts, isLoading, onViewPayment }) => {
           <div className="text-sm text-gray-900">
             {row.user_firstname} {row.user_lastname}
           </div>
-          <div className="text-xs text-gray-500">{row.user_email}</div>
+          <div className="text-xs text-gray-500">
+            {row.user_email || "N / A"}
+          </div>
         </div>
       ),
     },
@@ -34,17 +36,17 @@ const PaymentsTable = ({ payouts, isLoading, onViewPayment }) => {
       render: (row) => (
         <div>
           <div className="text-sm text-gray-900">
-            {row.individual_name || row.companyName}
+            {row.individual_name || row.companyName || "N / A"}
           </div>
           <div className="text-xs text-gray-500">{row.vendorType}</div>
         </div>
       ),
     },
     {
-      title: "Package",
-      key: "packageName",
+      title: "Service",
+      key: "serviceName",
       render: (row) => (
-        <div className="text-sm text-gray-900">{row.packageName}</div>
+        <div className="text-sm text-gray-900">{row.serviceName}</div>
       ),
     },
     {
@@ -56,15 +58,15 @@ const PaymentsTable = ({ payouts, isLoading, onViewPayment }) => {
         </div>
       ),
     },
-    {
-      title: "Currency",
-      key: "currency",
-      render: (row) => (
-        <div className="text-sm text-gray-700">
-          {row.currency?.toUpperCase()}
-        </div>
-      ),
-    },
+    // {
+    //   title: "Currency",
+    //   key: "currency",
+    //   render: (row) => (
+    //     <div className="text-sm text-gray-700">
+    //       {row.currency?.toUpperCase() || "N / A"}
+    //     </div>
+    //   ),
+    // },
     {
       title: "Date",
       key: "created_at",

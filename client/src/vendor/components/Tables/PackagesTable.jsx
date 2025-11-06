@@ -27,7 +27,7 @@ const PackagesTable = ({ services, onEdit, fetchData }) => {
       return;
     try {
       setDeleting(id);
-      await axios.delete(`/api/vendor/deletepackages/${id}`);
+      await api.delete(`/api/vendor/deletepackages/${id}`);
       toast.success("Package deleted successfully");
       fetchData(); // Refresh list
     } catch (error) {

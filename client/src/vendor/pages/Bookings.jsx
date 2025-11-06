@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
 import BookingsTable from "../components/Tables/BookingsTable";
 import { Button } from "../../shared/components/Button";
 import { FormSelect, FormInput } from "../../shared/components/Form";
@@ -8,6 +7,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { Search, RefreshCcw } from "lucide-react";
 import Pagination from "../../shared/components/Pagination";
+import api from "../../lib/axiosConfig";
 
 const VendorBookings = () => {
   const [bookings, setBookings] = useState([]);
@@ -51,7 +51,7 @@ const VendorBookings = () => {
   const fetchEmployees = useCallback(async () => {
     try {
       const token = localStorage.getItem("vendorToken");
-      const res = await axios.get("/api/employee/getemployee", {
+      const res = await api.get("/api/employee/getemployee", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       setEmployees(res.data.employees || res.data?.data || []);
@@ -80,7 +80,7 @@ const VendorBookings = () => {
           end_date: dateRange.endDate || undefined,
         };
 
-        const res = await axios.get("/api/booking/vendorassignedservices", {
+        const res = await api.get("/api/booking/vendorassignedservices", {
           params,
         });
 
@@ -125,7 +125,7 @@ const VendorBookings = () => {
 
     try {
       const token = localStorage.getItem("vendorToken");
-      const res = await axios.post(
+      const res = await api.post(
         "/api/employee/assign-booking",
         { booking_id: bookingId, employee_id: employeeId },
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
@@ -162,7 +162,7 @@ const VendorBookings = () => {
 
   const handleUpdateStatus = async (bookingId, status) => {
     try {
-      const res = await axios.put("/api/booking/approveorrejectbooking", {
+      const res = await api.put("/api/booking/approveorrejectbooking", {
         booking_id: bookingId,
         status,
       });

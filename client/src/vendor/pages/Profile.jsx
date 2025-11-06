@@ -71,7 +71,6 @@ const Profile = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <LoadingSpinner size="lg" />
-          <p className="mt-4 text-gray-600">Loading your profile...</p>
         </div>
       </div>
     );
@@ -156,7 +155,9 @@ const Profile = () => {
                           <div className="relative inline-block">
                             <div className="w-32 h-32 mx-auto overflow-hidden border-4 border-white shadow-lg rounded-2xl">
                               <img
-                                src={profile?.profileImage}
+                                src={
+                                  profile?.profileImage || "/profile-img.webp"
+                                }
                                 alt="Profile"
                                 className="object-cover w-full h-full"
                               />
@@ -266,16 +267,15 @@ const Profile = () => {
                                 {profile?.expertise || "Not provided"}
                               </p>
                             </div>
-                          <div className="space-y-1 md:col-span-2">
-                            <label className="text-sm font-medium text-gray-500">
-                              Address
-                            </label>
-                            <p className="text-gray-900">
-                              {profile?.address || "Not provided"}
-                            </p>
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-sm font-medium text-gray-500">
+                                Address
+                              </label>
+                              <p className="text-gray-900">
+                                {profile?.address || "Not provided"}
+                              </p>
+                            </div>
                           </div>
-                          </div>
-
 
                           {/* Company Specific */}
                           {profile?.vendorType === "company" && (
@@ -396,7 +396,7 @@ const Profile = () => {
                             </div>
                           )}
                           {/* Expiry */}
-                          <div className="mt-3 text-sm">
+                          <div className="my-2 text-sm">
                             <span className="text-gray-500">Expiry:&nbsp;</span>
                             {profile?.businessLicenseExpireDate ? (
                               <>
@@ -452,7 +452,8 @@ const Profile = () => {
                             </div>
                           )}
 
-                          <div>
+                          <div className="my-2 text-sm">
+                            <span className="text-gray-500">Expiry:&nbsp;</span>
                             {profile?.certificateOfExpertiseExpireDate ? (
                               <>
                                 <span className="text-gray-900">

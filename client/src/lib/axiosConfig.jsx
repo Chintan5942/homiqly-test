@@ -12,37 +12,46 @@ let activeRequests = 0;
 
 // Start NProgress
 const startLoading = () => {
+  if (typeof window === "undefined") return;
   if (activeRequests === 0) {
     NProgress.start();
   }
-  activeRequests++;
+  activeRequests += 1;
 };
 
 // Stop NProgress
 const stopLoading = () => {
-  activeRequests--;
-  if (activeRequests <= 0) {
+  if (typeof window === "undefined") return;
+  // avoid negative counts
+  activeRequests = Math.max(0, activeRequests - 1);
+  if (activeRequests === 0) {
     NProgress.done();
   }
 };
 
 // Helper: Get the correct token
+// - supports both localStorage (remember-me) and sessionStorage (non-remember)
+// - uses pathname to pick specific token when on role-specific routes
 const getAuthToken = () => {
-  const pathname = window.location.pathname;
+  if (typeof window === "undefined") return null;
 
-  if (pathname.startsWith("/admin")) {
-    return localStorage.getItem("adminToken");
-  }
+  // read tokens from both storages (remember-me uses localStorage)
+  const adminToken =
+    localStorage.getItem("adminToken") || sessionStorage.getItem("adminToken");
+  const vendorToken =
+    localStorage.getItem("vendorToken") || sessionStorage.getItem("vendorToken");
+  const employeesToken =
+    localStorage.getItem("employeesToken") ||
+    sessionStorage.getItem("employeesToken");
 
-  if (pathname.startsWith("/vendor")) {
-    return localStorage.getItem("vendorToken");
-  }
+  const pathname = window.location.pathname || "";
 
-  if (pathname.startsWith("/employees")) {
-    return localStorage.getItem("employeesToken");
-  }
+  // If we're on a role-specific route, prefer that role's token
+  if (pathname.startsWith("/admin") && adminToken) return adminToken;
+  if (pathname.startsWith("/vendor") && vendorToken) return vendorToken;
+  if (pathname.startsWith("/employees") && employeesToken) return employeesToken;
 
-  // Priority: admin > vendor
+  // Otherwise fall back to priority order: admin > vendor > employees
   if (adminToken) return adminToken;
   if (vendorToken) return vendorToken;
   if (employeesToken) return employeesToken;
@@ -55,10 +64,17 @@ api.interceptors.request.use(
   (config) => {
     startLoading();
 
-    const token = getAuthToken();
+    try {
+      const token = getAuthToken();
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      if (token) {
+        // ensure headers object exists
+        if (!config.headers) config.headers = {};
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (err) {
+      // be defensive: don't break if storage is not accessible
+      console.warn("Failed to attach auth token to request:", err);
     }
 
     return config;
@@ -69,7 +85,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor: stop loading
+// Response interceptor: stop loading and basic 401 handling
 api.interceptors.response.use(
   (response) => {
     stopLoading();
@@ -78,9 +94,12 @@ api.interceptors.response.use(
   (error) => {
     stopLoading();
 
-    if (error.response?.status === 401) {
+    // handle unauthorized globally (optional)
+    if (error?.response?.status === 401) {
+      // token expired or invalid — you can dispatch logout here or emit an event
       console.warn("Unauthorized - token might be expired or missing");
-      // optionally handle logout here
+      // Example (don't import auth here to avoid circular deps):
+      // window.location.href = "/vendor/login";
     }
 
     return Promise.reject(error);

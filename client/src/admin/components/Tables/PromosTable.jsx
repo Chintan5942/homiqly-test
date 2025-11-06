@@ -1,6 +1,6 @@
 // components/PromosTable.jsx
 import React from "react";
-import { Edit2, Trash } from "lucide-react";
+import { Edit2, Pencil, Trash } from "lucide-react";
 import DataTable from "../../../shared/components/Table/DataTable";
 import { IconButton } from "../../../shared/components/Button";
 
@@ -92,7 +92,7 @@ const PromosTable = ({ promos = [], isLoading = false, onEdit, onDelete }) => {
       render: (row) => (
         <div className="flex items-center justify-end space-x-2">
           <IconButton
-            icon={<Edit2 className="w-4 h-4" />}
+            icon={<Pencil className="w-4 h-4" />}
             variant="ghost"
             size="sm"
             onClick={(e) => {

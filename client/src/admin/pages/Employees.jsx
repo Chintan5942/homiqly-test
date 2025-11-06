@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import EmployeesTable from "../components/Tables/EmployeesTable";
@@ -8,6 +7,7 @@ import FormInput from "../../shared/components/Form/FormInput";
 import { FormSelect } from "../../shared/components/Form";
 import UniversalDeleteModal from "../../shared/components/Modal/UniversalDeleteModal";
 import { Search } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const Employees = () => {
   const [employees, setEmployees] = useState([]);
@@ -32,7 +32,7 @@ const Employees = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("adminToken");
-      const response = await axios.get("/api/admin/getallemployees", {
+      const response = await api.get("/api/admin/getallemployees", {
         headers: {
           Authorization: token ? `Bearer ${token}` : undefined,
         },
@@ -85,7 +85,7 @@ const Employees = () => {
       const id = employee.employee_id ?? employee.id;
       try {
         setDeleting(true);
-        const resp = await axios.delete(`/api/admin/delete-employee/${id}`, {
+        const resp = await api.delete(`/api/admin/delete-employee/${id}`, {
           headers: {
             Authorization: token ? `Bearer ${token}` : undefined,
           },

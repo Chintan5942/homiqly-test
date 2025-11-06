@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import LoadingSlider from "../../shared/components/LoadingSpinner";
 import { formatDate } from "../../shared/utils/dateUtils";
 import IconButton from "../../shared/components/Button/IconButton";
 import { FormInput, FormSelect } from "../../shared/components/Form";
 import { Calendar, Star, Trash, User } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const UserRating = () => {
   const [ratings, setRatings] = useState([]);
@@ -20,7 +20,7 @@ const UserRating = () => {
   const fetchRatings = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("/api/rating/getpackagebookedrating");
+      const res = await api.get("/api/rating/getpackagebookedrating");
       setRatings(res.data.rating || []);
     } catch (err) {
       console.error("Error fetching ratings:", err);
@@ -37,7 +37,7 @@ const UserRating = () => {
     if (!confirmed) return;
 
     try {
-      await axios.delete(`/api/notification/deleterating/${ratingId}`);
+      await api.delete(`/api/notification/deleterating/${ratingId}`);
       fetchRatings(); // Refresh list after deletion
     } catch (err) {
       alert("Failed to delete rating.");

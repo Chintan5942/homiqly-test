@@ -8,7 +8,7 @@ import {
   FormFileInput,
 } from "../../../shared/components/Form";
 import { FiPlus, FiTrash } from "react-icons/fi";
-import axios from "axios";
+import api from "../../../lib/axiosConfig";
 
 const AddServiceTypeModal = ({ isOpen, onClose, onSubmit, isSubmitting }) => {
   const [services, setServices] = useState([]);
@@ -31,7 +31,7 @@ const AddServiceTypeModal = ({ isOpen, onClose, onSubmit, isSubmitting }) => {
   const loadVendorRegisteredServices = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/vendor/vendorservice");
+      const response = await api.get("/api/vendor/vendorservice");
       setServices(response.data.services || []);
       setLoading(false);
     } catch (error) {

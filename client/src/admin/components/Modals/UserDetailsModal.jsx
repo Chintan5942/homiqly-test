@@ -15,7 +15,7 @@ const UserDetailsModal = ({
       isOpen={isOpen}
       onClose={onClose}
       title="User Details"
-      size="lg"
+      // size="lg"
     >
       <div className="flex items-center mb-6">
         {user.profileImage ? (

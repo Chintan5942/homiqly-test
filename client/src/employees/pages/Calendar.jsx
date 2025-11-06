@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import StatusBadge from "../../shared/components/StatusBadge";
 import { formatDate, formatTime } from "../../shared/utils/dateUtils";
 import { CheckCircle, Clock, User, XCircle } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const Calendar = () => {
   const [bookings, setBookings] = useState([]);
@@ -21,7 +21,7 @@ const Calendar = () => {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/employee/getbookingemployee");
+      const response = await api.get("/api/employee/getbookingemployee");
       setBookings(response.data.bookings || []);
       setLoading(false);
     } catch (error) {
@@ -74,7 +74,7 @@ const Calendar = () => {
 
   const handleUpdateStatus = async (bookingId, status) => {
     try {
-      const response = await axios.put("/api/booking/approveorrejectbooking", {
+      const response = await api.put("/api/booking/approveorrejectbooking", {
         booking_id: bookingId,
         status,
       });

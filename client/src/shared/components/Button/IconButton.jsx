@@ -23,18 +23,18 @@ const IconButton = ({
     outline:
       "bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300",
     danger:
-      "bg-error hover:bg-red-600 text-white focus:outline-none focus:ring-1 focus:ring-red-500",
+      "bg-error hover:bg-red-600 text-white focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-red-500",
     success:
-      "bg-success hover:bg-green-600 text-white focus:outline-none focus:ring-1 focus:ring-green-500",
+      "bg-success hover:bg-green-600 text-white focus:outline-none focus:ring-1 focus:ring-green-500 focus:ring-offset-green-500",
     warning:
-      "bg-warning hover:bg-yellow-600 text-white focus:outline-none focus:ring-1 focus:ring-yellow-500",
+      "bg-warning hover:bg-yellow-600 text-white focus:outline-none focus:ring-1 focus:ring-yellow-500 focus:ring-offset-yellow-500",
     ghost:
-      "bg-gray-100 hover:bg-gray-200 text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-300",
+      "bg-gray-100 hover:bg-gray-200 text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:ring-offset-gray-300",
 
     inherit:
-      "bg-transparent text-current hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300",
+      "bg-transparent text-current hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:ring-offset-gray-300",
     light:
-      "bg-gray-50 text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300",
+      "bg-gray-50 text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:ring-offset-gray-300",
     lightPrimary:
       "bg-green-100 text-green-700 hover:bg-green-200 focus:outline-none focus:ring-1 focus:ring-green-300",
     lightSecondary:
@@ -48,9 +48,9 @@ const IconButton = ({
     lightDanger:
       "bg-red-100 text-red-700 hover:bg-red-200 focus:outline-none focus:ring-1 focus:ring-red-300",
     lightBlack:
-      "bg-gray-200 text-black hover:bg-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-400",
+      "bg-gray-200 text-black hover:bg-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:ring-offset-gray-400",
     lightWhite:
-      "bg-white text-black hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-200",
+      "bg-white text-black hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-200 focus:ring-offset-gray-200",
     lightGhost:
       "bg-gray-100 text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-300",
   };
@@ -109,7 +109,7 @@ const IconButton = ({
       title={tooltip}
       className={`inline-flex items-center justify-center rounded-full
         transition-colors duration-300 ease-in-out
-        focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-primary
+        focus:outline-none focus:ring-1 focus:ring-offset-1 
         ${variantClasses[variant]} ${sizeClasses[size]} ${
         disabled || isLoading
           ? "opacity-50 cursor-not-allowed"

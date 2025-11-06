@@ -4,6 +4,7 @@ import { FormInput } from "../../../shared/components/Form";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { Button } from "../../../shared/components/Button";
+import api from "../../../lib/axiosConfig";
 
 const Field = ({ label, children }) => (
   <div>
@@ -86,7 +87,7 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose, onUpdated }) => {
 
       for (let ep of endpoints) {
         try {
-          resp = await axios.put(
+          resp = await api.put(
             ep,
             {
               first_name: formData.first_name,

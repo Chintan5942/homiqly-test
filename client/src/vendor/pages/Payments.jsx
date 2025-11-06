@@ -1,6 +1,5 @@
 // pages/vendor/Payments.jsx
 import { useState, useEffect, useCallback, useMemo } from "react";
-import axios from "axios";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { formatDate } from "../../shared/utils/dateUtils";
 import PaymentsTable from "../components/Tables/PaymentsTable";
@@ -8,6 +7,7 @@ import { FormInput, FormSelect } from "../../shared/components/Form";
 import { Button } from "../../shared/components/Button";
 import Pagination from "../../shared/components/Pagination";
 import { RefreshCcw } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const Payments = () => {
   const [bookings, setBookings] = useState([]);
@@ -51,7 +51,7 @@ const Payments = () => {
       if (dateRange.startDate) params.startDate = dateRange.startDate;
       if (dateRange.endDate) params.endDate = dateRange.endDate;
 
-      const response = await axios.get("/api/vendor/getpaymenthistory", {
+      const response = await api.get("/api/vendor/getpaymenthistory", {
         params,
       });
       const resp = response.data || {};
@@ -90,11 +90,11 @@ const Payments = () => {
         pendingPayout: computedPendingPayout,
         paidPayout: resp.paidPayout ?? 0,
       });
-      
+
       // pagination meta (from API if present)
       setTotalPages(
         resp.totalPages ??
-        Math.max(1, Math.ceil((resp.totalBookings ?? payouts.length) / limit))
+          Math.max(1, Math.ceil((resp.totalBookings ?? payouts.length) / limit))
       );
       setTotalBookings(
         resp.totalBookings ?? resp.totalBookings ?? payouts.length
@@ -155,7 +155,7 @@ const Payments = () => {
     try {
       setApplyLoading(true);
       const payload = { requested_amount: amt }; // API expects integer
-      const res = await axios.post("/api/payment/applypayout", payload);
+      const res = await api.post("/api/payment/applypayout", payload);
 
       setApplySuccess(res.data?.message || "Payout requested successfully.");
     } catch (err) {
@@ -216,17 +216,15 @@ const Payments = () => {
   return (
     <div className="p-4 space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800">Booking History</h2>
+        <h2 className="text-2xl font-bold text-gray-800">
+          Payment Booking History
+        </h2>
 
         <div className="flex items-center space-x-2">
-          <div className="hidden mr-2 text-sm text-gray-600 md:block">
-            Page {page} of {totalPages}
-          </div>
-
           <Button
             className="h-9"
             onClick={fetchBookings}
-            variant="outline"
+            variant="lightInherit"
             icon={<RefreshCcw className="w-4 h-4 mr-2" />}
           >
             Refresh
@@ -270,7 +268,10 @@ const Payments = () => {
         <div className="grid items-end grid-cols-1 gap-4 md:grid-cols-6">
           {/* Filter */}
           <div className="md:col-span-1">
-            <label htmlFor="filter" className="block mb-1 text-sm font-medium text-gray-700">
+            <label
+              htmlFor="filter"
+              className="block mb-1 text-sm font-medium text-gray-700"
+            >
               Filter
             </label>
             <FormSelect
@@ -290,7 +291,10 @@ const Payments = () => {
 
           {/* Start Date */}
           <div className="md:col-span-1">
-            <label htmlFor="startDate" className="block mb-1 text-sm font-medium text-gray-700">
+            <label
+              htmlFor="startDate"
+              className="block mb-1 text-sm font-medium text-gray-700"
+            >
               Start Date
             </label>
             <FormInput
@@ -305,7 +309,10 @@ const Payments = () => {
 
           {/* End Date */}
           <div className="md:col-span-1">
-            <label htmlFor="endDate" className="block mb-1 text-sm font-medium text-gray-700">
+            <label
+              htmlFor="endDate"
+              className="block mb-1 text-sm font-medium text-gray-700"
+            >
               End Date
             </label>
             <FormInput
@@ -360,7 +367,10 @@ const Payments = () => {
             keepVisibleOnSinglePage={true}
             totalBookings={totalBookings}
             limit={limit}
-            onLimitChange={(n) => { setLimit(n); setPage(1); }}
+            onLimitChange={(n) => {
+              setLimit(n);
+              setPage(1);
+            }}
             renderLimitSelect={({ value, onChange, options }) => (
               <FormSelect
                 id="limit"

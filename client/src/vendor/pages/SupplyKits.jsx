@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 import { formatCurrency } from '../../shared/utils/formatUtils';
 import { formatDate } from '../../shared/utils/dateUtils';
 import { Check, ShoppingCart, X } from 'lucide-react';
+import api from '../../lib/axiosConfig';
 
 const SupplyKits = () => {
   const [supplyKits, setSupplyKits] = useState([]);
@@ -25,11 +25,11 @@ const SupplyKits = () => {
       setLoading(true);
       
       // Fetch all supply kits
-      const kitsResponse = await axios.get('/api/supplykit/all');
+      const kitsResponse = await api.get('/api/supplykit/all');
       setSupplyKits(kitsResponse.data.supply_kits || []);
       
       // Fetch vendor's orders
-      const ordersResponse = await axios.get('/api/supplykit/vendor/orders');
+      const ordersResponse = await api.get('/api/supplykit/vendor/orders');
       setMyOrders(ordersResponse.data.orders || []);
       
       setLoading(false);
@@ -60,7 +60,7 @@ const SupplyKits = () => {
     try {
       setSubmitting(true);
       
-      const response = await axios.post('/api/supplykit/order', {
+      const response = await api.post('/api/supplykit/order', {
         kit_id: selectedKit.kit_id,
         quantity_ordered: quantity
       });

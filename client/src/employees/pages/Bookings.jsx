@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import BookingsTable from "../components/Tables/BookingsTable";
 import { Button } from "../../shared/components/Button";
 import { FormSelect } from "../../shared/components/Form";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { RefreshCcw } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const Bookings = () => {
   const [bookings, setBookings] = useState([]);
@@ -19,7 +19,7 @@ const Bookings = () => {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/employee/getbookingemployee");
+      const response = await api.get("/api/employee/getbookingemployee");
       setBookings(response.data.bookings || []);
     } catch (error) {
       console.error("Error fetching bookings:", error);
@@ -31,7 +31,7 @@ const Bookings = () => {
 
   const handleUpdateStatus = async (bookingId, status) => {
     try {
-      const response = await axios.put("/api/booking/approveorrejectbooking", {
+      const response = await api.put("/api/booking/approveorrejectbooking", {
         booking_id: bookingId,
         status,
       });

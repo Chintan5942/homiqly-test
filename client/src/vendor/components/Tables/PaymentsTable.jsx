@@ -80,10 +80,7 @@ const PaymentsTable = ({
             </div>
           )}
           <div className="text-sm">
-            <div className="font-medium">{row.packageName ?? "—"}</div>
-            <div className="text-xs text-gray-500">
-              {row.package_id ? `ID: ${row.package_id}` : ""}
-            </div>
+            <div className="">{row.packageName ?? "—"}</div>
           </div>
         </div>
       ),
@@ -93,8 +90,8 @@ const PaymentsTable = ({
       key: "user",
       render: (row) => (
         <div>
-          <div className="font-medium">
-            {row.user_name ?? row.user_email ?? "—"}
+          <div className="">
+            {row.user_name ?? row.user_email ?? "N/A"}
           </div>
           {row.user_email && (
             <div className="text-sm text-gray-500">{row.user_email}</div>
@@ -157,7 +154,7 @@ const PaymentsTable = ({
 
         return (
           <span
-            className={`px-2 py-1 rounded-full text-xs font-medium ${color}`}
+            className={`px-2 py-1 rounded-full text-xs  ${color}`}
           >
             {label}
           </span>

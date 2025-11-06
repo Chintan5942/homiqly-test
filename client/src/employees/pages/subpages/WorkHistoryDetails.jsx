@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../../shared/components/Button";
-
 import { Calendar, Clock, User, Mail, Phone, MapPin } from "lucide-react";
 import { formatDate, formatTime } from "../../../shared/utils/dateUtils";
 import { toast } from "react-toastify";
 import Breadcrumb from "../../../shared/components/Breadcrumb";
 import StatusBadge from "../../../shared/components/StatusBadge";
 import LoadingSlider from "../../../shared/components/LoadingSpinner";
+import api from "../../../lib/axiosConfig";
 
 const WorkHistoryDetails = () => {
   const { bookingId } = useParams();
@@ -19,7 +19,7 @@ const WorkHistoryDetails = () => {
   const fetchWorkHistoryDetails = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("/api/employees/bookinghistory");
+      const response = await api.get("/api/employees/bookinghistory");
       const found = response.data.bookings.find(
         (b) => b.booking_id === Number(bookingId)
       );

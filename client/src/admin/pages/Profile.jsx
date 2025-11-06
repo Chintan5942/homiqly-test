@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { useAdminAuth } from "../contexts/AdminAuthContext";
 import { Card } from "../../shared/components/Card";
 import { Button } from "../../shared/components/Button";
 import { FormInput, FormTextarea } from "../../shared/components/Form";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
-import { Edit, Lock, Mail, Save, User, X, Shield, Camera } from "lucide-react";
+import { Edit, Lock, Mail, Save, User, X, Shield, Camera, Pencil } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const Profile = () => {
   const { currentUser, setCurrentUser } = useAdminAuth();
@@ -38,7 +38,7 @@ const Profile = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const res = await axios.get("/api/admin/getprofile", {
+        const res = await api.get("/api/admin/getprofile", {
           headers: getHeaders(),
         });
 
@@ -92,7 +92,7 @@ const Profile = () => {
 
     try {
       setUpdating(true);
-      const res = await axios.patch("/api/admin/editprofile", payload, {
+      const res = await api.patch("/api/admin/editprofile", payload, {
         headers: getHeaders(),
       });
 
@@ -114,7 +114,8 @@ const Profile = () => {
 
         // persist to localStorage for cross-tab consistency
         try {
-          localStorage.setItem("adminData", JSON.stringify(updatedUser));
+          localStorage.setItem("adminData", JSON.stringify(updatedUser)) ||
+            sessionStorage.setItem("adminData", JSON.stringify(updatedUser));
         } catch (err) {
           console.warn("Failed to write adminData to localStorage", err);
         }
@@ -167,7 +168,7 @@ const Profile = () => {
         (k) => payload[k] === undefined && delete payload[k]
       );
 
-      const res = await axios.patch("/api/admin/changepassword", payload, {
+      const res = await api.patch("/api/admin/changepassword", payload, {
         headers: getHeaders(),
       });
 
@@ -229,7 +230,7 @@ const Profile = () => {
               {!editing ? (
                 <Button
                   onClick={toggleEdit}
-                  icon={<Edit className="w-4 h-4" />}
+                  icon={<Pencil className="w-4 h-4" />}
                 >
                   Edit Profile
                 </Button>

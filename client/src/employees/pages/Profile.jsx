@@ -4,7 +4,7 @@ import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { Button } from "../../shared/components/Button";
 import { FormInput, FormFileInput } from "../../shared/components/Form";
 import { toast } from "react-toastify";
-import { Edit2, Mail, Phone, Save, User, X } from "lucide-react";
+import { Edit2, Mail, Pencil, Phone, Save, User, X } from "lucide-react";
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
@@ -165,7 +165,7 @@ const Profile = () => {
             onClick={() => setEditing((prev) => !prev)}
             variant={editing ? "outline" : "primary"}
             icon={
-              editing ? <X className="mr-2" /> : <Edit2 className="mr-2" />
+              editing ? <X className="mr-2" /> : <Pencil className="mr-2" />
             }
           >
             {editing ? "Cancel" : "Edit Profile"}

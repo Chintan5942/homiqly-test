@@ -1,8 +1,8 @@
 import { useState } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import Modal from "../../../shared/components/Modal/Modal";
 import { Button } from "../../../shared/components/Button";
+import api from "../../../lib/axiosConfig";
 
 const RatingModal = ({ isOpen, onClose, bookingId }) => {
   const [rating, setRating] = useState(0);
@@ -17,7 +17,7 @@ const RatingModal = ({ isOpen, onClose, bookingId }) => {
 
     try {
       setLoading(true);
-      await axios.post("/api/rating/add-rating", {
+      await api.post("/api/rating/add-rating", {
         booking_id: bookingId,
         rating,
         review,

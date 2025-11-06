@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import moment from "moment-timezone";
 import {
@@ -13,12 +12,15 @@ import {
   Pencil,
   Trash,
   AlertCircle,
+  X,
 } from "lucide-react";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import StatusBadge from "../../shared/components/StatusBadge";
 import { formatDate, formatTime } from "../../shared/utils/dateUtils";
-import { Button } from "../../shared/components/Button";
+import { Button, IconButton } from "../../shared/components/Button";
 import Modal from "../../shared/components/Modal/Modal";
+import api from "../../lib/axiosConfig";
+import { FormInput, FormSelect } from "../../shared/components/Form";
 
 /* ---------- Constants ---------- */
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -35,41 +37,41 @@ const fromMountainTime = (date) => getMoment(date).local().toDate();
 
 /* ---------- Small Utils ---------- */
 const startOfMonth = (d) => {
-  const mt = getMoment(d).startOf('month');
+  const mt = getMoment(d).startOf("month");
   return mt.toDate();
 };
 const endOfMonth = (d) => {
-  const mt = getMoment(d).endOf('month');
+  const mt = getMoment(d).endOf("month");
   return mt.toDate();
 };
 const startOfWeek = (d) => {
-  const mt = getMoment(d).startOf('week');
+  const mt = getMoment(d).startOf("week");
   return mt.toDate();
 };
 const endOfWeek = (d) => {
-  const mt = getMoment(d).endOf('week');
+  const mt = getMoment(d).endOf("week");
   return mt.toDate();
 };
 const isSameDay = (a, b) => {
   const mtA = getMoment(a);
   const mtB = getMoment(b);
-  return mtA.isSame(mtB, 'day');
+  return mtA.isSame(mtB, "day");
 };
-const toDateKey = (d) => getMoment(d).format('YYYY-MM-DD');
+const toDateKey = (d) => getMoment(d).format("YYYY-MM-DD");
 
 const inRange = (date, s, e) => {
-  const mtDate = getMoment(date).startOf('day');
-  const mtStart = getMoment(s).startOf('day');
-  const mtEnd = getMoment(e).startOf('day');
-  return mtDate.isBetween(mtStart, mtEnd, 'day', '[]');
+  const mtDate = getMoment(date).startOf("day");
+  const mtStart = getMoment(s).startOf("day");
+  const mtEnd = getMoment(e).startOf("day");
+  return mtDate.isBetween(mtStart, mtEnd, "day", "[]");
 };
 
 /* ---------- Date helpers for Mountain Time ---------- */
 const toInputDate = (d) => {
-  return getMoment(d).format('YYYY-MM-DD');
+  return getMoment(d).format("YYYY-MM-DD");
 };
 const todayISO = () => {
-  return getMoment().format('YYYY-MM-DD');
+  return getMoment().format("YYYY-MM-DD");
 };
 const clampToTodayISO = (iso) => {
   const today = todayISO();
@@ -155,7 +157,7 @@ const Calendar = () => {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get("/api/booking/vendorassignedservices");
+      const { data } = await api.get("/api/booking/vendorassignedservices");
       setBookings(data.bookings || []);
     } catch {
       setError("Failed to load bookings");
@@ -167,7 +169,7 @@ const Calendar = () => {
   const fetchAvailabilities = async () => {
     try {
       setLoadingAvail(true);
-      const { data } = await axios.get("/api/vendor/get-availability");
+      const { data } = await api.get("/api/vendor/get-availability");
       setAvailabilities(data.availabilities || []);
     } catch {
       toast.error("Failed to load availabilities");
@@ -178,10 +180,7 @@ const Calendar = () => {
 
   const createAvailability = async (payload) => {
     try {
-      const { data } = await axios.post(
-        "/api/vendor/set-availability",
-        payload
-      );
+      const { data } = await api.post("/api/vendor/set-availability", payload);
       toast.success(data.message || "Availability set successfully");
       setShowCreateModal(false);
       setAvailabilityForm(emptyForm);
@@ -195,7 +194,7 @@ const Calendar = () => {
 
   const updateAvailability = async (id, payload) => {
     try {
-      const { data } = await axios.put(
+      const { data } = await api.put(
         `/api/vendor/edit-availability/${id}`,
         payload
       );
@@ -251,7 +250,7 @@ const Calendar = () => {
     try {
       setDeleteBusy(true);
       setDeleteBookedDates([]);
-      const res = await axios.delete(url, { data: payload });
+      const res = await api.delete(url, { data: payload });
       toast.success(res?.data?.message || "Availability deleted successfully");
       setShowDeleteModal(false);
       setDeleteTarget(null);
@@ -271,17 +270,17 @@ const Calendar = () => {
   const monthMatrix = useMemo(() => {
     const ms = startOfMonth(currentDate),
       me = endOfMonth(currentDate);
-    const start = getMoment(ms).startOf('week');
-    const end = getMoment(me).endOf('week');
-    
+    const start = getMoment(ms).startOf("week");
+    const end = getMoment(me).endOf("week");
+
     const weeks = [];
     const it = start.clone();
-    
-    while (it.isBefore(end) || it.isSame(end, 'day')) {
+
+    while (it.isBefore(end) || it.isSame(end, "day")) {
       const w = [];
       for (let i = 0; i < 7; i++) {
         w.push(it.toDate());
-        it.add(1, 'day');
+        it.add(1, "day");
       }
       weeks.push(w);
     }
@@ -291,7 +290,7 @@ const Calendar = () => {
   const weekDays = useMemo(() => {
     const s = startOfWeek(currentDate);
     return Array.from({ length: 7 }, (_, i) => {
-      const d = getMoment(s).add(i, 'days');
+      const d = getMoment(s).add(i, "days");
       return d.toDate();
     });
   }, [currentDate]);
@@ -301,7 +300,7 @@ const Calendar = () => {
     bookings.forEach((b) => {
       const rawDate = b.bookingDate || b.date || b.dateBooked || b.booking_date;
       const d = getMoment(rawDate);
-      const k = d.format('YYYY-MM-DD');
+      const k = d.format("YYYY-MM-DD");
       (map[k] ||= []).push(b);
     });
     Object.keys(map).forEach((k) =>
@@ -324,18 +323,18 @@ const Calendar = () => {
   /* ---------- Interactions ---------- */
   const handleDateClick = (date) => {
     setSelectedDate(date);
-    const key = getMoment(date).format('YYYY-MM-DD');
+    const key = getMoment(date).format("YYYY-MM-DD");
     setSelectedBookings(bookingsByDay[key] || []);
   };
 
   const handlePreviousPeriod = () => {
     let newDate;
     if (viewMode === "month") {
-      newDate = getMoment(currentDate).subtract(1, 'month').toDate();
+      newDate = getMoment(currentDate).subtract(1, "month").toDate();
     } else if (viewMode === "week") {
-      newDate = getMoment(currentDate).subtract(1, 'week').toDate();
+      newDate = getMoment(currentDate).subtract(1, "week").toDate();
     } else {
-      newDate = getMoment(currentDate).subtract(1, 'day').toDate();
+      newDate = getMoment(currentDate).subtract(1, "day").toDate();
     }
     setCurrentDate(newDate);
   };
@@ -343,11 +342,11 @@ const Calendar = () => {
   const handleNextPeriod = () => {
     let newDate;
     if (viewMode === "month") {
-      newDate = getMoment(currentDate).add(1, 'month').toDate();
+      newDate = getMoment(currentDate).add(1, "month").toDate();
     } else if (viewMode === "week") {
-      newDate = getMoment(currentDate).add(1, 'week').toDate();
+      newDate = getMoment(currentDate).add(1, "week").toDate();
     } else {
-      newDate = getMoment(currentDate).add(1, 'day').toDate();
+      newDate = getMoment(currentDate).add(1, "day").toDate();
     }
     setCurrentDate(newDate);
   };
@@ -359,36 +358,42 @@ const Calendar = () => {
     const currentMoment = getMoment(currentDate);
     const title =
       viewMode === "month"
-        ? currentMoment.format('MMMM YYYY')
+        ? currentMoment.format("MMMM YYYY")
         : viewMode === "week"
-        ? `${getMoment(startOfWeek(currentDate)).format('MMM D')} - ${getMoment(endOfWeek(currentDate)).format('MMM D, YYYY')}`
-        : currentMoment.format('dddd, MMMM D, YYYY');
+        ? `${getMoment(startOfWeek(currentDate)).format("MMM D")} - ${getMoment(
+            endOfWeek(currentDate)
+          ).format("MMM D, YYYY")}`
+        : currentMoment.format("dddd, MMMM D, YYYY");
 
     return (
       <div className="flex flex-col items-center justify-between sm:flex-row pb-7">
         <div className="flex items-center gap-2">
-          <button
+          <IconButton
             onClick={handlePreviousPeriod}
-            className="p-2 text-gray-600 rounded-full hover:bg-gray-100"
-          >
-            <ArrowLeft size={20} />
-          </button>
+            variant="lightBlack"
+            icon={<ArrowLeft size={20} />}
+          />
           <span className="text-lg font-bold">{title}</span>
-          <button
+          <IconButton
             onClick={handleNextPeriod}
-            className="p-2 text-gray-600 rounded-full hover:bg-gray-100"
-          >
-            <ArrowRight size={20} />
-          </button>
-          <button
-            onClick={handleToday}
-            className="px-3 py-1 ml-3 text-xs rounded-full sm:text-sm text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
-          >
+            variant="lightBlack"
+            icon={<ArrowRight size={20} />}
+          />
+          <Button onClick={handleToday} variant="ghost">
             Today
-          </button>
+          </Button>
         </div>
         <div className="flex gap-1 p-1 mt-4 bg-gray-100 rounded-full sm:mt-0">
-          {["month", "week", "day"].map((m) => (
+          <FormSelect
+            options={[
+              { value: "month", label: "Month" },
+              { value: "week", label: "Week" },
+              { value: "day", label: "Day" },
+            ]}
+            value={viewMode}
+            onChange={(e) => setViewMode(e.target.value)}
+          />
+          {/* {["month", "week", "day"].map((m) => (
             <button
               key={m}
               onClick={() => setViewMode(m)}
@@ -400,11 +405,11 @@ const Calendar = () => {
             >
               {m[0].toUpperCase() + m.slice(1)}
             </button>
-          ))}
+          ))} */}
         </div>
         <div className="flex items-center gap-2 mt-4 sm:mt-0">
           <div className="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded">
-            MT: {getMoment().format('YYYY-MM-DD HH:mm')}
+            MT: {getMoment().format("YYYY-MM-DD HH:mm")}
           </div>
           <Button
             onClick={() => {
@@ -447,10 +452,11 @@ const Calendar = () => {
           <div key={wIdx} className="grid grid-cols-7">
             {week.map((day) => {
               const dayMoment = getMoment(day);
-              const key = dayMoment.format('YYYY-MM-DD');
+              const key = dayMoment.format("YYYY-MM-DD");
               const dayBookings = bookingsByDay[key] || [];
-              const isCurrentMonth = dayMoment.month() === getMoment(currentDate).month();
-              const isToday = dayMoment.isSame(getMoment(), 'day');
+              const isCurrentMonth =
+                dayMoment.month() === getMoment(currentDate).month();
+              const isToday = dayMoment.isSame(getMoment(), "day");
               const dayAvs = availabilitiesForDate(day);
               const isAvailable = dayAvs.length > 0;
 
@@ -542,7 +548,7 @@ const Calendar = () => {
           {weekDays.map((d) => {
             const dayMoment = getMoment(d);
             const dayAvs = availabilitiesForDate(d);
-            const isToday = dayMoment.isSame(getMoment(), 'day');
+            const isToday = dayMoment.isSame(getMoment(), "day");
             return (
               <div
                 key={dayMoment.format()}
@@ -550,7 +556,7 @@ const Calendar = () => {
                   isToday ? "border-emerald-300" : ""
                 } ${dayAvs.length ? "bg-emerald-50" : ""}`}
               >
-                <div>{dayMoment.format('ddd')}</div>
+                <div>{dayMoment.format("ddd")}</div>
                 <div
                   className={`text-xs ${
                     isToday ? "font-bold text-emerald-700" : "text-gray-500"
@@ -591,10 +597,10 @@ const Calendar = () => {
         <div className="grid grid-cols-7 divide-x">
           {weekDays.map((d) => {
             const dayMoment = getMoment(d);
-            const key = dayMoment.format('YYYY-MM-DD');
+            const key = dayMoment.format("YYYY-MM-DD");
             const dayBookings = bookingsByDay[key] || [];
             const dayAvs = availabilitiesForDate(d);
-            const isToday = dayMoment.isSame(getMoment(), 'day');
+            const isToday = dayMoment.isSame(getMoment(), "day");
 
             return (
               <div
@@ -652,11 +658,11 @@ const Calendar = () => {
   /* ---------- Day View ---------- */
   const renderDayMain = () => {
     const dayMoment = getMoment(currentDate);
-    const key = dayMoment.format('YYYY-MM-DD');
+    const key = dayMoment.format("YYYY-MM-DD");
     const dayBookings = bookingsByDay[key] || [];
     const dayAvs = availabilitiesForDate(currentDate);
     const isAvailable = !!dayAvs.length;
-    const isToday = dayMoment.isSame(getMoment(), 'day');
+    const isToday = dayMoment.isSame(getMoment(), "day");
 
     return (
       <div
@@ -670,7 +676,7 @@ const Calendar = () => {
           }`}
         >
           <h3 className="text-lg font-semibold text-gray-800">
-            {dayMoment.format('dddd, MMMM D, YYYY')}
+            {dayMoment.format("dddd, MMMM D, YYYY")}
           </h3>
           {isAvailable && (
             <div className="mt-1 text-sm text-emerald-700">
@@ -797,7 +803,7 @@ const Calendar = () => {
         <div className="flex items-start justify-between mb-2">
           <div>
             <h3 className="text-lg font-semibold">
-              {selectedMoment.format('dddd, MMMM D, YYYY')}
+              {selectedMoment.format("dddd, MMMM D, YYYY")}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
               {selectedBookings.length} booking
@@ -811,21 +817,22 @@ const Calendar = () => {
               </p>
             )}
           </div>
-          <button
+          <IconButton
             onClick={() => {
               setSelectedDate(null);
               setSelectedBookings([]);
             }}
-            className="p-2 rounded-full hover:bg-gray-100"
-          >
-            <XCircle className="text-gray-600" />
-          </button>
+            variant="lightDanger"
+            icon={<X size={20} />}
+          />
         </div>
 
         <div className="mt-4">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold">Availabilities</h4>
-            <button
+            <Button
+            size="sm"
+              variant="lightInherit"
               onClick={() => {
                 const base = toInputDate(selectedDate);
                 const safe = clampToTodayISO(base);
@@ -837,10 +844,9 @@ const Calendar = () => {
                 });
                 setShowCreateModal(true);
               }}
-              className="px-2 py-1 text-xs rounded text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
             >
               Add
-            </button>
+            </Button>
           </div>
 
           <div className="space-y-3">
@@ -865,20 +871,18 @@ const Calendar = () => {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 ml-3">
-                      <button
+                      <IconButton
                         onClick={() => openEditModal(a)}
-                        className="p-1 text-xs border rounded hover:bg-emerald-200"
                         title="Edit"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
+                        variant="lightBlack"
+                        icon={<Pencil size={14} />}
+                      />
+                      <IconButton
                         onClick={() => openDeleteModal(a)}
-                        className="p-1 text-xs border rounded hover:bg-red-200"
                         title="Delete"
-                      >
-                        <Trash size={14} />
-                      </button>
+                        variant="lightDanger"
+                        icon={<Trash size={14} />}
+                      />
                     </div>
                   </div>
                 ))
@@ -1022,8 +1026,8 @@ const Calendar = () => {
           <div className="space-y-3">
             {/* Start Date */}
             <div>
-              <label className="block text-xs text-gray-600">Start date</label>
-              <input
+              <FormInput
+                label="Start date"
                 value={availabilityForm.startDate}
                 onChange={(e) => {
                   const v = clampToTodayISO(e.target.value);
@@ -1033,7 +1037,6 @@ const Calendar = () => {
                     endDate: s.endDate && s.endDate < v ? v : s.endDate || v, // keep end >= start
                   }));
                 }}
-                className="w-full p-2 text-sm border rounded"
                 type="date"
                 min={todayISO()}
               />
@@ -1041,8 +1044,8 @@ const Calendar = () => {
 
             {/* End Date */}
             <div>
-              <label className="block text-xs text-gray-600">End date</label>
-              <input
+              <FormInput
+                label="End date"
                 value={availabilityForm.endDate}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -1056,7 +1059,6 @@ const Calendar = () => {
                     endDate: v < minEnd ? minEnd : v,
                   }));
                 }}
-                className="w-full p-2 text-sm border rounded"
                 type="date"
                 min={
                   availabilityForm.startDate &&
@@ -1070,10 +1072,8 @@ const Calendar = () => {
             <div className="grid grid-cols-2 gap-3">
               {["startTime", "endTime"].map((k) => (
                 <div key={k}>
-                  <label className="block text-xs text-gray-600">
-                    {k === "startTime" ? "Start time" : "End time"}
-                  </label>
-                  <input
+                  <FormInput
+                    label={k === "startTime" ? "Start time" : "End time"}
                     value={availabilityForm[k]}
                     onChange={(e) =>
                       setAvailabilityForm((s) => ({
@@ -1081,7 +1081,6 @@ const Calendar = () => {
                         [k]: e.target.value,
                       }))
                     }
-                    className="w-full p-2 text-sm border rounded"
                     type="time"
                   />
                 </div>
@@ -1089,23 +1088,18 @@ const Calendar = () => {
             </div>
 
             <div className="flex justify-end gap-2 mt-4">
-              <button
+              <Button
+                variant="lightInherit"
                 onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={submitCreateAvailability}
                 disabled={loadingAvail}
-                className={`px-4 py-2 text-sm text-white rounded-md ${
-                  loadingAvail
-                    ? "bg-emerald-400 cursor-not-allowed"
-                    : "bg-emerald-600 hover:bg-emerald-700"
-                }`}
               >
                 {loadingAvail ? "Saving..." : "Create"}
-              </button>
+              </Button>
             </div>
           </div>
         </Modal>
@@ -1121,8 +1115,8 @@ const Calendar = () => {
           <div className="space-y-3">
             {/* Start Date */}
             <div>
-              <label className="block text-xs text-gray-600">Start date</label>
-              <input
+              <FormInput
+                label="Start date"
                 value={availabilityForm.startDate}
                 onChange={(e) => {
                   const v = clampToTodayISO(e.target.value);
@@ -1132,7 +1126,6 @@ const Calendar = () => {
                     endDate: s.endDate && s.endDate < v ? v : s.endDate || v,
                   }));
                 }}
-                className="w-full p-2 text-sm border rounded"
                 type="date"
                 min={todayISO()}
               />
@@ -1140,8 +1133,8 @@ const Calendar = () => {
 
             {/* End Date */}
             <div>
-              <label className="block text-xs text-gray-600">End date</label>
-              <input
+              <FormInput
+                label="End date"
                 value={availabilityForm.endDate}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -1155,7 +1148,6 @@ const Calendar = () => {
                     endDate: v < minEnd ? minEnd : v,
                   }));
                 }}
-                className="w-full p-2 text-sm border rounded"
                 type="date"
                 min={
                   availabilityForm.startDate &&
@@ -1169,10 +1161,8 @@ const Calendar = () => {
             <div className="grid grid-cols-2 gap-3">
               {["startTime", "endTime"].map((k) => (
                 <div key={k}>
-                  <label className="block text-xs text-gray-600">
-                    {k === "startTime" ? "Start time" : "End time"}
-                  </label>
-                  <input
+                  <FormInput
+                    label={k === "startTime" ? "Start time" : "End time"}
                     value={availabilityForm[k]}
                     onChange={(e) =>
                       setAvailabilityForm((s) => ({
@@ -1180,7 +1170,6 @@ const Calendar = () => {
                         [k]: e.target.value,
                       }))
                     }
-                    className="w-full p-2 text-sm border rounded"
                     type="time"
                   />
                 </div>
@@ -1188,23 +1177,15 @@ const Calendar = () => {
             </div>
 
             <div className="flex justify-end gap-2 mt-4">
-              <button
+              <Button
+                variant="lightInherit"
                 onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
               >
                 Cancel
-              </button>
-              <button
-                onClick={submitEditAvailability}
-                disabled={loadingAvail}
-                className={`px-4 py-2 text-sm text-white rounded-md ${
-                  loadingAvail
-                    ? "bg-emerald-400 cursor-not-allowed"
-                    : "bg-emerald-600 hover:bg-emerald-700"
-                }`}
-              >
+              </Button>
+              <Button onClick={submitEditAvailability} disabled={loadingAvail}>
                 {loadingAvail ? "Saving..." : "Update"}
-              </button>
+              </Button>
             </div>
           </div>
         </Modal>
@@ -1222,7 +1203,7 @@ const Calendar = () => {
               <label className="flex items-center gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50">
                 <input
                   type="radio"
-                  className="accent-red-600"
+                  className="accent-green-600"
                   checked={deleteMode === "all"}
                   onChange={() => setDeleteMode("all")}
                 />
@@ -1236,7 +1217,7 @@ const Calendar = () => {
               <label className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50">
                 <input
                   type="radio"
-                  className="mt-1 accent-red-600"
+                  className="mt-1 accent-green-600"
                   checked={deleteMode === "date"}
                   onChange={() => setDeleteMode("date")}
                 />
@@ -1246,12 +1227,9 @@ const Calendar = () => {
                   </div>
                   <div className="grid grid-cols-1 gap-2 mt-2 sm:grid-cols-2">
                     <div>
-                      <label className="block text-xs text-gray-600">
-                        Start date (inside range)
-                      </label>
-                      <input
+                      <FormInput
                         type="date"
-                        className="w-full p-2 text-sm border rounded"
+                        label="Start date (inside range)"
                         value={deleteStartDate}
                         min={
                           deleteTarget
@@ -1270,12 +1248,9 @@ const Calendar = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600">
-                        End date (inside range)
-                      </label>
-                      <input
+                      <FormInput
                         type="date"
-                        className="w-full p-2 text-sm border rounded"
+                        label="End date (inside range)"
                         value={deleteEndDate}
                         min={deleteStartDate || todayISO()}
                         max={deleteTarget?.endDate}
@@ -1305,28 +1280,24 @@ const Calendar = () => {
             </div>
 
             <div className="flex justify-end gap-2 mt-5">
-              <button
+              <Button
+                variant="lightInherit"
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                 disabled={deleteBusy}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="lightError"
                 onClick={submitDeleteAvailability}
                 disabled={
                   deleteBusy ||
                   (deleteMode === "date" &&
                     (!deleteStartDate || !deleteEndDate))
                 }
-                className={`px-4 py-2 text-sm text-white rounded-md ${
-                  deleteBusy
-                    ? "bg-red-300 cursor-not-allowed"
-                    : "bg-red-600 hover:bg-red-700"
-                }`}
               >
                 {deleteBusy ? "Deleting..." : "Delete"}
-              </button>
+              </Button>
             </div>
           </>
         </Modal>

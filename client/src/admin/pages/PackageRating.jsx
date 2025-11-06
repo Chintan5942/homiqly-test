@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { formatDate } from "../../shared/utils/dateUtils";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { FormSelect } from "../../shared/components/Form";
 import { Calendar, User } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const PackageRating = () => {
   const [packages, setPackages] = useState([]);
@@ -20,7 +20,7 @@ const PackageRating = () => {
 
   const fetchPackages = async () => {
     try {
-      const res = await axios.get("/api/admin/getallpackages");
+      const res = await api.get("/api/admin/getallpackages");
       // ensure option values are strings to match select value
       setPackages(res.data.packages || []);
     } catch (err) {
@@ -31,7 +31,7 @@ const PackageRating = () => {
   const fetchRatings = async (packageId) => {
     try {
       setLoading(true);
-      const res = await axios.get(`/api/rating/packageaverage/${packageId}`);
+      const res = await api.get(`/api/rating/packageaverage/${packageId}`);
       // defensive: ensure rating is array
       setRatings(res.data.review?.rating || []);
       setPackageInfo(res.data.review || null);

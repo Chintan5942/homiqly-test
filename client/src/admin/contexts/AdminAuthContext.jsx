@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios";
 import { requestFCMToken } from "../../firebase/firebase";
+import api from "../../lib/axiosConfig";
 
 const AdminAuthContext = createContext();
 
@@ -21,7 +21,6 @@ export const AdminAuthProvider = ({ children }) => {
     if (token && userData) {
       setCurrentUser(JSON.parse(userData));
       setIsAuthenticated(true);
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     }
 
     setLoading(false);
@@ -36,7 +35,7 @@ export const AdminAuthProvider = ({ children }) => {
   const login = async (email, password, fcmToken) => {
     try {
       setError(null);
-      const response = await axios.post("/api/admin/login", {
+      const response = await api.post("/api/admin/login", {
         email,
         password,
         fcmToken,
@@ -48,8 +47,6 @@ export const AdminAuthProvider = ({ children }) => {
 
       localStorage.setItem("adminToken", token);
       localStorage.setItem("adminData", JSON.stringify(userData));
-
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
       setCurrentUser(userData);
       setIsAuthenticated(true);
@@ -67,7 +64,6 @@ export const AdminAuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminData");
-    delete axios.defaults.headers.common["Authorization"];
     setCurrentUser(null);
     setIsAuthenticated(false);
   };
@@ -75,7 +71,7 @@ export const AdminAuthProvider = ({ children }) => {
   const requestPasswordReset = async (email) => {
     try {
       setError(null);
-      await axios.post("/api/admin/requestreset", { email });
+      await api.post("/api/admin/requestreset", { email });
       return { success: true };
     } catch (err) {
       setError(err.response?.data?.error || "Failed to send reset code");
@@ -89,7 +85,7 @@ export const AdminAuthProvider = ({ children }) => {
   const verifyResetCode = async (email, resetCode) => {
     try {
       setError(null);
-      const response = await axios.post("/api/admin/verifyresetcode", {
+      const response = await api.post("/api/admin/verifyresetcode", {
         email,
         resetCode,
       });
@@ -106,7 +102,7 @@ export const AdminAuthProvider = ({ children }) => {
   const resetPassword = async (token, newPassword) => {
     try {
       setError(null);
-      await axios.post(
+      await api.post(
         "/api/admin/resetpassword",
         { newPassword },
         { headers: { Authorization: `Bearer ${token}` } }

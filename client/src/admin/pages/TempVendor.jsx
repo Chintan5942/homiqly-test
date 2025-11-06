@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import {
   X,
   FileText,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import Modal from "../../shared/components/Modal/Modal"; // <- adjust path if needed
+import api from "../../lib/axiosConfig";
 
 const TempVendor = () => {
   const [vendors, setVendors] = useState([]);
@@ -29,7 +29,7 @@ const TempVendor = () => {
   const fetchVendors = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("/api/vendor/get-temp-vendor");
+      const res = await api.get("/api/vendor/get-temp-vendor");
       setVendors(res.data.data || []);
     } catch (error) {
       toast.error("Failed to fetch vendor data");

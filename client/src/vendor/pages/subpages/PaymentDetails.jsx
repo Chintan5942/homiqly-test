@@ -1,11 +1,11 @@
 // pages/vendor/components/PaymentDetails.jsx
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { formatDate } from "../../../shared/utils/dateUtils";
 import { formatCurrency } from "../../../shared/utils/formatUtils";
 import Breadcrumb from "../../../shared/components/Breadcrumb";
 import { ArrowLeft } from "lucide-react";
+import api from "../../../lib/axiosConfig";
 
 const PaymentDetails = () => {
   const { paymentId } = useParams(); // route param (booking_id passed earlier)
@@ -21,7 +21,7 @@ const PaymentDetails = () => {
       try {
         setLoading(true);
         // attempt an endpoint - if your backend has a different path update it
-        const res = await axios.get(`/api/vendor/getpayment/${id}`);
+        const res = await api.get(`/api/vendor/getpayment/${id}`);
         const data = res.data || null;
         if (data) {
           // If API returns wrapper like { payout: {...} } adapt here.

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import VendorsTable from "../components/Tables/VendorsTable";
 import VendorDetailsModal from "../components/Modals/VendorDetailsModal";
@@ -7,6 +6,7 @@ import { Button } from "../../shared/components/Button";
 import { FormInput, FormSelect } from "../../shared/components/Form";
 import Pagination from "../../shared/components/Pagination";
 import { RefreshCcw, RotateCcw, Search } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 const Vendors = () => {
   const [vendors, setVendors] = useState([]);
@@ -49,7 +49,7 @@ const Vendors = () => {
       else if (filter === "approved") params.status = 1;
       else if (filter === "rejected") params.status = 2;
 
-      const response = await axios.get("/api/admin/getvendors", { params });
+      const response = await api.get("/api/admin/getvendors", { params });
       const respData = response.data || {};
       setVendors(respData.data || []);
       setPage(respData.page || page);
@@ -72,7 +72,7 @@ const Vendors = () => {
 
   const handleApproveVendor = async (vendorId, status) => {
     try {
-      const response = await axios.put(
+      const response = await api.put(
         `/api/approval/verification/${vendorId}`,
         {
           is_authenticated: status,

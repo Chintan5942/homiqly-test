@@ -1,10 +1,10 @@
 import { useState } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { Button } from "../../../shared/components/Button";
 import { FormInput } from "../../../shared/components/Form";
 import Loader from "../../../shared/components/LoadingSpinner";
 import LoadingSlider from "../../../shared/components/LoadingSpinner";
+import api from "../../../lib/axiosConfig";
 
 const CreateEmployeesModal = ({ isOpen, onClose, onEmployeeCreated }) => {
   const [form, setForm] = useState({
@@ -23,7 +23,7 @@ const CreateEmployeesModal = ({ isOpen, onClose, onEmployeeCreated }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post("/api/employee/create-employee", form);
+      await api.post("/api/employee/create-employee", form);
       toast.success("Employee created successfully!");
       onEmployeeCreated();
       onClose();

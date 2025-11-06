@@ -7,7 +7,6 @@ import api from "../../../lib/axiosConfig";
 import Breadcrumb from "../../../shared/components/Breadcrumb";
 import PaymentBadge from "../../../shared/components/PaymentBadge";
 import { Button } from "../../../shared/components/Button";
-import axios from "axios";
 import { toast } from "react-toastify";
 import RatingModal from "../../../employees/components/Modals/RatingModal";
 import {
@@ -74,7 +73,7 @@ const BookingDetailsPage = () => {
 
   const handleUpdateBookingStatus = async (status) => {
     try {
-      const response = await axios.put(`/api/vendor/updatebookingstatus`, {
+      const response = await api.put(`/api/vendor/updatebookingstatus`, {
         booking_id: bookingId,
         status,
       });

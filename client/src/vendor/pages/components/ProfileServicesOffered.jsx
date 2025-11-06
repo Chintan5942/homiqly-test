@@ -36,19 +36,14 @@ const ProfileServicesOffered = () => {
     }
   };
 
-  // 🔁 API call to delete a specific sub-package
   const deleteSubPackageApi = async ({
     vendor_packages_id,
     package_id,
     package_item_id,
   }) => {
-    const res = await api.delete(
-      `/api/vendor/removepackage/${vendor_packages_id}`,
-      {
-        data: { package_id, package_item_id },
-      }
-    );
-    return res;
+    return api.delete(`/api/vendor/removepackage/${vendor_packages_id}`, {
+      data: { package_id, package_item_id },
+    });
   };
 
   // 🧠 open the modal from the sub-package delete button
@@ -169,9 +164,8 @@ const ProfileServicesOffered = () => {
                               }
                               onClick={() =>
                                 handleAskDeleteSub({
-                                  vendor_packages_id:
-                                    service.vendor_packages_id,
-                                  package_id: service.package_id, // ensure your service object has this
+                                  vendor_packages_id: sub.vendor_packages_id,
+                                  package_id: service.package_id,
                                   package_item_id: sub.package_item_id,
                                   sub_package_name: sub.sub_package_name,
                                 })
@@ -205,7 +199,7 @@ const ProfileServicesOffered = () => {
         onDelete={deleteAction}
         confirmLabel="Remove"
         cancelLabel="Cancel"
-        onError={(err) => toast.error(err?.message || "Delete failed")}
+        // onError={(err) => toast.error(err?.message || "Delete failed")}
         title="Confirm delete"
         desc={deleteDesc}
         autoClose={true}

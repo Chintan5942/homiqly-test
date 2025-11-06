@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -17,6 +16,7 @@ import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { formatCurrency } from "../../shared/utils/formatUtils";
 import { Button } from "../../shared/components/Button";
 import { Download, RefreshCcw } from "lucide-react";
+import api from "../../lib/axiosConfig";
 
 // Register ChartJS components
 ChartJS.register(
@@ -48,23 +48,23 @@ const Analytics = () => {
       setLoading(true);
 
       // Fetch booking trends
-      const trendsResponse = await axios.get("/api/analytics/booking-trends");
+      const trendsResponse = await api.get("/api/analytics/booking-trends");
       setBookingTrends(trendsResponse.data.trends || []);
 
       // Fetch service category stats
-      const categoryResponse = await axios.get(
+      const categoryResponse = await api.get(
         "/api/analytics/service-categories"
       );
       setCategoryStats(categoryResponse.data.stats || []);
 
       // Fetch vendor performance
-      const vendorResponse = await axios.get(
+      const vendorResponse = await api.get(
         "/api/analytics/vendor-performance"
       );
       setVendorPerformance(vendorResponse.data.performance || []);
 
       // Fetch revenue analytics
-      const revenueResponse = await axios.get("/api/analytics/revenue");
+      const revenueResponse = await api.get("/api/analytics/revenue");
       setRevenueData(revenueResponse.data.revenue || []);
 
       setLoading(false);

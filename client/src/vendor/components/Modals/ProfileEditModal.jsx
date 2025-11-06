@@ -8,6 +8,7 @@ import {
   FormTextarea,
   FormFileInput,
   FormOption,
+  FormSelect,
 } from "../../../shared/components/Form";
 import {
   X,
@@ -28,11 +29,13 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import Modal from "../../../shared/components/Modal/Modal";
+import { useVendorAuth } from "../../contexts/VendorAuthContext";
 
 const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
   const [activeSection, setActiveSection] = useState("profile");
   const [updating, setUpdating] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
+  const { currentUser, setCurrentUser } = useVendorAuth();
 
   const [formData, setFormData] = useState({
     name: profile?.name || "",
@@ -144,6 +147,23 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
       if (response.status === 200) {
         toast.success("Profile updated successfully");
         onProfileUpdate();
+      }
+
+      const updatedUser = {
+        ...(currentUser || {}),
+        name: formData.name,
+        email: formData.email,
+      };
+
+      if (typeof setCurrentUser === "function") {
+        setCurrentUser(updatedUser);
+      }
+
+      try {
+        localStorage.setItem("vendorData", JSON.stringify(formData)) ||
+          sessionStorage.setItem("vendorData", JSON.stringify(formData));
+      } catch (err) {
+        console.warn("Failed to write vendorData to localStorage", err);
       }
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -268,7 +288,7 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
                         src={
                           profileImage
                             ? URL.createObjectURL(profileImage)
-                            : profile?.profileImage
+                            : profile?.profileImage || "/profile-img.webp"
                         }
                         alt="Profile"
                         className="object-cover w-full h-full"
@@ -388,13 +408,14 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label
-                          className="block mb-1 text-sm font-medium text-gray-700"
-                          htmlFor="expertise"
-                        >
-                          Expertise
-                        </label>
-                        {expertiseOptions.map((opt) => (
+                        <FormSelect
+                          label="Expertise"
+                          name="expertise"
+                          value={formData.expertise}
+                          onChange={handleInputChange}
+                          options={expertiseOptions}
+                        />
+                        {/* {expertiseOptions.map((opt) => (
                           <FormOption
                             key={opt}
                             type="checkbox"
@@ -412,7 +433,7 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
                             }}
                             label={opt}
                           />
-                        ))}
+                        ))} */}
                       </div>
                     </>
                   )}

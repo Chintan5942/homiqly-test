@@ -1,7 +1,7 @@
 // PlatformTax.jsx
 import React, { useEffect, useState } from "react";
 import api from "../../../lib/axiosConfig"; // adjust path if needed
-import { Trash, Edit2, Plus } from "lucide-react";
+import { Trash, Edit2, Plus, Pencil } from "lucide-react";
 import { Button, IconButton } from "../../../shared/components/Button";
 import Modal from "../../../shared/components/Modal/Modal";
 import { FormInput } from "../../../shared/components/Form";
@@ -57,7 +57,7 @@ function TaxesTable({ taxes = [], isLoading = false, onEdit, onDelete }) {
       render: (row) => (
         <div className="flex items-center justify-end space-x-2">
           <IconButton
-            icon={<Edit2 className="w-4 h-4" />}
+            icon={<Pencil className="w-4 h-4" />}
             variant="ghost"
             size="sm"
             onClick={(e) => {

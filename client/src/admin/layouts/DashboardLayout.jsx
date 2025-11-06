@@ -135,7 +135,7 @@ const DashboardLayout = () => {
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
       <aside
-        className="bg-background text-text-primary fixed inset-y-0 left-0 z-30 transition-all duration-300"
+        className="bg-background text-text-primary fixed inset-y-0 left-0  transition-all duration-300"
         style={{ width: sidebarWidth, minWidth: sidebarWidth }}
       >
         <div className="flex flex-col h-full">
