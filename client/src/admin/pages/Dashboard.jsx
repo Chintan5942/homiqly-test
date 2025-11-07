@@ -211,7 +211,7 @@ const Dashboard = () => {
       </div>
 
       {/* Calendar Section */}
-      <div className="bg-white rounded-lg shadow p-6">
+      {/* <div className="bg-white rounded-lg shadow p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Booking Calendar</h2>
           <Link
@@ -226,7 +226,7 @@ const Dashboard = () => {
             Calendar component will be integrated here
           </p>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

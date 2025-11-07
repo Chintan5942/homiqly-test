@@ -16,7 +16,7 @@ import ToggleButton from "../components/ToggleButton";
 import StatusBadge from "../../shared/components/StatusBadge";
 import Calendar from "./Calendar";
 import { FormInput, FormSelect } from "../../shared/components/Form";
-import { CheckCircle, Clock, DollarSign, ShoppingBag } from "lucide-react";
+import { Check, CheckCircle, Clock, DollarSign, ShoppingBag } from "lucide-react";
 
 // Register ChartJS components
 ChartJS.register(
@@ -32,7 +32,8 @@ ChartJS.register(
 const Dashboard = () => {
   const [stats, setStats] = useState({
     totalBookings: 0,
-    pendingBookings: 0,
+    startedBookings: 0,
+    approvedBookings: 0,
     completedBookings: 0,
     totalEarnings: 0,
   });
@@ -58,7 +59,8 @@ const Dashboard = () => {
 
       setStats({
         totalBookings: statsData.totalBookings || 0,
-        pendingBookings: parseInt(statsData.pendingBookings) || 0,
+        startedBookings: parseInt(statsData.startedBookings) || 0,
+        approvedBookings: parseInt(statsData.approvedBookings) || 0,
         completedBookings: parseInt(statsData.completedBookings) || 0,
         totalEarnings: statsData.totalEarnings || 0,
       });
@@ -167,7 +169,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
         <div className="flex items-center p-6 space-x-4 bg-white rounded-lg shadow">
           <div className="p-3 text-blue-600 bg-blue-100 rounded-full">
             <ShoppingBag className="w-6 h-6" />
@@ -183,8 +185,8 @@ const Dashboard = () => {
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-sm text-gray-500">Pending Bookings</p>
-            <p className="text-2xl font-semibold">{stats.pendingBookings}</p>
+            <p className="text-sm text-gray-500">Started Bookings</p>
+            <p className="text-2xl font-semibold">{stats.startedBookings}</p>
           </div>
         </div>
 
@@ -195,6 +197,15 @@ const Dashboard = () => {
           <div>
             <p className="text-sm text-gray-500">Completed Bookings</p>
             <p className="text-2xl font-semibold">{stats.completedBookings}</p>
+          </div>
+        </div>
+        <div className="flex items-center p-6 space-x-4 bg-white rounded-lg shadow">
+          <div className="p-3 text-blue-600 bg-blue-100 rounded-full">
+            <Check className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Approved Bookings</p>
+            <p className="text-2xl font-semibold">{stats.approvedBookings}</p>
           </div>
         </div>
 

@@ -49,12 +49,12 @@ const NotificationModal = ({ isOpen, onClose }) => {
         className="fixed top-0 right-0 h-full"
         style={{
           width: "calc(100% - 16rem)",
-          left: "16rem",
+          right: "16rem",
           zIndex: 40,
         }}
         onClick={onClose}
       >
-        <div className="w-full h-full bg-black/25" />
+        <div className="w-full h-full bg-black/50 backdrop-blur-sm" />
       </div>
 
       {/* Notification Drawer */}

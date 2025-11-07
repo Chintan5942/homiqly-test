@@ -380,11 +380,8 @@ const Calendar = () => {
             variant="lightBlack"
             icon={<ArrowRight size={20} />}
           />
-          <Button onClick={handleToday} variant="ghost">
-            Today
-          </Button>
         </div>
-        <div className="flex gap-1 p-1 mt-4 bg-gray-100 rounded-full sm:mt-0">
+        <div className="flex items-center gap-2 mt-4 sm:mt-0">
           <FormSelect
             options={[
               { value: "month", label: "Month" },
@@ -394,26 +391,29 @@ const Calendar = () => {
             value={viewMode}
             onChange={(e) => setViewMode(e.target.value)}
           />
-        </div>
-        <div className="flex items-center gap-2 mt-4 sm:mt-0">
-          <Button
-            onClick={() => {
-              const base = selectedDate
-                ? toInputDate(selectedDate)
-                : toInputDate(new Date());
-              const safe = clampToTodayISO(base);
-              setAvailabilityForm({
-                startDate: safe,
-                endDate: safe,
-                startTime: "09:00",
-                endTime: "18:00",
-              });
-              setShowCreateModal(true);
-            }}
-            icon={<Plus size={16} />}
-          >
-            New Availability
+          <Button onClick={handleToday} variant="ghost">
+            Today
           </Button>
+          <div className="w-full">
+            <Button
+              onClick={() => {
+                const base = selectedDate
+                  ? toInputDate(selectedDate)
+                  : toInputDate(new Date());
+                const safe = clampToTodayISO(base);
+                setAvailabilityForm({
+                  startDate: safe,
+                  endDate: safe,
+                  startTime: "09:00",
+                  endTime: "18:00",
+                });
+                setShowCreateModal(true);
+              }}
+              icon={<Plus size={16} />}
+            >
+              New Availability
+            </Button>
+          </div>
         </div>
       </div>
     );

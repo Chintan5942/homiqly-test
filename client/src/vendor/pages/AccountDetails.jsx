@@ -107,6 +107,18 @@ const AccountDetails = () => {
       return false;
     }
 
+    if (formData.preferred_transfer_type === "e_transfer") {
+      if (!formData.interac_email && !formData.interac_phone) {
+        toast.error("Please provide either Interac Email or Interac Phone");
+        return false;
+      }
+    }
+
+    if (!emailRegex.test(formData.interac_email)) {
+      toast.error("Invalid Interac Email format");
+      return false;
+    }
+
     if (
       formData.preferred_transfer_type === "e_transfer" &&
       formData.interac_phone &&

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Modal from "../../../shared/components/Modal/Modal";
+import UniversalDeleteModal from "../../../shared/components/Modal/UniversalDeleteModal";
 import { Button, IconButton } from "../../../shared/components/Button";
 import StatusBadge from "../../../shared/components/StatusBadge";
 import api from "../../../lib/axiosConfig";
@@ -46,6 +47,12 @@ export default function VendorDetailsModal({
   const [pendingValue, setPendingValue] = useState(null);
   const [saving, setSaving] = useState(false);
   const [localServices, setLocalServices] = useState(vendor.services ?? []);
+
+  // New states for delete modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletingItem, setDeletingItem] = useState(null);
+  const [deleteDesc, setDeleteDesc] = useState("");
 
   useEffect(() => {
     setLocalServices(vendor.services ?? []);
@@ -119,29 +126,29 @@ export default function VendorDetailsModal({
     }
   };
 
+  /**
+   * Core delete routine (unchanged behavior)
+   * Accepts vendor_packages_id (or package item id your backend expects)
+   */
   const handleDeleteService = async (vendor_packages_id) => {
-    const ok = window.confirm("Are you sure you want to delete");
-    if (!ok) return;
+    if (!vendor_packages_id) return;
 
     // keep snapshot for rollback
     const prevServices = JSON.parse(JSON.stringify(localServices));
 
-    // produce updated services: remove the package from whichever service contains it
+    // produce updated services: remove the package item from whichever service contains it
     const updatedServices = localServices.map((svc) => {
-      // if package exists in svc.packages, filter it out
+      // if packages is not array, return as is
       if (!Array.isArray(svc.packages)) return svc;
       const newPackages = svc.packages
         .map((pkg) => {
           if (!Array.isArray(pkg.items)) return pkg;
-          // If the package ID itself references vendor_packages_id you might want to remove whole package,
-          // but in your payload item.vendor_packages_id exists inside items — so we remove items matching id.
           const filteredItems = pkg.items.filter(
             (it) => it.vendor_packages_id !== vendor_packages_id
           );
-          // If you want to remove the entire package when it has no items left:
           return { ...pkg, items: filteredItems };
         })
-        // optionally remove packages with zero items (uncomment next line if desired)
+        // remove packages with zero items (optional behaviour but safe)
         .filter((pkg) =>
           Array.isArray(pkg.items) ? pkg.items.length > 0 : true
         );
@@ -161,11 +168,49 @@ export default function VendorDetailsModal({
       );
       // optionally call refresh for parent lists
       refresh && refresh();
+      return { success: true };
     } catch (err) {
       // rollback on error
       console.error("Failed to delete service", err);
       setLocalServices(prevServices);
       toast.error("Failed to delete service");
+      return { success: false, error: err };
+    }
+  };
+
+  /**
+   * Called when user clicks the trash icon: show the Unified Delete Modal
+   */
+  const openDeleteModal = (vendor_packages_id, itemName) => {
+    setDeletingItem(vendor_packages_id);
+    setDeleteDesc(
+      itemName
+        ? `Are you sure you want to delete "${itemName}"? This action cannot be undone.`
+        : "Are you sure you want to delete this package item? This action cannot be undone."
+    );
+    setShowDeleteModal(true);
+  };
+
+  /**
+   * Confirmed delete from modal
+   */
+  const confirmDelete = async () => {
+    if (!deletingItem) {
+      setShowDeleteModal(false);
+      return;
+    }
+    try {
+      setDeleting(true);
+      // call the same delete routine
+      await handleDeleteService(deletingItem);
+      setShowDeleteModal(false);
+      setDeletingItem(null);
+    } catch (err) {
+      console.error("Confirm delete error:", err);
+      // showDeleteModal remains open (modal prop onError can also be used)
+      toast.error("Error deleting item");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -509,8 +554,9 @@ export default function VendorDetailsModal({
                                         {item.vendor_packages_id && (
                                           <IconButton
                                             onClick={() =>
-                                              handleDeleteService(
-                                                item.vendor_packages_id
+                                              openDeleteModal(
+                                                item.vendor_packages_id,
+                                                item.itemName
                                               )
                                             }
                                             variant="lightDanger"
@@ -612,6 +658,27 @@ export default function VendorDetailsModal({
           </div>
         </div>
       </Modal>
+
+      {/* Universal Delete Modal */}
+      <UniversalDeleteModal
+        open={showDeleteModal}
+        onClose={() => {
+          if (!deleting) {
+            setShowDeleteModal(false);
+            setDeletingItem(null);
+            setDeleteDesc("");
+          }
+        }}
+        onDelete={confirmDelete}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onError={(err) => {
+          console.error("Delete error:", err);
+          toast.error("Delete error");
+        }}
+        title="Delete Package"
+        desc={deleteDesc}
+      />
     </>
   );
 }

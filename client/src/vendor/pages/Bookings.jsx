@@ -260,8 +260,9 @@ const VendorBookings = () => {
                 { value: "all", label: "All Bookings" },
                 { value: "0", label: "Pending" },
                 { value: "1", label: "Approved" },
-                { value: "2", label: "Cancelled" },
-                { value: "3", label: "Completed" },
+                // { value: "2", label: "Cancelled" },
+                { value: "4", label: "Completed" },
+                { value: "3", label: "Started" },
               ]}
             />
           </div>
