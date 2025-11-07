@@ -1,13 +1,11 @@
 import { useState } from "react";
 import api from "../../../lib/axiosConfig";
-import { toast } from "sonner";
 // import { Card } from "../../shared/components/Card";
 import { Button } from "../../../shared/components/Button";
 import {
   FormInput,
   FormTextarea,
   FormFileInput,
-  FormOption,
   FormSelect,
 } from "../../../shared/components/Form";
 import {
@@ -27,9 +25,11 @@ import {
   Pencil,
   CheckCheck,
   BadgeCheck,
+  Trash2, // Added Trash2 icon
 } from "lucide-react";
 import Modal from "../../../shared/components/Modal/Modal";
 import { useVendorAuth } from "../../contexts/VendorAuthContext";
+import { toast } from "sonner";
 
 const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
   const [activeSection, setActiveSection] = useState("profile");
@@ -71,6 +71,13 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
     confirm: false,
   });
 
+  // Track which certificates are marked for deletion
+  const [certificatesToDelete, setCertificatesToDelete] = useState({
+    policeClearance: false,
+    certificateOfExpertise: false,
+    businessLicense: false,
+  });
+
   if (!isOpen) return null;
 
   const handleInputChange = (e) => {
@@ -78,8 +85,8 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const UploadedInfo = ({ url, label, extra }) => {
-    if (!url) return null;
+  const UploadedInfo = ({ url, label, extra, onDelete, certificateKey }) => {
+    if (!url || certificatesToDelete[certificateKey]) return null;
     return (
       <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-2.5 py-1">
         <CheckCheck className="w-4 h-4 text-green-600" />
@@ -95,6 +102,14 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
         {extra ? (
           <span className="text-sm text-green-800">• {extra}</span>
         ) : null}
+        <button
+          type="button"
+          onClick={onDelete}
+          className="p-1 text-red-600 transition-colors rounded-full hover:bg-red-100"
+          title={`Delete ${label}`}
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
       </div>
     );
   };
@@ -113,17 +128,60 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
     }
   };
 
+  // Function to delete police clearance
+  const deletePoliceClearance = () => {
+    setCertificatesToDelete(prev => ({
+      ...prev,
+      policeClearance: true
+    }));
+    setFormData(prev => ({
+      ...prev,
+      policeClearance: null
+    }));
+    toast.info("Police clearance marked for removal. Save changes to confirm.");
+  };
+
+  // Function to delete certificate of expertise
+  const deleteCertificateOfExpertise = () => {
+    setCertificatesToDelete(prev => ({
+      ...prev,
+      certificateOfExpertise: true
+    }));
+    setFormData(prev => ({
+      ...prev,
+      certificateOfExpertise: null,
+      certificateOfExpertiseExpireDate: ""
+    }));
+    toast.info("Certificate of expertise marked for removal. Save changes to confirm.");
+  };
+
+  // Function to delete business license
+  const deleteBusinessLicense = () => {
+    setCertificatesToDelete(prev => ({
+      ...prev,
+      businessLicense: true
+    }));
+    setFormData(prev => ({
+      ...prev,
+      businessLicense: null,
+      businessLicenseExpireDate: ""
+    }));
+    toast.info("Business license marked for removal. Save changes to confirm.");
+  };
+
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     try {
       setUpdating(true);
       const data = new FormData();
 
+      // Check if new business license file is added but expire date is missing
       if (formData.businessLicense && !formData.businessLicenseExpireDate) {
         toast.error("Business license expire date is required");
         return;
       }
 
+      // Check if new certificate of expertise file is added but expire date is missing
       if (
         formData.certificateOfExpertise &&
         !formData.certificateOfExpertiseExpireDate
@@ -132,10 +190,39 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
         return;
       }
 
+      // Append all form data except certificates
       Object.entries(formData).forEach(([key, value]) => {
-        if (value) data.append(key, value);
+        if (value !== null && value !== "") {
+          // Don't append certificate files that are marked for deletion
+          if (
+            !(key === 'policeClearance' && certificatesToDelete.policeClearance) &&
+            !(key === 'certificateOfExpertise' && certificatesToDelete.certificateOfExpertise) &&
+            !(key === 'businessLicense' && certificatesToDelete.businessLicense)
+          ) {
+            data.append(key, value);
+          }
+        }
       });
 
+      // Handle certificate deletions - only send empty strings for deleted certificates
+      if (certificatesToDelete.policeClearance) {
+        data.append("policeClearance", "");
+        toast.success("Police clearance deleted successfully");
+      }
+      
+      if (certificatesToDelete.certificateOfExpertise) {
+        data.append("certificateOfExpertise", "");
+        data.append("certificateOfExpertiseExpireDate", "");
+        toast.success("Certificate of expertise deleted successfully");
+      }
+      
+      if (certificatesToDelete.businessLicense) {
+        data.append("businessLicense", "");
+        data.append("businessLicenseExpireDate", "");
+        toast.success("Business license deleted successfully");
+      }
+
+      // Append profile image if changed
       if (profileImage) {
         data.append("profileImageVendor", profileImage);
       }
@@ -146,6 +233,14 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
 
       if (response.status === 200) {
         toast.success("Profile updated successfully");
+        
+        // Reset deletion tracking after successful update
+        setCertificatesToDelete({
+          policeClearance: false,
+          certificateOfExpertise: false,
+          businessLicense: false,
+        });
+        
         onProfileUpdate();
       }
 
@@ -223,7 +318,6 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
   ];
 
   return (
-    /* Replace the entire previous fixed modal markup with this: */
     <Modal
       size="xl"
       isOpen={isOpen}
@@ -415,25 +509,6 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
                           onChange={handleInputChange}
                           options={expertiseOptions}
                         />
-                        {/* {expertiseOptions.map((opt) => (
-                          <FormOption
-                            key={opt}
-                            type="checkbox"
-                            name="expertise"
-                            value={opt}
-                            checked={formData.expertise.includes(opt)}
-                            onChange={(e) => {
-                              const { checked } = e.target;
-                              setFormData((prev) => ({
-                                ...prev,
-                                expertise: checked
-                                  ? [...prev.expertise, opt]
-                                  : prev.expertise.filter((x) => x !== opt),
-                              }));
-                            }}
-                            label={opt}
-                          />
-                        ))} */}
                       </div>
                     </>
                   )}
@@ -560,7 +635,7 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
 
           {activeSection === "certificates" && (
             <form onSubmit={handleProfileSubmit}>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-1 mt-4">
+              <div className="grid grid-cols-1 gap-6 mt-4 md:grid-cols-1">
                 {/* Police Clearance */}
                 <div>
                   <label className="block mb-1 text-sm font-medium text-gray-700">
@@ -580,6 +655,8 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
                   <UploadedInfo
                     url={profile?.policeClearance}
                     label="Police Clearance"
+                    onDelete={deletePoliceClearance}
+                    certificateKey="policeClearance"
                   />
                 </div>
 
@@ -608,6 +685,8 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
                         </>
                       ) : undefined
                     }
+                    onDelete={deleteCertificateOfExpertise}
+                    certificateKey="certificateOfExpertise"
                   />
                   {/* Only require date if a NEW file is picked */}
                   {(formData.certificateOfExpertise ||
@@ -653,6 +732,8 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
                         <>Expires on {formData.businessLicenseExpireDate}</>
                       ) : undefined
                     }
+                    onDelete={deleteBusinessLicense}
+                    certificateKey="businessLicense"
                   />
                 </div>
 
