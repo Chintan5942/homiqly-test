@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../../lib/axiosConfig";
 import Card from "../../shared/components/Card/Card";
-// import Input from "../../shared/components/Form/FormInput";
 import Button from "../../shared/components/Button/Button";
 import {
   Loader2,
@@ -11,11 +10,9 @@ import {
   Shield,
   BanknoteIcon,
 } from "lucide-react";
-import { toast } from "react-toastify";
-import { CustomFileInput } from "../../shared/components/CustomFileInput";
-import FormInput from "../../shared/components/Form/FormInput";
+import { toast } from "sonner";
 import { FormFileInput, FormSelect } from "../../shared/components/Form";
-import { ImagePreview } from "../../shared/components/ImagePreview";
+import FormInput from "../../shared/components/Form/FormInput";
 
 const AccountDetails = () => {
   const vendorData = localStorage.getItem("vendorData")
@@ -26,6 +23,7 @@ const AccountDetails = () => {
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [governmentIdFile, setGovernmentIdFile] = useState(null);
 
   const [formData, setFormData] = useState({
     account_holder_name: "",
@@ -44,14 +42,10 @@ const AccountDetails = () => {
     interac_phone: "",
   });
 
-  const [governmentIdFile, setGovernmentIdFile] = useState(null);
+  // Validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRegex = /^\d{7,15}$/;
 
-  const transferTypes = [
-    { value: "e_transfer", label: "Interac E-Transfer" },
-    // { value: "bank_transfer", label: "Bank Transfer" },
-  ];
-
-  // Fetch account details
   const fetchAccount = async () => {
     try {
       setLoading(true);
@@ -82,35 +76,53 @@ const AccountDetails = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    // Numeric restrictions
-    if (
-      [
-        "institution_number",
-        "transit_number",
-        "account_number",
-        "interac_phone",
-      ].includes(name)
-    ) {
-      let filtered = value.replace(/\D/g, ""); // only digits
-
-      // length restrictions
-      if (name === "institution_number") filtered = filtered.slice(0, 3);
-      if (name === "transit_number") filtered = filtered.slice(0, 5);
-      if (name === "account_number") filtered = filtered.slice(0, 12);
-      if (name === "interac_phone") filtered = filtered.slice(0, 15);
-
-      setFormData({ ...formData, [name]: filtered });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e) => {
     setGovernmentIdFile(e.target.files[0]);
   };
 
+  const validateForm = () => {
+    const requiredFields = [
+      "account_holder_name",
+      "bank_name",
+      "institution_number",
+      "transit_number",
+      "account_number",
+      "email",
+    ];
+
+    for (let field of requiredFields) {
+      if (!formData[field]?.toString().trim()) {
+        toast.error(
+          `Please fill the required field: ${field.replace(/_/g, " ")}`
+        );
+        return false;
+      }
+    }
+
+    if (formData.email && !emailRegex.test(formData.email)) {
+      toast.error("Invalid email format");
+      return false;
+    }
+
+    if (
+      formData.preferred_transfer_type === "e_transfer" &&
+      formData.interac_phone &&
+      !phoneRegex.test(formData.interac_phone)
+    ) {
+      toast.error(
+        "Interac Phone must be digits only and 7 to 15 characters long"
+      );
+      return false;
+    }
+
+    return true;
+  };
+
   const handleCreate = async () => {
+    if (!validateForm()) return;
     try {
       setLoading(true);
       const formDataToSend = new FormData();
@@ -134,6 +146,7 @@ const AccountDetails = () => {
   };
 
   const handleUpdate = async () => {
+    if (!validateForm()) return;
     try {
       setLoading(true);
       const formDataToSend = new FormData();
@@ -155,141 +168,6 @@ const AccountDetails = () => {
       setLoading(false);
     }
   };
-
-  const renderField = (label, name, type = "text", placeholder = "") => (
-    <div className="space-y-1">
-      <label className="text-sm font-semibold text-gray-700">{label}</label>
-      <FormInput
-        type={type}
-        name={name}
-        value={formData[name] || ""}
-        onChange={handleChange}
-        disabled={!editing}
-        placeholder={placeholder}
-        className="w-full"
-        inputMode={
-          [
-            "institution_number",
-            "transit_number",
-            "account_number",
-            "interac_phone",
-          ].includes(name)
-            ? "numeric"
-            : "text"
-        }
-        pattern={
-          [
-            "institution_number",
-            "transit_number",
-            "account_number",
-            "interac_phone",
-          ].includes(name)
-            ? "[0-9]*"
-            : undefined
-        }
-      />
-    </div>
-  );
-
-  const renderDropdown = (label, name, options) => (
-    <div className="space-y-1">
-      <FormSelect
-        label={label}
-        name={name}
-        value={formData[name] || ""}
-        onChange={handleChange}
-        disabled={!editing}
-        options={options}
-      />
-    </div>
-  );
-
-  const renderVendorSpecificFields = () => {
-    if (vendorType === "individual") {
-      return (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {renderField(
-            "Full Legal Name",
-            "legal_name",
-            "text",
-            "Name as on ID"
-          )}
-          {renderField("Date of Birth", "dob", "date")}
-        </div>
-      );
-    } else if (vendorType === "company") {
-      return (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {renderField(
-            "Business Name",
-            "business_name",
-            "text",
-            "Registered business name"
-          )}
-          {/* {renderField("Legal Entity Name", "legal_name", "text", "Legal name")} */}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const renderFileUpload = () => (
-    <div className="space-y-1">
-      <FormFileInput
-        label="Government ID (Upload)"
-        name="government_id"
-        onChange={handleFileChange}
-        disabled={!editing}
-        accept=".jpg,.jpeg,.png,.pdf"
-        // onRemove={() => setFormData({ ...formData, government_id: "" })}
-      />
-
-      <div className="flex items-center justify-between text-xs">
-        {formData.government_id && !governmentIdFile && (
-          <p className=" text-gray-600">
-            Current file: {formData.government_id.split("/").pop()}
-          </p>
-        )}
-        <div className="flex items-center mb-2 space-x-2">
-          {formData.government_id && (
-            <a
-              href={formData.government_id}
-              target="_blank"
-              className="text-blue-500 underline"
-            >
-              Government ID
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderTransferType = () => (
-    <div className="space-y-4">
-      {renderDropdown(
-        "Preferred Transfer Type",
-        "preferred_transfer_type",
-        transferTypes
-      )}
-      {formData.preferred_transfer_type === "e_transfer" && (
-        <div className="grid grid-cols-1 gap-4 p-4 rounded-lg md:grid-cols-2 bg-blue-50">
-          {renderField(
-            "Interac Email",
-            "interac_email",
-            "email",
-            "email@example.com"
-          )}
-          {renderField(
-            "Interac Phone (Numbers Only)",
-            "interac_phone",
-            "tel",
-            "e.g. 4165551234"
-          )}
-        </div>
-      )}
-    </div>
-  );
 
   return (
     <div className="max-w-5xl p-6 mx-auto">
@@ -338,7 +216,6 @@ const AccountDetails = () => {
               </div>
             ) : (
               <>
-                {/* Bank Info */}
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
                     <Building2 className="w-5 h-5 text-gray-600" />
@@ -347,46 +224,75 @@ const AccountDetails = () => {
                     </h3>
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {renderField(
-                      "Account Holder Name",
-                      "account_holder_name",
-                      "text",
-                      "Legal name on bank account"
-                    )}
-                    {renderField(
-                      "Bank Name",
-                      "bank_name",
-                      "text",
-                      "e.g. Royal Bank of Canada"
-                    )}
-                    {renderField(
-                      "Institution Number (3 digits)",
-                      "institution_number",
-                      "text",
-                      "e.g. 004"
-                    )}
-                    {renderField(
-                      "Transit Number (5 digits)",
-                      "transit_number",
-                      "text",
-                      "e.g. 12345"
-                    )}
-                    {renderField(
-                      "Account Number (7–12 digits)",
-                      "account_number",
-                      "text",
-                      "e.g. 1234567"
-                    )}
-                    {renderField(
-                      "Bank Address (optional)",
-                      "bank_address",
-                      "text",
-                      "Branch address"
-                    )}
+                    <FormInput
+                      label="Account Holder Name"
+                      type="text"
+                      name="account_holder_name"
+                      value={formData.account_holder_name || ""}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      placeholder="Legal name on bank account"
+                      className="w-full"
+                    />
+                    <FormInput
+                      label="Bank Name"
+                      type="text"
+                      name="bank_name"
+                      value={formData.bank_name || ""}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      placeholder="e.g. Royal Bank of Canada"
+                      className="w-full"
+                    />
+                    <FormInput
+                      label="Institution Number (3 digits)"
+                      type="text"
+                      name="institution_number"
+                      value={formData.institution_number || ""}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      placeholder="e.g. 004"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="w-full"
+                    />
+                    <FormInput
+                      label="Transit Number (5 digits)"
+                      type="text"
+                      name="transit_number"
+                      value={formData.transit_number || ""}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      placeholder="e.g. 12345"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="w-full"
+                    />
+                    <FormInput
+                      label="Account Number (7–12 digits)"
+                      type="text"
+                      name="account_number"
+                      value={formData.account_number || ""}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      placeholder="e.g. 1234567"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="w-full"
+                    />
+                    <FormInput
+                      label="Bank Address (optional)"
+                      type="text"
+                      name="bank_address"
+                      value={formData.bank_address || ""}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      placeholder="Branch address"
+                      className="w-full"
+                    />
                   </div>
                 </section>
 
-                {/* Contact Info */}
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
                     <Mail className="w-5 h-5 text-gray-600" />
@@ -394,17 +300,19 @@ const AccountDetails = () => {
                       Contact Information
                     </h3>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {renderField(
-                      "Email Address",
-                      "email",
-                      "email",
-                      "vendor@example.com"
-                    )}
-                  </div>
+                  <FormInput
+                    label="Email Address"
+                    type="email"
+                    name="email"
+                    value={formData.email || ""}
+                    onChange={handleChange}
+                    disabled={!editing}
+                    placeholder="vendor@example.com"
+                    className="w-full max-w-md"
+                    autoComplete="email"
+                  />
                 </section>
 
-                {/* Vendor Info */}
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
                     <User className="w-5 h-5 text-gray-600" />
@@ -414,10 +322,40 @@ const AccountDetails = () => {
                         : "Business Details"}
                     </h3>
                   </div>
-                  {renderVendorSpecificFields()}
+                  {vendorType === "individual" ? (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <FormInput
+                        label="Full Legal Name"
+                        type="text"
+                        name="legal_name"
+                        value={formData.legal_name || ""}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="Name as on ID"
+                      />
+                      <FormInput
+                        label="Date of Birth"
+                        type="date"
+                        name="dob"
+                        value={formData.dob || ""}
+                        onChange={handleChange}
+                        disabled={!editing}
+                      />
+                    </div>
+                  ) : (
+                    <FormInput
+                      label="Business Name"
+                      type="text"
+                      name="business_name"
+                      value={formData.business_name || ""}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      placeholder="Registered business name"
+                      className="max-w-md"
+                    />
+                  )}
                 </section>
 
-                {/* KYC Verification */}
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
                     <Shield className="w-5 h-5 text-gray-600" />
@@ -425,10 +363,30 @@ const AccountDetails = () => {
                       Identity Verification
                     </h3>
                   </div>
-                  {renderFileUpload()}
+                  <FormFileInput
+                    label="Government ID (Upload)"
+                    name="government_id"
+                    onChange={handleFileChange}
+                    disabled={!editing}
+                    accept=".jpg,.jpeg,.png,.pdf"
+                  />
+                  {formData.government_id && !governmentIdFile && (
+                    <p className="text-gray-600 text-xs">
+                      Current file: {formData.government_id.split("/").pop()}
+                    </p>
+                  )}
+                  {formData.government_id && (
+                    <a
+                      href={formData.government_id}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-500 underline text-xs"
+                    >
+                      View Government ID
+                    </a>
+                  )}
                 </section>
 
-                {/* Transfer Preferences */}
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
                     <BanknoteIcon className="w-5 h-5 text-gray-600" />
@@ -436,10 +394,42 @@ const AccountDetails = () => {
                       Transfer Preferences
                     </h3>
                   </div>
-                  {renderTransferType()}
+                  <FormSelect
+                    label="Preferred Transfer Type"
+                    name="preferred_transfer_type"
+                    value={formData.preferred_transfer_type}
+                    onChange={handleChange}
+                    disabled={!editing}
+                    options={[
+                      { value: "e_transfer", label: "e-Transfer" },
+                      // { value: "bank_transfer", label: "Bank Transfer" },
+                    ]}
+                  />
+                  {formData.preferred_transfer_type === "e_transfer" && (
+                    <div className="grid grid-cols-1 gap-4 p-4 rounded-lg bg-blue-50 md:grid-cols-2">
+                      <FormInput
+                        label="Interac Email"
+                        type="email"
+                        name="interac_email"
+                        value={formData.interac_email || ""}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="email@example.com"
+                      />
+                      <FormInput
+                        label="Interac Phone (Numbers Only)"
+                        type="tel"
+                        name="interac_phone"
+                        value={formData.interac_phone || ""}
+                        onChange={handleChange}
+                        disabled={!editing}
+                        placeholder="e.g. 4165551234"
+                        inputMode="numeric"
+                      />
+                    </div>
+                  )}
                 </section>
 
-                {/* Buttons */}
                 {editing && (
                   <div className="flex justify-end pt-6 space-x-3 border-t">
                     <Button
@@ -454,8 +444,8 @@ const AccountDetails = () => {
                     </Button>
                     <Button
                       onClick={account ? handleUpdate : handleCreate}
-                      className="bg-blue-600 hover:bg-blue-700"
                       disabled={loading}
+                      className="bg-blue-600 hover:bg-blue-700"
                     >
                       {loading
                         ? account

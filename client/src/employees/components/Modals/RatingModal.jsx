@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import Modal from "../../../shared/components/Modal/Modal";
 import { Button } from "../../../shared/components/Button";
 import api from "../../../lib/axiosConfig";

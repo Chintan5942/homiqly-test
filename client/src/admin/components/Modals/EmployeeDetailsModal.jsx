@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Modal from "../../../shared/components/Modal/Modal"; // adjust path if needed
 import { FormInput } from "../../../shared/components/Form";
 import axios from "axios";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Button } from "../../../shared/components/Button";
 import api from "../../../lib/axiosConfig";
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/axiosConfig";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 import VendorApplicationTable from "../components/Tables/VendorApplicationTable";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import api from "../../lib/axiosConfig";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { Button } from "../../shared/components/Button";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import ApplyServiceModal from "../components/Modals/ApplyServiceModal";
 
 const Services = () => {

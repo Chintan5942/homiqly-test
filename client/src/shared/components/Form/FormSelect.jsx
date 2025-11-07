@@ -16,7 +16,7 @@ const FormSelect = ({
   id,
   // NEW props:
   dropdownDirection = "down", // "down" | "up" | "auto"
-  dropdownMaxHeight = 150, // px, matches Tailwind max-h-56 (14rem = 224px)
+  dropdownMaxHeight = 150, // px
   ...rest
 }) => {
   const containerRef = useRef(null);
@@ -30,9 +30,9 @@ const FormSelect = ({
     left: 0,
     width: 0,
   });
-  const [resolvedDirection, setResolvedDirection] = useState("down"); // actual chosen direction
+  const [resolvedDirection, setResolvedDirection] = useState("down");
 
-  // Normalize options: ensure { label, value }
+  // Normalize options
   const normOptions = options.map((opt) =>
     typeof opt === "object" ? opt : { label: String(opt), value: opt }
   );
@@ -42,152 +42,123 @@ const FormSelect = ({
   );
 
   useEffect(() => {
-    // reset highlight if options change or open toggles
     if (!open) setHighlightIndex(-1);
   }, [open, options.length]);
 
-  // Determine dropdown position + direction when opening
-  useEffect(() => {
-    if (!open || !buttonRef.current) return;
+  // Compute position for fixed popup (use viewport coordinates, DO NOT add scroll offsets)
+  const computePosition = (forcedDir) => {
+    const btn = buttonRef.current;
+    if (!btn) return;
 
-    const updatePosition = () => {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const scrollY = window.scrollY || window.pageYOffset;
-      const scrollX = window.scrollX || window.pageXOffset;
+    const rect = btn.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
 
-      // space below and above trigger (viewport coordinates)
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
+    let dir = forcedDir || dropdownDirection;
+    if (dropdownDirection === "auto") {
+      if (spaceBelow >= dropdownMaxHeight) dir = "down";
+      else if (spaceAbove >= dropdownMaxHeight) dir = "up";
+      else dir = spaceBelow >= spaceAbove ? "down" : "up";
+    }
 
-      // Decide direction
-      let dir = dropdownDirection;
-      if (dropdownDirection === "auto") {
-        // prefer down if there's enough space below else choose above if above has more room
-        if (spaceBelow >= dropdownMaxHeight) dir = "down";
-        else if (spaceAbove >= dropdownMaxHeight) dir = "up";
-        else {
-          // none fits fully, choose side with more space
-          dir = spaceBelow >= spaceAbove ? "down" : "up";
-        }
-      }
+    // For fixed positioning we should use viewport coords (rect.*) directly.
+    let top;
+    let maxHeight = dropdownMaxHeight;
 
-      // compute top coordinate based on chosen direction
-      let top;
-      if (dir === "down") {
-        top = rect.bottom + scrollY;
+    if (dir === "down") {
+      top = rect.bottom; // viewport coordinate
+      // if not enough space below, shrink maxHeight to available space
+      if (spaceBelow < maxHeight) maxHeight = Math.max(40, spaceBelow - 8);
+    } else {
+      // up: place dropdown ending at rect.top
+      // estimate actual content height with min(items*40, dropdownMaxHeight)
+      const estimatedHeight = Math.min(
+        normOptions.length * 40,
+        dropdownMaxHeight
+      );
+      // top should be rect.top - estimatedHeight
+      top = rect.top - estimatedHeight;
+      // if top is negative, clamp to a small offset and reduce maxHeight accordingly
+      if (top < 8) {
+        const extra = 8 - top;
+        top = 8;
+        maxHeight = Math.max(40, estimatedHeight - extra);
       } else {
-        // For up direction, we need to calculate based on actual content height
-        // Since we don't know the exact height, we'll use the max height
-        top =
-          rect.top +
-          scrollY -
-          Math.min(dropdownMaxHeight, normOptions.length * 40); // Estimate 40px per item
-        // If top goes above document (negative), clamp to 0
-        if (top < 0) top = 0;
+        maxHeight = estimatedHeight;
       }
+    }
 
-      setResolvedDirection(dir);
-      setDropdownPos({
-        top,
-        left: rect.left + scrollX,
-        width: rect.width,
-      });
-    };
+    setResolvedDirection(dir);
+    setDropdownPos({
+      top,
+      left: rect.left,
+      width: rect.width,
+      maxHeight,
+    });
+  };
 
-    updatePosition();
+  useEffect(() => {
+    if (!open) return;
+    computePosition();
+    // Recompute immediately after open (in case fonts/layout shift)
+    const t = setTimeout(() => computePosition(), 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, dropdownDirection, dropdownMaxHeight, normOptions.length]);
 
-  // Close on outside click and scroll (including portal)
+  // Outside click & scroll handling
   useEffect(() => {
-    const handleOutsideClick = (e) => {
+    if (!open) return;
+
+    const onDocClick = (e) => {
+      // support shadow DOM / portals
+      const path = e.composedPath ? e.composedPath() : e.path || [];
       if (
-        !containerRef.current?.contains(e.target) &&
-        !listRef.current?.contains(e.target)
+        !path.includes(containerRef.current) &&
+        !path.includes(listRef.current) &&
+        !path.includes(buttonRef.current)
       ) {
         setOpen(false);
       }
     };
 
-    const handleScroll = (e) => {
-      // Only close if the scroll event is not inside the dropdown itself
-      if (!listRef.current?.contains(e.target)) {
-        setOpen(false);
+    const onScroll = (e) => {
+      // If scrolling happens, recompute position — but if the scroll origin is window/document,
+      // recompute using viewport coords so the dropdown stays attached to the button.
+      // If the scroll occurs inside the dropdown (e.g. user scrolls the options), do nothing.
+      const path = e.composedPath ? e.composedPath() : e.path || [];
+      if (path.includes(listRef.current) || path.includes(buttonRef.current)) {
+        // scrolling inside dropdown or button — do nothing
+        return;
       }
+      // If scroll is external, recompute position. If element moved far (or removed), closing is safer.
+      // We'll recompute and keep open so user doesn't see gap.
+      computePosition();
     };
 
-    if (open) {
-      document.addEventListener("mousedown", handleOutsideClick);
-      // Use passive: true for better performance on scroll events
-      window.addEventListener("scroll", handleScroll, {
-        passive: true,
-        capture: true,
-      });
-      document.addEventListener("scroll", handleScroll, {
-        passive: true,
-        capture: true,
-      });
-    }
+    const onResize = () => computePosition();
+
+    document.addEventListener("mousedown", onDocClick);
+    window.addEventListener("scroll", onScroll, {
+      passive: true,
+      capture: true,
+    });
+    document.addEventListener("scroll", onScroll, {
+      passive: true,
+      capture: true,
+    });
+    window.addEventListener("resize", onResize);
 
     return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      window.removeEventListener("scroll", handleScroll, { capture: true });
-      document.removeEventListener("scroll", handleScroll, { capture: true });
+      document.removeEventListener("mousedown", onDocClick);
+      window.removeEventListener("scroll", onScroll, { capture: true });
+      document.removeEventListener("scroll", onScroll, { capture: true });
+      window.removeEventListener("resize", onResize);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Update dropdown position on window resize
-  useEffect(() => {
-    if (!open) return;
-
-    const handleResize = () => {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const scrollY = window.scrollY || window.pageYOffset;
-      const scrollX = window.scrollX || window.pageXOffset;
-
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-
-      let dir = resolvedDirection;
-
-      // Recalculate direction if auto
-      if (dropdownDirection === "auto") {
-        if (spaceBelow >= dropdownMaxHeight) dir = "down";
-        else if (spaceAbove >= dropdownMaxHeight) dir = "up";
-        else {
-          dir = spaceBelow >= spaceAbove ? "down" : "up";
-        }
-        setResolvedDirection(dir);
-      }
-
-      let top;
-      if (dir === "down") {
-        top = rect.bottom + scrollY;
-      } else {
-        top =
-          rect.top +
-          scrollY -
-          Math.min(dropdownMaxHeight, normOptions.length * 40);
-        if (top < 0) top = 0;
-      }
-
-      setDropdownPos({
-        top,
-        left: rect.left + scrollX,
-        width: rect.width,
-      });
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [
-    open,
-    resolvedDirection,
-    dropdownDirection,
-    dropdownMaxHeight,
-    normOptions.length,
-  ]);
-
-  // Keyboard handlers for accessibility
+  // Keyboard handlers
   useEffect(() => {
     const onKey = (e) => {
       if (!open) return;
@@ -197,8 +168,6 @@ const FormSelect = ({
           const next = i + 1;
           return next >= normOptions.length ? 0 : next;
         });
-
-        // Scroll highlighted item into view
         setTimeout(() => {
           const highlightedItem = listRef.current?.querySelector(
             '[data-highlighted="true"]'
@@ -211,8 +180,6 @@ const FormSelect = ({
           const next = i - 1;
           return next < 0 ? normOptions.length - 1 : next;
         });
-
-        // Scroll highlighted item into view
         setTimeout(() => {
           const highlightedItem = listRef.current?.querySelector(
             '[data-highlighted="true"]'
@@ -234,20 +201,15 @@ const FormSelect = ({
       }
     };
 
-    if (open) {
-      document.addEventListener("keydown", onKey);
-    }
-
+    if (open) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, highlightIndex, normOptions]);
 
   const triggerChange = (newValue) => {
-    // Mimic native event shape so existing handlers work
     if (onChange && !disabled) {
       onChange({ target: { name, value: newValue } });
     }
     setOpen(false);
-    // small timeout to allow focus/visual update
     setTimeout(() => {
       buttonRef.current?.focus();
     }, 0);
@@ -258,10 +220,7 @@ const FormSelect = ({
     setOpen((v) => !v);
   };
 
-  // Handle click on dropdown items
-  const handleItemClick = (value) => {
-    triggerChange(value);
-  };
+  const handleItemClick = (val) => triggerChange(val);
 
   return (
     <div
@@ -286,12 +245,10 @@ const FormSelect = ({
           disabled ? "bg-gray-50 cursor-not-allowed" : ""
         }`}
       >
-        {/* left icon */}
         {icon && (
           <div className="pl-3 text-gray-400 pointer-events-none">{icon}</div>
         )}
 
-        {/* button that behaves as the select trigger */}
         <button
           id={id || name}
           type="button"
@@ -318,7 +275,6 @@ const FormSelect = ({
           </span>
 
           <span className="flex-shrink-0 ml-3 text-gray-400 select-none">
-            {/* chevron */}
             <svg
               className={`w-4 h-4 transform transition-transform duration-200 ${
                 open ? "rotate-180" : "rotate-0"
@@ -336,12 +292,10 @@ const FormSelect = ({
         </button>
       </div>
 
-      {/* error message */}
       {error && (
         <p className="mt-1 text-sm font-medium text-red-500">{error}</p>
       )}
 
-      {/* dropdown rendered via portal */}
       {open &&
         createPortal(
           <div
@@ -351,7 +305,7 @@ const FormSelect = ({
               top: dropdownPos.top,
               left: dropdownPos.left,
               width: dropdownPos.width,
-              maxHeight: dropdownMaxHeight,
+              maxHeight: dropdownPos.maxHeight ?? dropdownMaxHeight,
               minWidth: dropdownPos.width,
             }}
             role="listbox"
@@ -368,7 +322,6 @@ const FormSelect = ({
               </div>
             ) : (
               <ul className="py-1 max-h-full overflow-auto">
-                {/* optional but recommended */}
                 {normOptions.map((opt, idx) => {
                   const active = String(opt.value) === String(value);
                   const highlighted = idx === highlightIndex;

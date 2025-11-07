@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../../shared/components/Button";
 import { Calendar, Clock, User, Mail, Phone, MapPin } from "lucide-react";
 import { formatDate, formatTime } from "../../../shared/utils/dateUtils";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import Breadcrumb from "../../../shared/components/Breadcrumb";
 import StatusBadge from "../../../shared/components/StatusBadge";
 import LoadingSlider from "../../../shared/components/LoadingSpinner";

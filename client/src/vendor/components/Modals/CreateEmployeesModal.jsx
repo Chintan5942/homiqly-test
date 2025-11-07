@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Button } from "../../../shared/components/Button";
 import { FormInput } from "../../../shared/components/Form";
 import Loader from "../../../shared/components/LoadingSpinner";

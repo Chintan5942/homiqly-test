@@ -6,7 +6,7 @@ import LoadingSpinner from "../../../shared/components/LoadingSpinner";
 import Breadcrumb from "../../../shared/components/Breadcrumb";
 import { Button } from "../../../shared/components/Button";
 import Modal from "../../../shared/components/Modal/Modal"; // adjust path if needed
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { CustomFileInput } from "../../../shared/components/CustomFileInput";
 import { FormTextarea } from "../../../shared/components/Form";
 

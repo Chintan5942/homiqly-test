@@ -13,7 +13,7 @@ import {
   Image as ImageIcon,
   Eye,
 } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import Modal from "../../shared/components/Modal/Modal"; // <- adjust path if needed
 import api from "../../lib/axiosConfig";
 

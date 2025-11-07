@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { useAdminAuth } from "../contexts/AdminAuthContext";
 import { Card } from "../../shared/components/Card";
 import { Button } from "../../shared/components/Button";

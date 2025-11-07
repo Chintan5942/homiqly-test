@@ -4,8 +4,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { Slide, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+
 
 // Routes
 import AdminRoutes from "./admin/routes/AdminRoutes";
@@ -16,6 +15,7 @@ import { AdminAuthProvider } from "./admin/contexts/AdminAuthContext";
 import { VendorAuthProvider } from "./vendor/contexts/VendorAuthContext";
 import { EmployeesAuthProvider } from "./employees/contexts/EmployeesAuthContext";
 import EmployeesRoutes from "./employees/routes/EmployeesRoutes";
+import { Toaster } from "sonner";
 
 function App() {
   return (
@@ -52,7 +52,9 @@ function App() {
         <Route path="/" element={<Navigate to="/admin" replace />} />
       </Routes>
 
-      <ToastContainer
+      <Toaster richColors position="top-right" />
+
+      {/* <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -63,7 +65,7 @@ function App() {
         draggable
         pauseOnHover
         transition={Slide}
-      />
+      /> */}
     </Router>
   );
 }

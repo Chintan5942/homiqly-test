@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import api from "../../lib/axiosConfig";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import DataTable from "../../../shared/components/Table/DataTable";
 
 const PackagesTable = ({ services, onEdit, fetchData }) => {

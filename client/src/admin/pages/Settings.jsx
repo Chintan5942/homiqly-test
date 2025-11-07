@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../../lib/axiosConfig";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import Button from "../../shared/components/Button/Button";
 
 const Settings = () => {

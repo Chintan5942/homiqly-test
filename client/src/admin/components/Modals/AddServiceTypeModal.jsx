@@ -8,7 +8,7 @@ import {
   FormCheckbox,
 } from "../../../shared/components/Form";
 import api from "../../../lib/axiosConfig";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { CustomFileInput } from "../../../shared/components/CustomFileInput";
 import ItemCard from "../../../shared/components/Card/ItemCard";
 import { CollapsibleSectionCard } from "../../../shared/components/Card/CollapsibleSectionCard";

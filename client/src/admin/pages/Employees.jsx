@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import EmployeesTable from "../components/Tables/EmployeesTable";
 import EmployeeDetailsModal from "../components/Modals/EmployeeDetailsModal"; // <-- modal has edit built-in

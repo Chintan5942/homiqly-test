@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import VendorsTable from "../components/Tables/VendorsTable";
 import VendorDetailsModal from "../components/Modals/VendorDetailsModal";
 import { Button } from "../../shared/components/Button";

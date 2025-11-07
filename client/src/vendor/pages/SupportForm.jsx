@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import api from "../../lib/axiosConfig";
 import { FormInput, FormTextarea } from "../../shared/components/Form";
 import { Button } from "../../shared/components/Button";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 const SupportForm = () => {
   const [form, setForm] = useState({

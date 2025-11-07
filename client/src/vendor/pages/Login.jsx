@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useVendorAuth } from "../contexts/VendorAuthContext";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Loader, Lock, Mail, User } from "lucide-react";
 import { FormInput } from "../../shared/components/Form";
 import { Button } from "../../shared/components/Button";
@@ -102,7 +102,7 @@ const Login = () => {
               htmlFor="remember-me"
               className="ml-2 block text-sm text-gray-700"
             >
-              Remember me
+              Stay Signed In
             </label>
           </div>
 

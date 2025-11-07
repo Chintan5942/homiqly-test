@@ -5,7 +5,7 @@ import StatusBadge from "../../../shared/components/StatusBadge";
 import LoadingSlider from "../../../shared/components/LoadingSpinner";
 import api from "../../../lib/axiosConfig";
 import Breadcrumb from "../../../shared/components/Breadcrumb";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Button } from "../../../shared/components/Button";
 import PaymentBadge from "../../../shared/components/PaymentBadge";
 import { Calendar, Clock, MapPin } from "lucide-react";

@@ -3,7 +3,7 @@ import BookingsTable from "../components/Tables/BookingsTable";
 import { Button } from "../../shared/components/Button";
 import { FormSelect, FormInput } from "../../shared/components/Form";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Search, RefreshCcw } from "lucide-react";
 import Pagination from "../../shared/components/Pagination";

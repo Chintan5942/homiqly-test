@@ -3,7 +3,7 @@ import api from "../../lib/axiosConfig";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { Button } from "../../shared/components/Button";
 import { FormInput, FormFileInput } from "../../shared/components/Form";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Edit2, Mail, Pencil, Phone, Save, User, X } from "lucide-react";
 
 const Profile = () => {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../contexts/AdminAuthContext";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { requestFCMToken } from "../../firebase/firebase";
 import { Loader, Lock, Mail } from "lucide-react";
 

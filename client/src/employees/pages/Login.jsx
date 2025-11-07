@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useEmployeesAuth } from "../contexts/EmployeesAuthContext";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Loader, Lock, Mail } from "lucide-react";
 
 const Login = () => {

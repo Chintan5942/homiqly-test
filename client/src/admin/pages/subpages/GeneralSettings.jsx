@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 // import { FiSave, FiLock } from "react-icons/fi";
 import { Card } from "../../../shared/components/Card";
 import { Button } from "../../../shared/components/Button";

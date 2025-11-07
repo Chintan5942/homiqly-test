@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../../lib/axiosConfig";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { useNavigate } from "react-router-dom";
 import Button from "../../shared/components/Button/Button";
@@ -184,12 +184,8 @@ const Bookings = () => {
         <h2 className="text-2xl font-bold text-gray-800">
           Admin Booking Management
         </h2>
-        
-        <div className="flex items-center space-x-2">
-          <div className="hidden mr-2 text-sm text-gray-600 md:block">
-            Page {page} of {totalPages}
-          </div>
 
+        <div className="flex items-center space-x-2">
           <Button
             className="h-9"
             onClick={fetchBookings}
@@ -320,7 +316,10 @@ const Bookings = () => {
             keepVisibleOnSinglePage={true}
             totalRecords={total}
             limit={limit}
-            onLimitChange={(n) => { setLimit(n); setPage(1); }}
+            onLimitChange={(n) => {
+              setLimit(n);
+              setPage(1);
+            }}
             renderLimitSelect={({ value, onChange, options }) => (
               <FormSelect
                 id="limit"
@@ -328,7 +327,10 @@ const Bookings = () => {
                 dropdownDirection="auto"
                 value={value}
                 onChange={(e) => onChange(Number(e.target.value))}
-                options={options.map((v) => ({ value: v, label: `${v} / page` }))}
+                options={options.map((v) => ({
+                  value: v,
+                  label: `${v} / page`,
+                }))}
               />
             )}
             pageSizeOptions={[5, 10, 20, 50]}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import UsersTable from "../components/Tables/UsersTable"; // Adjust path as needed
 import FormInput from "../../shared/components/Form/FormInput"; // Adjust path as needed
@@ -246,13 +246,13 @@ const Users = () => {
     : "Are you sure you want to delete this user?";
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4">
       <h2 className="text-2xl font-bold text-gray-800">
         Admin User Management
       </h2>
 
       {/* Search Controls */}
-      <div className="flex items-center justify-between w-full gap-3 md:w-auto">
+      <div className="flex items-center justify-between w-full gap-3 md:w-auto my-4">
         <div className="flex-1 min-w-0 md:max-w-sm">
           <FormInput
             value={searchTerm}

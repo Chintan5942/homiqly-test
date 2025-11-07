@@ -3,7 +3,7 @@ import Modal from "../../../shared/components/Modal/Modal";
 import { Button } from "../../../shared/components/Button";
 import api from "../../../lib/axiosConfig";
 import Select from "react-select";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
   const [groupedPackages, setGroupedPackages] = useState({});

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAdminAuth } from "../contexts/AdminAuthContext";
 import api from "../../lib/axiosConfig";
 import TicketsTable from "../components/Tables/TicketsTable"; // Update the path as needed
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 const Tickets = () => {
   const { currentUser } = useAdminAuth();

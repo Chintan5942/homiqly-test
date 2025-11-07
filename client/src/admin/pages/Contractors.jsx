@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 import { Check, Eye, Plus, X } from 'lucide-react';
 import api from '../../lib/axiosConfig';

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FormInput } from "../../../shared/components/Form";
 import { Button } from "../../../shared/components/Button";
 import Modal from "../../../shared/components/Modal/Modal";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import api from "../../../lib/axiosConfig";
 
 export const ServiceFilterModal = ({

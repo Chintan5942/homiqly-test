@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/axiosConfig";
 import PayoutsTable from "../components/Tables/PayoutsTable";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 const PayoutList = () => {
   const [payouts, setPayouts] = useState([]);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useVendorAuth } from "../contexts/VendorAuthContext";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import Button from "../../shared/components/Button/Button";
 import {
   FormOption,
@@ -58,6 +58,11 @@ const Register = () => {
   ];
 
   const [expertise, setExpertise] = useState("");
+
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const isValidPhone = (phone) =>
+    /^(\+?\d{1,4}[\s-])?(?!0+\s*,?$)\d{10,14}$/.test(phone.trim());
 
   // Load service categories when entering step 2 or 3
   useEffect(() => {
@@ -124,6 +129,14 @@ const Register = () => {
         toast.error("Please fill all required fields");
         return false;
       }
+      if (!isValidEmail(email)) {
+        toast.error("Please enter a valid email");
+        return false;
+      }
+      if (!isValidPhone(phone)) {
+        toast.error("Please enter a valid phone number");
+        return false;
+      }
     } else if (vendorType === "company") {
       if (
         !companyName ||
@@ -133,6 +146,14 @@ const Register = () => {
         !companyAddress
       ) {
         toast.error("Please fill all required fields");
+        return false;
+      }
+      if (!isValidEmail(companyEmail)) {
+        toast.error("Please enter a valid company email address");
+        return false;
+      }
+      if (!isValidPhone(companyPhone)) {
+        toast.error("Please enter a valid company phone number");
         return false;
       }
     }
@@ -254,56 +275,81 @@ const Register = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-xl max-w-4xl mx-auto p-4 max-h-[800px] overflow-y-auto">
-      <div className="text-center">
+    <div className="bg-white rounded-3xl shadow-2xl max-w-4xl mx-auto p-2 sm:p-8 my-10 sm:my-16 border border-gray-100">
+      <div className="text-center py-2">
         <img
-          className="object-contain w-full h-10"
+          className="object-contain max-w-[190px] h-14 mx-auto my-0"
           src="/homiqly-logo.png"
           alt="logo"
         />
+        <p className="font-semibold text-lg mt-1 mb-2 sm:mb-6 text-gray-600">
+          Vendor Panel Registration
+        </p>
       </div>
-      <p className="font-semibold text-center text-gray-600">
-        Vendor Panel Registration
-      </p>
-
-      <div className="flex flex-col items-center justify-center px-4">
-        <div className="w-full max-w-3xl p-8 bg-white rounded-2xl">
+      <div className="flex flex-col items-center justify-center">
+        <div className="w-full max-w-3xl p-6 sm:p-10 bg-white rounded-2xl transition-all">
           {/* Stepper */}
-          <div className="flex justify-between mb-8">
-            {["Basic Info", "Services", "Confirm"].map((label, index) => {
-              const stepNum = index + 1;
+          <nav className="flex items-center justify-center mb-10">
+            {["Basic Info", "Services", "Confirm"].map((label, idx) => {
+              const active = step === idx + 1;
+              const complete = step > idx + 1;
               return (
-                <div key={label} className="flex flex-col items-center flex-1">
+                <div
+                  key={label}
+                  className="flex-1 flex flex-col items-center relative"
+                >
                   <div
-                    className={`w-7 h-7 flex items-center justify-center rounded-full border-2 ${
-                      step >= stepNum
+                    className={`w-8 h-8 flex items-center justify-center rounded-full border-2 
+                    ${
+                      complete
+                        ? "bg-green-500 border-green-500 text-white"
+                        : active
                         ? "bg-primary border-primary text-white"
-                        : "border-gray-300 text-gray-400"
-                    }`}
+                        : "border-gray-200 text-gray-400 bg-gray-50"
+                    }
+                    shadow`}
                   >
-                    {stepNum}
+                    {complete ? (
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M4 11l5 5 9-9"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                        />
+                      </svg>
+                    ) : (
+                      idx + 1
+                    )}
                   </div>
-                  <p
-                    className={`mt-2 text-sm ${
-                      step >= stepNum
-                        ? "text-primary font-medium"
-                        : "text-gray-400"
-                    }`}
+                  <span
+                    className={`mt-2 text-sm font-medium 
+                  ${
+                    active
+                      ? "text-primary"
+                      : complete
+                      ? "text-green-500"
+                      : "text-gray-400"
+                  }`}
                   >
                     {label}
-                  </p>
+                  </span>
+                  {idx < 2 && (
+                    <span className="absolute top-4 left-full w-10 h-0.5 bg-gray-200"></span>
+                  )}
                 </div>
               );
             })}
-          </div>
+          </nav>
 
-          {/* Step 1 */}
+          {/* Step 1: Basic Info */}
           {step === 1 && (
-            <div>
-              <h2 className="mb-6 text-lg font-semibold text-gray-800">
-                Basic Information
-              </h2>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <form className="space-y-10 transition-all">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="md:col-span-2">
                   <FormSelect
                     label="Vendor Type"
@@ -311,15 +357,10 @@ const Register = () => {
                     onChange={(e) => setVendorType(e.target.value)}
                     placeholder="Select Vendor Type"
                     options={[
-                      {
-                        value: "individual",
-                        label: "Individual",
-                      },
-                      {
-                        value: "company",
-                        label: "Company",
-                      },
+                      { value: "individual", label: "Individual" },
+                      { value: "company", label: "Company" },
                     ]}
+                    required
                   />
                 </div>
 
@@ -333,16 +374,18 @@ const Register = () => {
                       onChange={(e) => setName(e.target.value)}
                       placeholder="John Doe"
                       autoComplete="name"
+                      required
                     />
                     <FormInput
                       id="email"
                       icon={<Mail />}
                       label="Email*"
-                      type="mail"
+                      type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="john@example.com"
                       autoComplete="email"
+                      required
                     />
                     <FormInput
                       id="phone"
@@ -353,6 +396,7 @@ const Register = () => {
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+91 9876543210"
                       autoComplete="tel"
+                      required
                     />
                     <FormInput
                       id="password"
@@ -363,8 +407,9 @@ const Register = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       autoComplete="new-password"
+                      required
                     />
-                    <div className="md:col-span-2">
+                    <div className="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <FormInput
                         id="resume"
                         label="Resume (PDF)"
@@ -378,36 +423,27 @@ const Register = () => {
                         value={aboutme}
                         onChange={(e) => setAboutme(e.target.value)}
                         placeholder="About Me"
-                        autoComplete="aboutme"
                         maxLength={100}
+                        required
+                        autoComplete="aboutme"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="col-span-2">
                       <FormSelect
                         id="expertise"
                         label="Expertise"
                         name="expertise"
                         value={expertise}
                         onChange={(e) => setExpertise(e.target.value)}
-                        options={expertiseOptions}
+                        options={expertiseOptions.map((opt) => ({
+                          label: opt,
+                          value: opt,
+                        }))}
+                        required
                       />
-                      {/* {expertiseOptions.map((opt) => (
-                        <FormOption
-                          key={opt}
-                          // Mainlabel="Expertise"
-                          // type="radio"
-                          name="expertise"
-                          value={opt}
-                          label={opt}
-                          checked={expertise === opt}
-                          onChange={(e) => setExpertise(e.target.value)}
-                          icon={<BadgeCheck className="w-5 h-5" />}
-                        />
-                      ))} */}
                     </div>
                   </>
                 )}
-
                 {vendorType === "company" && (
                   <>
                     <FormInput
@@ -415,6 +451,7 @@ const Register = () => {
                       label="Company Name*"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
+                      required
                       placeholder="ABC Company"
                     />
                     <FormInput
@@ -422,6 +459,7 @@ const Register = () => {
                       label="Contact Person*"
                       value={contactPerson}
                       onChange={(e) => setContactPerson(e.target.value)}
+                      required
                       placeholder="John Doe"
                     />
                     <FormInput
@@ -430,6 +468,7 @@ const Register = () => {
                       type="email"
                       value={companyEmail}
                       onChange={(e) => setCompanyEmail(e.target.value)}
+                      required
                       placeholder="info@company.com"
                     />
                     <FormInput
@@ -438,6 +477,7 @@ const Register = () => {
                       type="tel"
                       value={companyPhone}
                       onChange={(e) => setCompanyPhone(e.target.value)}
+                      required
                       placeholder="+91 9876543210"
                     />
                     <div className="md:col-span-2">
@@ -446,6 +486,7 @@ const Register = () => {
                         id="companyAddress"
                         value={companyAddress}
                         onChange={(e) => setCompanyAddress(e.target.value)}
+                        required
                         placeholder="123 Business Street, City, State, Zip"
                       />
                     </div>
@@ -459,26 +500,29 @@ const Register = () => {
                   </>
                 )}
               </div>
-
-              <div className="flex justify-end mt-6">
-                <Button onClick={handleNextStep}>
+              <div className="flex justify-end pt-4">
+                <Button
+                  size="lg"
+                  className="rounded-xl shadow"
+                  onClick={handleNextStep}
+                  type="button"
+                >
                   Next <ArrowRight className="ml-2" />
                 </Button>
               </div>
-            </div>
+            </form>
           )}
 
-          {/* Step 2: Services + Global City selection */}
+          {/* Step 2: Packages & City */}
           {step === 2 && (
             <div>
-              <h2 className="mb-3 text-lg font-semibold text-gray-800">
-                Select Packages & City
+              <h2 className="mb-4 text-lg font-semibold text-gray-800">
+                Select Packages &amp; City
               </h2>
-
               <div className="mb-4">
                 {citiesLoading ? (
-                  <div className="flex items-center">
-                    <Loader className="animate-spin h-5 w-5 text-primary mr-2" />
+                  <div className="flex items-center text-primary gap-2 py-3">
+                    <Loader className="animate-spin h-5 w-5" />
                     <span>Loading cities...</span>
                   </div>
                 ) : (
@@ -487,98 +531,100 @@ const Register = () => {
                     value={selectedCity}
                     onChange={(e) => setSelectedCity(e.target.value)}
                     placeholder="Select your city"
-                    options={
-                      cities.map((c) => ({
-                        value: c.serviceCity,
-                        label: c.serviceCity,
-                      })) || []
-                    }
+                    options={cities.map((c) => ({
+                      value: c.serviceCity,
+                      label: c.serviceCity,
+                    }))}
+                    required
                   />
                 )}
               </div>
-
               {serviceLoading ? (
                 <div className="flex justify-center py-8">
                   <Loader className="animate-spin h-8 w-8 text-primary" />
                 </div>
               ) : (
-                <div className="pr-2 space-y-6 overflow-y-auto max-h-96">
+                <div className="overflow-y-auto max-h-96 grid gap-6">
                   {serviceCategories.map((category) => (
-                    <div
+                    <section
                       key={category.serviceCategoryId}
-                      className="p-4 rounded-lg bg-gray-50"
+                      className="p-4 rounded-xl bg-gray-50 border"
                     >
                       <h3 className="mb-2 font-semibold text-gray-800">
                         {category.categoryName}
                       </h3>
-
                       {category.services.map((service) => (
-                        <div key={service.serviceId} className="mb-4 ml-4">
+                        <div key={service.serviceId} className="mb-2 ml-2">
                           <h4 className="font-medium text-gray-700">
                             {service.title}
                           </h4>
-
                           {Array.isArray(service.packages) &&
                             service.packages.map((pkg) => {
-                              // is any sub-package selected for this package?
                               const pkgSelected = selectedServices.find(
                                 (p) => p.package_id === pkg.package_id
                               );
                               return (
                                 <div
                                   key={pkg.package_id}
-                                  className="pl-4 mt-2 ml-6 border-l border-gray-300"
+                                  className="mt-2 ml-4 border-l-2 border-primary/30 pl-5 pb-3"
                                 >
-                                  <p className="font-medium text-gray-600">
+                                  <p className="font-medium text-gray-600 mb-1">
                                     {pkg.packageName}
                                   </p>
-
-                                  {/* sub-packages checkboxes */}
-                                  {Array.isArray(pkg.sub_packages) &&
-                                    pkg.sub_packages.map((sub) => {
-                                      const isChecked = !!(
-                                        pkgSelected &&
-                                        pkgSelected.sub_packages.some(
-                                          (s) => s.item_id === sub.item_id
-                                        )
-                                      );
-                                      return (
-                                        <label
-                                          key={sub.item_id}
-                                          className="flex items-center mt-1"
-                                        >
-                                          <input
-                                            type="checkbox"
-                                            checked={isChecked}
-                                            onChange={() =>
-                                              toggleSubPackage(
-                                                pkg.package_id,
-                                                sub.item_id
-                                              )
-                                            }
-                                            className="w-4 h-4 border-gray-300 rounded text-primary"
-                                          />
-                                          <span className="ml-2 text-sm">
+                                  <div className="flex flex-wrap gap-3">
+                                    {Array.isArray(pkg.sub_packages) &&
+                                      pkg.sub_packages.map((sub) => {
+                                        const isChecked = !!(
+                                          pkgSelected &&
+                                          pkgSelected.sub_packages.some(
+                                            (s) => s.item_id === sub.item_id
+                                          )
+                                        );
+                                        return (
+                                          <label
+                                            key={sub.item_id}
+                                            className="flex items-center rounded-full px-3 py-1 bg-white border cursor-pointer text-sm shadow-sm transition-colors hover:bg-primary/10 min-w-[100px]"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              className="accent-primary mr-2"
+                                              checked={isChecked}
+                                              onChange={() =>
+                                                toggleSubPackage(
+                                                  pkg.package_id,
+                                                  sub.item_id
+                                                )
+                                              }
+                                            />
                                             {sub.itemName}
-                                          </span>
-                                        </label>
-                                      );
-                                    })}
+                                          </label>
+                                        );
+                                      })}
+                                  </div>
                                 </div>
                               );
                             })}
                         </div>
                       ))}
-                    </div>
+                    </section>
                   ))}
                 </div>
               )}
-
-              <div className="flex justify-between mt-6">
-                <Button variant="ghost" onClick={handlePrevStep}>
+              <div className="flex justify-between gap-4 pt-8">
+                <Button
+                  variant="ghost"
+                  onClick={handlePrevStep}
+                  type="button"
+                  className="rounded-lg shadow"
+                >
                   <ArrowLeft className="mr-2" /> Previous
                 </Button>
-                <Button onClick={handleNextStep}>
+                <Button
+                  size="lg"
+                  className="rounded-xl shadow"
+                  onClick={handleNextStep}
+                  type="button"
+                >
                   Next <ArrowRight className="ml-2" />
                 </Button>
               </div>
@@ -587,8 +633,8 @@ const Register = () => {
 
           {/* Step 3: Confirmation */}
           {step === 3 && (
-            <div>
-              <h2 className="mb-6 text-2xl font-semibold text-gray-900">
+            <div className="space-y-10">
+              <h2 className="mb-6 text-2xl font-bold text-gray-900">
                 Confirm Registration
               </h2>
 
@@ -866,7 +912,8 @@ const Register = () => {
             </div>
           )}
 
-          <p className="mt-6 text-sm text-center text-gray-600">
+          {/* Already have account */}
+          <p className="mt-10 text-sm text-center text-gray-600">
             Already have an account?{" "}
             <Link
               to="/vendor/login"

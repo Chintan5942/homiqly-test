@@ -1,6 +1,6 @@
 import { ImagePreview } from "./ImagePreview";
 import { useState } from "react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Image } from "lucide-react";
 
 export const CustomFileInput = ({

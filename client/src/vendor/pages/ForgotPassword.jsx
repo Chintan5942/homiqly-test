@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useVendorAuth } from "../contexts/VendorAuthContext";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Loader, Lock, Mail } from "lucide-react";
 
 // Replace these imports with your actual component paths if different

@@ -8,7 +8,7 @@ import {
 } from "../../../shared/components/Form";
 import { Button } from "../../../shared/components/Button";
 import api from "../../../lib/axiosConfig";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { CollapsibleSectionCard } from "../../../shared/components/Card/CollapsibleSectionCard";
 
 const safeNumber = (v) => {

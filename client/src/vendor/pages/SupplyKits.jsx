@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 import { formatCurrency } from '../../shared/utils/formatUtils';
 import { formatDate } from '../../shared/utils/dateUtils';

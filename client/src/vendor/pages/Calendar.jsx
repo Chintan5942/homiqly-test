@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { toast } from "react-toastify";
+// import { toast } from "sonner";
 import moment from "moment-timezone";
 import {
   ArrowLeft,
@@ -21,6 +21,7 @@ import { Button, IconButton } from "../../shared/components/Button";
 import Modal from "../../shared/components/Modal/Modal";
 import api from "../../lib/axiosConfig";
 import { FormInput, FormSelect } from "../../shared/components/Form";
+import { toast } from "sonner";
 
 /* ---------- Constants ---------- */
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -393,24 +394,8 @@ const Calendar = () => {
             value={viewMode}
             onChange={(e) => setViewMode(e.target.value)}
           />
-          {/* {["month", "week", "day"].map((m) => (
-            <button
-              key={m}
-              onClick={() => setViewMode(m)}
-              className={`px-4 py-1 rounded-full text-xs sm:text-sm ${
-                viewMode === m
-                  ? "bg-emerald-600 text-white shadow"
-                  : "text-gray-700 hover:bg-emerald-100"
-              }`}
-            >
-              {m[0].toUpperCase() + m.slice(1)}
-            </button>
-          ))} */}
         </div>
         <div className="flex items-center gap-2 mt-4 sm:mt-0">
-          <div className="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded">
-            MT: {getMoment().format("YYYY-MM-DD HH:mm")}
-          </div>
           <Button
             onClick={() => {
               const base = selectedDate
@@ -799,139 +784,146 @@ const Calendar = () => {
     const isAvailable = hasAvailability(selectedDate);
 
     return (
-      <aside className="w-full lg:w-[340px] p-5 bg-white border-l rounded-xl shadow-md">
-        <div className="flex items-start justify-between mb-2">
-          <div>
-            <h3 className="text-lg font-semibold">
-              {selectedMoment.format("dddd, MMMM D, YYYY")}
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {selectedBookings.length} booking
-              {selectedBookings.length !== 1 ? "s" : ""} •{" "}
-              {selectedDateAvailabilities.length} availability
-              {selectedDateAvailabilities.length !== 1 ? "s" : ""}
-            </p>
-            {isAvailable && (
-              <p className="mt-1 text-xs text-emerald-700">
-                This day has availability set
-              </p>
-            )}
-          </div>
-          <IconButton
-            onClick={() => {
-              setSelectedDate(null);
-              setSelectedBookings([]);
-            }}
-            variant="lightDanger"
-            icon={<X size={20} />}
-          />
+      <>
+        <div className="text-center px-2 py-1 text-xs text-gray-800 my-3 bg-gray-100 rounded w-fit">
+          MT: {getMoment().format("YYYY-MM-DD HH:mm")}
         </div>
-
-        <div className="mt-4">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold">Availabilities</h4>
-            <Button
-            size="sm"
-              variant="lightInherit"
-              onClick={() => {
-                const base = toInputDate(selectedDate);
-                const safe = clampToTodayISO(base);
-                setAvailabilityForm({
-                  startDate: safe,
-                  endDate: safe,
-                  startTime: "09:00",
-                  endTime: "18:00",
-                });
-                setShowCreateModal(true);
-              }}
-            >
-              Add
-            </Button>
-          </div>
-
-          <div className="space-y-3">
-            {selectedDateAvailabilities.length ? (
-              selectedDateAvailabilities
-                .slice()
-                .sort((a, b) =>
-                  (a.startTime || "").localeCompare(b.startTime || "")
-                )
-                .map((a) => (
-                  <div
-                    key={a.vendor_availability_id}
-                    className="flex items-start justify-between p-3 border rounded bg-emerald-50/50 border-emerald-100"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-emerald-700">
-                        {a.startTime} - {a.endTime}
-                      </div>
-                      <div className="text-xs truncate text-emerald-700">
-                        {a.startDate}{" "}
-                        {a.startDate !== a.endDate && `→ ${a.endDate}`}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 ml-3">
-                      <IconButton
-                        onClick={() => openEditModal(a)}
-                        title="Edit"
-                        variant="lightBlack"
-                        icon={<Pencil size={14} />}
-                      />
-                      <IconButton
-                        onClick={() => openDeleteModal(a)}
-                        title="Delete"
-                        variant="lightDanger"
-                        icon={<Trash size={14} />}
-                      />
-                    </div>
-                  </div>
-                ))
-            ) : (
-              <div className="py-3 text-sm text-gray-500">No availability</div>
-            )}
-          </div>
-
-          <div className="mt-6">
-            <h4 className="mb-2 text-sm font-semibold">Bookings</h4>
-            <div className="divide-y">
-              {selectedBookings.length ? (
-                selectedBookings
-                  .slice()
-                  .sort((a, b) =>
-                    (a.bookingTime || "").localeCompare(b.bookingTime || "")
-                  )
-                  .map((b) => {
-                    return (
-                      <div
-                        key={b.booking_id || b.bookingId}
-                        className={`flex items-start justify-between px-2 py-3 border rounded `}
-                      >
-                        <div className="flex items-center min-w-0 gap-2">
-                          <span
-                            className={`inline-block w-2.5 h-2.5 rounded-full`}
-                          />
-                          <div>
-                            <div className="text-sm font-medium truncate">
-                              {b.serviceName}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              {b.bookingTime} • {b.userName}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="ml-3">
-                          <StatusBadge status={b.bookingStatus} />
-                        </div>
-                      </div>
-                    );
-                  })
-              ) : (
-                <div className="py-6 text-sm text-gray-500">No bookings</div>
+        <aside className="w-full lg:w-[340px] p-5 bg-white border-l rounded-xl shadow-md">
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <h3 className="text-lg font-semibold">
+                {selectedMoment.format("dddd, MMMM D, YYYY")}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {selectedBookings.length} booking
+                {selectedBookings.length !== 1 ? "s" : ""} •{" "}
+                {selectedDateAvailabilities.length} availability
+                {selectedDateAvailabilities.length !== 1 ? "s" : ""}
+              </p>
+              {isAvailable && (
+                <p className="mt-1 text-xs text-emerald-700">
+                  This day has availability set
+                </p>
               )}
             </div>
+            <IconButton
+              onClick={() => {
+                setSelectedDate(null);
+                setSelectedBookings([]);
+              }}
+              variant="lightDanger"
+              icon={<X size={20} />}
+            />
           </div>
-        </div>
-      </aside>
+
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold">Availabilities</h4>
+              <Button
+                size="sm"
+                variant="lightInherit"
+                onClick={() => {
+                  const base = toInputDate(selectedDate);
+                  const safe = clampToTodayISO(base);
+                  setAvailabilityForm({
+                    startDate: safe,
+                    endDate: safe,
+                    startTime: "09:00",
+                    endTime: "18:00",
+                  });
+                  setShowCreateModal(true);
+                }}
+              >
+                Add
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {selectedDateAvailabilities.length ? (
+                selectedDateAvailabilities
+                  .slice()
+                  .sort((a, b) =>
+                    (a.startTime || "").localeCompare(b.startTime || "")
+                  )
+                  .map((a) => (
+                    <div
+                      key={a.vendor_availability_id}
+                      className="flex items-start justify-between p-3 border rounded bg-emerald-50/50 border-emerald-100"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-emerald-700">
+                          {a.startTime} - {a.endTime}
+                        </div>
+                        <div className="text-xs truncate text-emerald-700">
+                          {a.startDate}{" "}
+                          {a.startDate !== a.endDate && `→ ${a.endDate}`}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2 ml-3">
+                        <IconButton
+                          onClick={() => openEditModal(a)}
+                          title="Edit"
+                          variant="lightBlack"
+                          icon={<Pencil size={14} />}
+                        />
+                        <IconButton
+                          onClick={() => openDeleteModal(a)}
+                          title="Delete"
+                          variant="lightDanger"
+                          icon={<Trash size={14} />}
+                        />
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <div className="py-3 text-sm text-gray-500">
+                  No availability
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6">
+              <h4 className="mb-2 text-sm font-semibold">Bookings</h4>
+              <div className="divide-y">
+                {selectedBookings.length ? (
+                  selectedBookings
+                    .slice()
+                    .sort((a, b) =>
+                      (a.bookingTime || "").localeCompare(b.bookingTime || "")
+                    )
+                    .map((b) => {
+                      return (
+                        <div
+                          key={b.booking_id || b.bookingId}
+                          className={`flex items-start justify-between px-2 py-3 border rounded `}
+                        >
+                          <div className="flex items-center min-w-0 gap-2">
+                            <span
+                              className={`inline-block w-2.5 h-2.5 rounded-full`}
+                            />
+                            <div>
+                              <div className="text-sm font-medium truncate">
+                                {b.serviceName}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                {b.bookingTime} • {b.userName}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="ml-3">
+                            <StatusBadge status={b.bookingStatus} />
+                          </div>
+                        </div>
+                      );
+                    })
+                ) : (
+                  <div className="py-6 text-sm text-gray-500">No bookings</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </aside>
+      </>
     );
   };
 

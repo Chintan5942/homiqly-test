@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import api from "../../lib/axiosConfig";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { Button, IconButton } from "../../shared/components/Button";
 import {
