@@ -1,121 +1,95 @@
 // pages/vendor/components/PaymentDetails.jsx
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import {
+  ArrowLeft,
+  User,
+  CreditCard,
+  Building2,
+  Package,
+  Calendar,
+  DollarSign,
+} from "lucide-react";
+import api from "../../../lib/axiosConfig";
 import { formatDate } from "../../../shared/utils/dateUtils";
 import { formatCurrency } from "../../../shared/utils/formatUtils";
 import Breadcrumb from "../../../shared/components/Breadcrumb";
-import { ArrowLeft } from "lucide-react";
-import api from "../../../lib/axiosConfig";
 
 const PaymentDetails = () => {
-  const { paymentId } = useParams(); // route param (booking_id passed earlier)
+  const { paymentId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const [payment, setPayment] = useState(location.state?.payment || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // try to fetch individual payment if not passed via location.state
   useEffect(() => {
     const fetchPayment = async (id) => {
       try {
         setLoading(true);
-        // attempt an endpoint - if your backend has a different path update it
         const res = await api.get(`/api/vendor/getpayment/${id}`);
         const data = res.data || null;
-        if (data) {
-          // If API returns wrapper like { payout: {...} } adapt here.
-          setPayment(data);
-        } else {
-          setError("Payment not found");
-        }
+        setPayment(data);
       } catch (err) {
-        console.warn("Could not fetch payment details", err);
         setError("Payment details unavailable");
       } finally {
         setLoading(false);
       }
     };
 
-    if (!payment && paymentId) {
-      // paymentId may be booking_id — try fetch
-      fetchPayment(paymentId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!payment && paymentId) fetchPayment(paymentId);
   }, [paymentId]);
 
-  if (loading) {
+  if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-b-2 border-gray-900 rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-gray-300 border-t-indigo-600 rounded-full animate-spin" />
       </div>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
-      <div className="p-6 text-center text-red-600">
+      <div className="p-6 text-center text-red-600 bg-red-50 rounded-xl max-w-md mx-auto">
         {error}
       </div>
     );
-  }
 
-  if (!payment) {
+  if (!payment)
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div className="p-6 text-center text-gray-500 bg-gray-50 rounded-xl max-w-md mx-auto">
         Payment details not available.
       </div>
     );
-  }
 
-  // Normalize fields from the API shape you provided
+  // Normalize values
   const bookingId = payment.booking_id ?? payment.payout_id ?? payment.id;
-  const payoutAmount = Number(payment.payout_amount ?? payment.payoutAmount ?? payment.gross_amount ?? 0);
-  const currencyRaw = (payment.currency ?? payment.payment_currency ?? "cad").toString();
-  const currencyLabel = (currencyRaw || "CAD").toUpperCase();
-  const statusRaw = (payment.payout_status ?? payment.payment_status ?? payment.bookingStatus ?? "").toString().toLowerCase();
+  const payoutAmount = Number(
+    payment.payout_amount ?? payment.gross_amount ?? 0
+  );
+  const currency = (payment.currency ?? "CAD").toUpperCase();
+  const formattedPayout = formatCurrency(payoutAmount, currency);
+  const statusRaw = (
+    payment.payout_status ??
+    payment.payment_status ??
+    ""
+  ).toLowerCase();
 
-  const statusLabel =
-    statusRaw === "pending"
-      ? "Pending"
-      : statusRaw === "paid"
-      ? "Paid"
-      : statusRaw === "completed"
-      ? "Completed"
-      : statusRaw === "rejected" || statusRaw === "cancelled"
-      ? statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1)
-      : statusRaw
-      ? statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1)
-      : "Unknown";
-
-  const statusClasses =
-    statusLabel === "Pending"
-      ? "bg-yellow-100 text-yellow-700"
-      : statusLabel === "Paid"
-      ? "bg-blue-100 text-blue-800"
-      : statusLabel === "Completed"
-      ? "bg-green-100 text-green-800"
-      : "bg-gray-100 text-gray-700";
-
-  // Try to format via formatCurrency utility if available; otherwise fallback
-  const formattedPayout = (() => {
-    try {
-      // many formatCurrency implementations accept (amount, currency)
-      const fc = formatCurrency(payoutAmount, currencyLabel);
-      if (fc && typeof fc === "string") return fc;
-    } catch (e) {
-      // ignore and fallback
-    }
-    // fallback basic formatting
-    const prefix = currencyLabel === "CAD" || currencyLabel === "C$" ? "C$" : currencyLabel + " ";
-    return `${prefix}${payoutAmount.toFixed(2)}`;
-  })();
+  const statusMap = {
+    pending: { label: "Pending", color: "bg-yellow-100 text-yellow-800" },
+    paid: { label: "Paid", color: "bg-blue-100 text-blue-800" },
+    completed: { label: "Completed", color: "bg-green-100 text-green-800" },
+    rejected: { label: "Rejected", color: "bg-red-100 text-red-800" },
+  };
+  const status = statusMap[statusRaw] || {
+    label: "Unknown",
+    color: "bg-gray-100 text-gray-700",
+  };
 
   return (
-    <div className="max-w-5xl p-6 mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
           <Breadcrumb
             links={[
               { label: "Dashboard", to: "/vendor" },
@@ -123,138 +97,147 @@ const PaymentDetails = () => {
               { label: "Payment Details" },
             ]}
           />
+          <h1 className="mt-2 text-3xl font-bold text-gray-900">
+            Payment Details
+          </h1>
+          <p className="text-gray-500 text-sm">
+            Detailed information about this transaction
+          </p>
         </div>
+
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
       </div>
 
-      {/* Payment Summary Card */}
-      <div className="p-6 bg-white shadow-md rounded-2xl">
-        <h2 className="mb-4 text-2xl font-semibold text-gray-800">
-          Payment Summary
-        </h2>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="p-5 bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">Booking ID</p>
-            <p className="font-medium text-gray-900">#{bookingId}</p>
+            <CreditCard className="w-5 h-5 text-gray-400" />
           </div>
+          <p className="mt-2 text-xl font-semibold text-gray-800">
+            #{bookingId}
+          </p>
+        </div>
 
-          <div>
-            <p className="text-sm text-gray-500">Payment Status</p>
-            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${statusClasses}`}>
-              {statusLabel}
-            </span>
+        <div className="p-5 bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">Status</p>
+            <DollarSign className="w-5 h-5 text-gray-400" />
           </div>
+          <span
+            className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded-full ${status.color}`}
+          >
+            {status.label}
+          </span>
+        </div>
 
-          <div>
-            <p className="text-sm text-gray-500">Payout Amount</p>
-            <p className="font-medium text-gray-900">
-              {formattedPayout}
-            </p>
+        <div className="p-5 bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">Amount</p>
+            <Building2 className="w-5 h-5 text-gray-400" />
           </div>
+          <p className="mt-2 text-xl font-semibold text-gray-800">
+            {formattedPayout}
+          </p>
+        </div>
 
-          <div>
-            <p className="text-sm text-gray-500">Booking Date</p>
-            <p className="font-medium text-gray-900">
-              {payment.bookingDate ? formatDate(payment.bookingDate) : "-"}{" "}
-              {payment.bookingTime ? `at ${payment.bookingTime}` : ""}
-            </p>
+        <div className="p-5 bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">Created</p>
+            <Calendar className="w-5 h-5 text-gray-400" />
           </div>
-
-          <div>
-            <p className="text-sm text-gray-500">Created On</p>
-            <p className="font-medium text-gray-900">
-              {payment.created_at ? formatDate(payment.created_at) : "-"}
-            </p>
-          </div>
-
-          {/* <div>
-            <p className="text-sm text-gray-500">Service ID</p>
-            <p className="font-medium text-gray-900">#{payment.package_id ?? payment.service_id ?? "—"}</p>
-          </div> */}
+          <p className="mt-2 text-base font-semibold text-gray-800">
+            {payment.created_at ? formatDate(payment.created_at) : "-"}
+          </p>
         </div>
       </div>
 
-      {/* Package Section */}
-      <div className="p-6 bg-white shadow-md rounded-2xl">
-        <h3 className="mb-4 text-xl font-semibold text-gray-800">
-          Package Details
-        </h3>
-        <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
-          <img
-            src={payment.packageMedia ?? payment.bookingMedia}
-            alt={payment.packageName ?? "Package"}
-            className="object-cover w-48 h-32 rounded-lg shadow"
-          />
+      {/* Package Info */}
+      <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
+        <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+          <Package className="w-5 h-5 text-indigo-600" /> Package Details
+        </h2>
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+          {payment.packageMedia && (
+            <img
+              src={payment.packageMedia}
+              alt={payment.packageName ?? "Package"}
+              className="w-48 h-32 object-cover rounded-xl shadow-sm"
+            />
+          )}
           <div>
-            <p className="text-lg font-medium text-gray-900">
+            <p className="text-lg font-semibold text-gray-800">
               {payment.packageName ?? "—"}
             </p>
-            {/* <p className="mt-1 text-sm text-gray-500">
-              Service ID: #{payment.package_id ?? payment.service_id ?? "—"}
-            </p> */}
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 mt-1">
               Price: {formattedPayout}
             </p>
-            {/* {payment.platform_fee_percentage && (
-              <p className="mt-1 text-sm text-gray-500">
-                Platform Fee: {payment.platform_fee_percentage}%
-              </p>
-            )} */}
           </div>
         </div>
       </div>
 
-      {/* User Section */}
-      <div className="p-6 bg-white shadow-md rounded-2xl">
-        <h3 className="mb-4 text-xl font-semibold text-gray-800">
-          User Information
-        </h3>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+      {/* User Info */}
+      <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
+        <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+          <User className="w-5 h-5 text-indigo-600" /> User Information
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           <div>
             <p className="text-sm text-gray-500">Name</p>
-            <p className="font-medium text-gray-900">{payment.user_name ?? payment.user_fullname ?? "-"}</p>
+            <p className="font-medium text-gray-900">
+              {payment.user_name ?? payment.user_fullname ?? "-"}
+            </p>
           </div>
-          {/* <div>
-            <p className="text-sm text-gray-500">Email</p>
-            <p className="font-medium text-gray-900">{payment.user_email ?? "-"}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Phone</p>
-            <p className="font-medium text-gray-900">{payment.user_phone ?? "-"}</p>
-          </div> */}
         </div>
       </div>
 
-      {/* Vendor Section */}
-      {(payment.vendor_name || payment.vendor_email || payment.vendor_phone) && (
-        <div className="p-6 bg-white shadow-md rounded-2xl">
-          <h3 className="mb-4 text-xl font-semibold text-gray-800">
-            Vendor Information
-          </h3>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
-            <div>
-              <p className="text-sm text-gray-500">Vendor Name</p>
-              <p className="font-medium text-gray-900">{payment.vendor_name ?? "-"}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Email</p>
-              <p className="font-medium text-gray-900">
-                {payment.vendor_email ?? "-"}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Phone</p>
-              <p className="font-medium text-gray-900">
-                {payment.vendor_phone ?? "-"}
-              </p>
-            </div>
+      {/* Vendor Info */}
+      {(payment.vendor_name ||
+        payment.vendor_email ||
+        payment.vendor_phone) && (
+        <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+            <Building2 className="w-5 h-5 text-indigo-600" /> Vendor Information
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {payment.vendor_name && (
+              <div>
+                <p className="text-sm text-gray-500">Vendor Name</p>
+                <p className="font-medium text-gray-900">
+                  {payment.vendor_name}
+                </p>
+              </div>
+            )}
+            {payment.vendor_email && (
+              <div>
+                <p className="text-sm text-gray-500">Email</p>
+                <p className="font-medium text-gray-900">
+                  {payment.vendor_email}
+                </p>
+              </div>
+            )}
+            {payment.vendor_phone && (
+              <div>
+                <p className="text-sm text-gray-500">Phone</p>
+                <p className="font-medium text-gray-900">
+                  {payment.vendor_phone}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Notes Section */}
+      {/* Notes */}
       {payment.notes && (
-        <div className="p-6 bg-white shadow-md rounded-2xl">
-          <h3 className="mb-4 text-xl font-semibold text-gray-800">Notes</h3>
+        <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-900 mb-3">Notes</h2>
           <p className="text-gray-700">{payment.notes}</p>
         </div>
       )}

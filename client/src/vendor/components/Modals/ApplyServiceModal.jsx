@@ -5,36 +5,30 @@ import api from "../../../lib/axiosConfig";
 import Select from "react-select";
 import { toast } from "sonner";
 
-/**
- * Props:
- * - isOpen, onClose, initialPackage
- * - vendorPackageIds: Set of package_id (from parent)
- * - vendorSubPackageMap: { [packageId]: Set(sub_package_id) }
- * - onApplied: function({ addedPackageIds: [], addedSubPackages: { [pkgId]: [subIds] } })
- */
-const ApplyServiceModal = ({
-  isOpen,
-  onClose,
-  initialPackage,
-  vendorPackageIds = new Set(),
-  vendorSubPackageMap = {},
-  onApplied = () => {},
-}) => {
+const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
   const [groupedPackages, setGroupedPackages] = useState({});
   const [loading, setLoading] = useState(false);
+
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
+
+  // user-selected sub-packages (react-select option objects)
   const [selectedSubPackages, setSelectedSubPackages] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
+  // vendor existing info
+  const [vendorPackageIds, setVendorPackageIds] = useState(new Set());
+  const [vendorSubPackageIds, setVendorSubPackageIds] = useState(new Set());
+
   useEffect(() => {
-    const fetchPackages = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await api.get("/api/admin/getpackages");
-        const rawData = Array.isArray(response.data)
-          ? response.data
-          : response.data?.result || [];
+        // fetch admin packages
+        const adminResp = await api.get("/api/admin/getpackages");
+        const rawData = Array.isArray(adminResp.data)
+          ? adminResp.data
+          : adminResp.data?.result || [];
 
         const grouped = rawData.reduce((acc, item) => {
           const categoryId = item.service_category_id;
@@ -57,7 +51,11 @@ const ApplyServiceModal = ({
 
           const existingService = acc[categoryId].services[serviceId];
           (item.packages || []).forEach((pkg) => {
-            if (!existingService.packages.some((p) => p.package_id === pkg.package_id)) {
+            if (
+              !existingService.packages.some(
+                (p) => p.package_id === pkg.package_id
+              )
+            ) {
               existingService.packages.push(pkg);
             }
           });
@@ -67,43 +65,90 @@ const ApplyServiceModal = ({
 
         setGroupedPackages(grouped);
 
-        // Prefill initialPackage
+        // fetch vendor's existing packages & sub-packages
+        const vendorResp = await api.get("/api/vendor/getvendorservice");
+        const vendorRaw = Array.isArray(vendorResp.data)
+          ? vendorResp.data
+          : vendorResp.data?.result || [];
+
+        const pkgIds = new Set();
+        const subIds = new Set();
+
+        vendorRaw.forEach((p) => {
+          // top-level package id
+          if (p.package_id) pkgIds.add(p.package_id);
+
+          // vendor sub-packages - sample used "package_item_id"
+          const spList = p.sub_packages || [];
+          spList.forEach((sp) => {
+            // support multiple field names used in different responses
+            const id = sp.sub_package_id || sp.package_item_id || sp.sub_package_item_id;
+            if (id) subIds.add(id);
+          });
+        });
+
+        setVendorPackageIds(pkgIds);
+        setVendorSubPackageIds(subIds);
+
+        // Prefill initialPackage: set category, service, and sub-packages from that package
         if (initialPackage) {
           const { service_category_id, service_id, package_id } = initialPackage;
           const cat = grouped[service_category_id];
           if (cat) {
-            setSelectedCategory({ value: service_category_id, label: cat.categoryName });
+            setSelectedCategory({
+              value: service_category_id,
+              label: cat.categoryName,
+            });
             const srv = cat.services[service_id];
             if (srv) {
               setSelectedService({ value: service_id, label: srv.serviceName });
               const pkg = srv.packages.find((p) => p.package_id === package_id);
               if (pkg && pkg.sub_packages?.length) {
-                // Preselect only those sub-packages that are NOT already owned by vendor.
-                const preselected = pkg.sub_packages
-                  .filter((sp) => {
-                    const ownedSet = vendorSubPackageMap[pkg.package_id];
-                    // If ownedSet exists and contains this id, don't preselect it.
-                    return !(ownedSet && ownedSet.has(sp.sub_package_id));
-                  })
-                  .map((sp) => ({
-                    value: sp.sub_package_id,
-                    label: sp.item_name || sp.sub_package_name,
+                const preselected = pkg.sub_packages.map((sp) => {
+                  const id = sp.sub_package_id || sp.package_item_id || sp.sub_package_item_id;
+                  return {
+                    value: id,
+                    label: sp.item_name || sp.sub_package_name || sp.title,
                     package_id: pkg.package_id,
-                  }));
-                setSelectedSubPackages(preselected);
+                    // mark disabled if vendor already has it
+                    isDisabled: subIds.has(id),
+                  };
+                });
+
+                // filter out any that are disabled (already owned)
+                const allowed = preselected.filter((p) => !p.isDisabled);
+                const disabledOnes = preselected.filter((p) => p.isDisabled);
+
+                if (disabledOnes.length > 0) {
+                  toast.info(
+                    "Some preselected items are already added to your vendor packages and were removed."
+                  );
+                }
+
+                setSelectedSubPackages(allowed);
               }
             }
           }
         }
       } catch (error) {
-        console.error("Error fetching packages:", error);
+        console.error("Error fetching packages or vendor services:", error);
+        toast.error("Failed to load packages");
       } finally {
         setLoading(false);
       }
     };
 
-    if (isOpen) fetchPackages();
-  }, [isOpen, initialPackage, vendorSubPackageMap]);
+    if (isOpen) {
+      // reset previous state when opening
+      setSelectedCategory(null);
+      setSelectedService(null);
+      setSelectedSubPackages([]);
+      setVendorPackageIds(new Set());
+      setVendorSubPackageIds(new Set());
+
+      fetchData();
+    }
+  }, [isOpen, initialPackage]);
 
   const resetSelections = () => {
     setSelectedCategory(null);
@@ -116,26 +161,28 @@ const ApplyServiceModal = ({
     onClose();
   };
 
+  // Service object and its packages for selected category/service
   const selectedServiceObj =
-    groupedPackages[selectedCategory?.value]?.services?.[selectedService?.value] || {};
+    groupedPackages[selectedCategory?.value]?.services?.[
+      selectedService?.value
+    ] || {};
   const allPackages = selectedServiceObj?.packages || [];
 
-  // Build sub-package options with isDisabled when vendor already has that sub-package
+  // Build sub-package options across all packages of the selected service.
+  // Each option includes package_id and isDisabled if vendor already has that sub-package.
   const subPackageOptions = allPackages.flatMap((pkg) =>
     (pkg.sub_packages || []).map((sub) => {
-      const adminSubId = sub.sub_package_id || sub.package_item_id;
-      const ownedSet = vendorSubPackageMap[pkg.package_id];
-      const isDisabled = !!(ownedSet && adminSubId && ownedSet.has(adminSubId));
+      const subId = sub.sub_package_id || sub.package_item_id || sub.sub_package_item_id;
+      const alreadyHas = vendorSubPackageIds.has(subId); // only disable sub-packages already owned
       return {
-        value: adminSubId,
-        label: sub.item_name || sub.sub_package_name,
+        value: subId,
+        label: sub.item_name || sub.sub_package_name || sub.title,
         package_id: pkg.package_id,
-        isDisabled,
+        isDisabled: alreadyHas,
       };
     })
   );
 
-  // Custom styles...
   const customSelectStyles = {
     control: (base, state) => ({
       ...base,
@@ -153,15 +200,14 @@ const ApplyServiceModal = ({
   };
 
   const handleSubmit = async () => {
-    // Filter selectedSubPackages to remove any disabled (defensive)
-    const filtered = selectedSubPackages.filter((s) => {
-      // find option by value to check isDisabled
-      const opt = subPackageOptions.find((o) => o.value === s.value && o.package_id === s.package_id);
-      return opt && !opt.isDisabled;
-    });
+    // Prevent submitting any disabled option
+    if (selectedSubPackages.some((opt) => opt.isDisabled)) {
+      toast.error("These packages already exist or you already have them.");
+      return;
+    }
 
-    // Group by package_id
-    const groupedByPackage = filtered.reduce((acc, sub) => {
+    // Group selected sub-packages by package_id and assemble payload
+    const groupedByPackage = selectedSubPackages.reduce((acc, sub) => {
       const pkgId = sub.package_id;
       if (!acc[pkgId]) acc[pkgId] = { package_id: pkgId, sub_packages: [] };
       acc[pkgId].sub_packages.push({ sub_package_id: sub.value });
@@ -171,45 +217,40 @@ const ApplyServiceModal = ({
     const builtPackages = Object.values(groupedByPackage);
 
     if (builtPackages.length === 0) {
-      toast.error("Please select at least one (non-owned) sub-package.");
+      toast.error("Please select at least one sub-package.");
       return;
     }
 
     try {
       setSubmitting(true);
-      // adapt payload to your backend - here I keep structure similar to your previous modal
+      // send payload - adjust key names if your API expects different shapes
       const response = await api.post("/api/vendor/applyservice", {
         selectedPackages: builtPackages,
       });
 
       toast.success(response.data.message || "Service requested successfully!");
 
-      // call parent callback to update vendor state immediately:
-      // Build data to pass up: addedSubPackages: { [pkgId]: [subIds] }, addedPackageIds []
-      const addedSubPackages = {};
+      // update local vendor sets to reflect newly added sub-packages so UI is consistent
+      const newVendorSubIds = new Set(vendorSubPackageIds);
       builtPackages.forEach((bp) => {
-        addedSubPackages[bp.package_id] = (bp.sub_packages || []).map((s) => s.sub_package_id);
-      });
-
-      // If the vendor applied for all sub-packages of some package, you may want to mark that package as added.
-      // Here we detect that:
-      const addedPackageIds = [];
-      builtPackages.forEach((bp) => {
-        const adminPkg = allPackages.find((p) => p.package_id === bp.package_id);
-        if (adminPkg) {
-          const totalSubs = (adminPkg.sub_packages || []).length;
-          if (totalSubs > 0 && bp.sub_packages.length >= totalSubs) {
-            addedPackageIds.push(bp.package_id);
-          }
+        // we do not assume API returns the exact ids; but optimistically update UI
+        if (bp.package_id) {
+          // leave vendorPackageIds alone (top-level) — adding sub-packages doesn't always mean entire package added
+          (bp.sub_packages || []).forEach((sp) => {
+            newVendorSubIds.add(sp.sub_package_id);
+          });
         }
       });
-
-      onApplied({ addedPackageIds, addedSubPackages });
+      setVendorSubPackageIds(newVendorSubIds);
 
       handleModalClose();
     } catch (err) {
       console.error(err);
-      toast.error(err?.response?.data?.error || "Failed to request service. Please try again.");
+      const errMsg =
+        err?.response?.data?.error ||
+        "Failed to request service. Please try again.";
+      // If server indicates duplicate packages, show the requested message
+      toast.error(errMsg);
     } finally {
       setSubmitting(false);
     }
@@ -220,14 +261,10 @@ const ApplyServiceModal = ({
     label: cat.categoryName,
   }));
   const serviceOptions = selectedCategory
-    ? Object.values(groupedPackages[selectedCategory.value]?.services || {}).map((srv) => ({
-        value: srv.serviceId,
-        label: srv.serviceName,
-      }))
+    ? Object.values(
+        groupedPackages[selectedCategory.value]?.services || {}
+      ).map((srv) => ({ value: srv.serviceId, label: srv.serviceName }))
     : [];
-
-  // Prevent selecting disabled options in the control (react-select prevents picking isDisabled)
-  // But ensure we don't accidentally prefill disabled values in selectedSubPackages.
 
   if (loading) {
     return (
@@ -238,8 +275,13 @@ const ApplyServiceModal = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleModalClose} title="Request New Services">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleModalClose}
+      title="Request New Services"
+    >
       <div className="space-y-5 mb-6">
+        {/* Category */}
         <div>
           <label className="block text-sm font-medium mb-1">Category</label>
           <Select
@@ -258,6 +300,7 @@ const ApplyServiceModal = ({
           />
         </div>
 
+        {/* Service */}
         {selectedCategory && (
           <div>
             <label className="block text-sm font-medium mb-1">Service</label>
@@ -277,6 +320,7 @@ const ApplyServiceModal = ({
           </div>
         )}
 
+        {/* Sub-Packages (select directly across all packages for the chosen service) */}
         {selectedService && subPackageOptions.length > 0 && (
           <div>
             <label className="block text-sm font-medium mb-1">Sub-Packages</label>
@@ -284,8 +328,9 @@ const ApplyServiceModal = ({
               options={subPackageOptions}
               value={selectedSubPackages}
               onChange={(value) => {
-                // filter out disabled options (react-select typically won't select disabled but defensive)
-                setSelectedSubPackages((value || []).filter((v) => !v.isDisabled));
+                // react-select will never set a disabled option via UI, but guard anyway
+                const filtered = (value || []).filter((v) => !v.isDisabled);
+                setSelectedSubPackages(filtered);
               }}
               styles={customSelectStyles}
               placeholder="Select sub-packages"
@@ -293,10 +338,10 @@ const ApplyServiceModal = ({
               isClearable
               menuPortalTarget={typeof window !== "undefined" ? document.body : null}
               menuPosition="fixed"
-              getOptionLabel={(o) => (o.isDisabled ? `${o.label} (Already added)` : o.label)}
+              // react-select recognizes option.isDisabled
             />
             <p className="text-xs text-gray-500 mt-1">
-              Already-added sub-packages are disabled. Choose remaining sub-packages to request.
+              Choose sub-packages. Already-added sub-packages are disabled.
             </p>
           </div>
         )}
@@ -309,7 +354,12 @@ const ApplyServiceModal = ({
         <Button
           variant="primary"
           onClick={handleSubmit}
-          disabled={submitting || !selectedCategory || !selectedService || selectedSubPackages.length === 0}
+          disabled={
+            submitting ||
+            !selectedCategory ||
+            !selectedService ||
+            selectedSubPackages.length === 0
+          }
         >
           {submitting ? "Submitting..." : "Request Service"}
         </Button>

@@ -414,8 +414,8 @@ const Services = () => {
 
   return (
     <div>
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Service Management</h2>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Service Management</h2>
         <div className="flex space-x-2">
           <Button
             variant="lightWarning"
