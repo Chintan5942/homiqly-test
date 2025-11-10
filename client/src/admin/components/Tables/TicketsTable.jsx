@@ -84,7 +84,7 @@ const TicketsTable = ({ tickets, isLoading, onViewTicket, onDeleteTicket }) => {
           /> */}
           <IconButton
             icon={<Trash className="h-4 w-4" />}
-            variant="danger"
+            variant="lightDanger"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();

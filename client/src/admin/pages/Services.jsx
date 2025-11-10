@@ -498,7 +498,7 @@ const Services = () => {
 
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                         <IconButton
-                          variant="lightInfo"
+                          // variant="lightInfo"
                           icon={<Pencil />}
                           onClick={() =>
                             editCategory({
@@ -569,7 +569,7 @@ const Services = () => {
                           </div>
                           <div className="flex items-start space-x-2 ml-4">
                             <IconButton
-                              variant="lightInfo"
+                              // variant="lightInfo"
                               icon={<Pencil />}
                               onClick={() => editService(service)}
                             />
@@ -628,7 +628,7 @@ const Services = () => {
                     <td className="px-4 py-2">{filter.serviceFilter}</td>
                     <td className="px-4 py-2 text-right space-x-2">
                       <IconButton
-                        variant="lightInfo"
+                        // variant="lightInfo"
                         size="sm"
                         icon={<Pencil />}
                         onClick={() => {

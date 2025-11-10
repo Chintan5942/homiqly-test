@@ -46,7 +46,7 @@ const PaymentsTable = ({ payouts, isLoading, onViewPayment }) => {
       title: "Service",
       key: "serviceName",
       render: (row) => (
-        <div className="text-sm text-gray-900">{row.serviceName}</div>
+        <div className="text-sm text-gray-900">{row.serviceName || "N/A"}</div>
       ),
     },
     {

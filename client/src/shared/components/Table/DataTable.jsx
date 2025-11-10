@@ -20,14 +20,14 @@ const DataTable = ({
 
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-8 text-center">
+      <div className="bg-white rounded-lg shadow p-8 flex items-center justify-center text-center">
         <p className="text-gray-600">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white rounded-lg border border-slate-200 shadow overflow-hidden">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">

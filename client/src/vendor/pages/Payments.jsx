@@ -219,17 +219,6 @@ const Payments = () => {
         <h2 className="text-2xl font-bold text-gray-800">
           Payment Booking History
         </h2>
-
-        <div className="flex items-center space-x-2">
-          <Button
-            className="h-9"
-            onClick={fetchBookings}
-            variant="lightInherit"
-            icon={<RefreshCcw className="w-4 h-4 mr-2" />}
-          >
-            Refresh
-          </Button>
-        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4 sm:grid-cols-4">
@@ -326,7 +315,15 @@ const Payments = () => {
           </div>
 
           {/* Spacer to push button to right */}
-          <div className="md:col-span-2"></div>
+          <div className="flex justify-end col-span-3">
+            <Button
+              onClick={fetchBookings}
+              variant="lightInherit"
+              icon={<RefreshCcw className="w-4 h-4" />}
+            >
+              Refresh
+            </Button>
+          </div>
 
           {/* Request Payout Button - Right aligned */}
           {/* <div className="flex justify-end md:col-span-1">

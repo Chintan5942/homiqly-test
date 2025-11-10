@@ -200,17 +200,6 @@ const Payments = () => {
         <h2 className="text-2xl font-bold text-gray-800">
           Admin Payment History
         </h2>
-
-        <div className="flex items-center space-x-2">
-          <Button
-            className="h-9"
-            onClick={fetchPayments}
-            variant="lightInherit"
-            icon={<RefreshCcw className="w-4 h-4 mr-2" />}
-          >
-            Refresh
-          </Button>
-        </div>
       </div>
 
       {/* Filters */}

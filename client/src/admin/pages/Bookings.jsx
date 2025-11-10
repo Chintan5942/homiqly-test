@@ -184,26 +184,15 @@ const Bookings = () => {
         <h2 className="text-2xl font-bold text-gray-800">
           Admin Booking Management
         </h2>
-
-        <div className="flex items-center space-x-2">
-          <Button
-            className="h-9"
-            onClick={fetchBookings}
-            variant="outline"
-            icon={<RefreshCcw className="w-4 h-4 mr-2" />}
-          >
-            Refresh
-          </Button>
-        </div>
       </div>
 
       {/* Filters */}
       <div className="mb-6">
-        <div className="grid items-end grid-cols-1 gap-4 md:grid-cols-6">
+        <div className="flex flex-wrap items-end gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
           {/* Search */}
-          <div className="md:col-span-2">
+          <div className="flex-1 min-w-[220px]">
             <FormInput
-              icon={<Search className="w-4 h-4" />}
+              icon={<Search className="w-4 h-4 text-gray-500" />}
               id="search"
               label="Search"
               type="text"
@@ -215,7 +204,7 @@ const Bookings = () => {
           </div>
 
           {/* Status */}
-          <div className="md:col-span-1">
+          <div className="w-40">
             <FormSelect
               label="Status"
               id="status"
@@ -232,7 +221,7 @@ const Bookings = () => {
           </div>
 
           {/* Start Date */}
-          <div className="md:col-span-1">
+          <div className="w-40">
             <FormInput
               id="startDate"
               label="Start Date"
@@ -245,7 +234,7 @@ const Bookings = () => {
           </div>
 
           {/* End Date */}
-          <div className="md:col-span-1">
+          <div className="w-40">
             <FormInput
               id="endDate"
               label="End Date"
@@ -258,11 +247,10 @@ const Bookings = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-start space-x-2 md:col-span-1 md:justify-end">
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
             <Button
               type="button"
               variant="ghost"
-              className="px-3 py-2"
               onClick={() => {
                 setFilter("all");
                 setDateRange({ startDate: "", endDate: "" });
@@ -272,15 +260,16 @@ const Bookings = () => {
               Clear
             </Button>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="px-3 py-2"
-              onClick={() => {
-                resetAll();
-              }}
-            >
+            <Button type="button" variant="ghost" onClick={resetAll}>
               Reset All
+            </Button>
+
+            <Button
+              onClick={fetchBookings}
+              variant="lightInherit"
+              icon={<RefreshCcw className="w-4 h-4" />}
+            >
+              Refresh
             </Button>
           </div>
         </div>

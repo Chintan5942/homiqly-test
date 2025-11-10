@@ -1068,7 +1068,7 @@ const AddServiceTypeModal = ({ isOpen, onClose, isSubmitting, refresh }) => {
         <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
           <div className="flex gap-3">
             <Button
-              variant="outline"
+              variant="lightInherit"
               onClick={() => {
                 resetForm();
                 onClose();
