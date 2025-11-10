@@ -25,7 +25,7 @@ const PaymentsTable = ({ payouts, isLoading, onViewPayment }) => {
             {row.user_firstname} {row.user_lastname}
           </div>
           <div className="text-xs text-gray-500">
-            {row.user_email || "N / A"}
+            {row.user_email || "N/A"}
           </div>
         </div>
       ),
@@ -36,7 +36,7 @@ const PaymentsTable = ({ payouts, isLoading, onViewPayment }) => {
       render: (row) => (
         <div>
           <div className="text-sm text-gray-900">
-            {row.individual_name || row.companyName || "N / A"}
+            {row.individual_name || row.companyName || "N/A"}
           </div>
           <div className="text-xs text-gray-500">{row.vendorType}</div>
         </div>

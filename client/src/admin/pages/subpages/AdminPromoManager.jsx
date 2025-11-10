@@ -51,10 +51,23 @@ export default function AdminPromoManager() {
     try {
       setLoading(true);
       const res = await api.get("/api/getallcodes");
-      setPromos(res.data || []);
+      let payload = [];
+      if (Array.isArray(res.data)) {
+        payload = res.data;
+      } else if (Array.isArray(res.data?.data)) {
+        payload = res.data.data;
+      } else {
+        if (res.data?.message) {
+          // don't spam errors on normal "no promos" responses — use info
+          toast.info(res.data.message);
+        }
+        payload = [];
+      }
+      setPromos(payload);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load promo codes");
+      setPromos([]);
     } finally {
       setLoading(false);
     }
@@ -262,14 +275,17 @@ export default function AdminPromoManager() {
     });
   };
 
-  const filtered = promos.filter((p) => {
-    if (!search) return true;
-    const dv = (p.discountValue ?? p.discount_value ?? "").toString();
-    return (
-      (p.code || "").toLowerCase().includes(search.toLowerCase()) ||
-      dv.toLowerCase().includes(search.toLowerCase())
-    );
-  });
+  // ensure promos is an array before filtering
+  const filtered = Array.isArray(promos)
+    ? promos.filter((p) => {
+        if (!search) return true;
+        const dv = (p.discountValue ?? p.discount_value ?? "").toString();
+        return (
+          (p.code || "").toLowerCase().includes(search.toLowerCase()) ||
+          dv.toLowerCase().includes(search.toLowerCase())
+        );
+      })
+    : [];
 
   const deleteDesc = deletingPromo
     ? `Delete promo code "${deletingPromo.code}" (ID: ${
@@ -322,12 +338,54 @@ export default function AdminPromoManager() {
           </div>
         </div>
 
-        <PromosTable
-          promos={filtered}
-          isLoading={loading}
-          onEdit={openEditModal}
-          onDelete={handleDeleteClick} // now opens delete modal
-        />
+        {/* Loading / Empty / Table conditional rendering */}
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-300 border-t-transparent" />
+            <span className="ml-3 text-gray-600">Loading promos...</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center text-gray-700">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-16 w-16 opacity-70"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M8 7V5a4 4 0 018 0v2"
+              />
+            </svg>
+            <h2 className="mt-4 text-lg font-medium">No promos yet</h2>
+            <p className="mt-2 text-sm text-gray-500 max-w-md">
+              You haven't created any promo codes. Create a promo to get started — you
+              can also enable auto-assign welcome codes.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <Button onClick={openCreateModal}>Create Promo</Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  fetchPromos();
+                }}
+                className="px-4 py-2"
+              >
+                Refresh
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <PromosTable
+            promos={filtered}
+            isLoading={loading}
+            onEdit={openEditModal}
+            onDelete={handleDeleteClick}
+          />
+        )}
 
         <Modal
           size="lg"
@@ -459,9 +517,7 @@ export default function AdminPromoManager() {
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {isEditing ? "Save Changes" : "Create Promo"}
-              </Button>
+              <Button type="submit">{isEditing ? "Save Changes" : "Create Promo"}</Button>
             </div>
           </form>
         </Modal>

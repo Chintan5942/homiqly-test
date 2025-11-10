@@ -329,7 +329,7 @@ const Payments = () => {
           <div className="md:col-span-2"></div>
 
           {/* Request Payout Button - Right aligned */}
-          <div className="flex justify-end md:col-span-1">
+          {/* <div className="flex justify-end md:col-span-1">
             <Button
               onClick={openApplyModal}
               size="sm"
@@ -345,7 +345,7 @@ const Payments = () => {
             >
               Request Payout
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
 

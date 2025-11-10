@@ -29,7 +29,7 @@ export default function VendorDetailsModal({
 
   const getVendorEmail = () =>
     vendor.vendorType === "individual"
-      ? vendor.individual_email
+      ? vendor.individual_email 
       : vendor.company_companyEmail;
 
   const getVendorPhone = () =>

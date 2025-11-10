@@ -8,6 +8,7 @@ import FormSelect from "../../shared/components/Form/FormSelect";
 import { FormInput } from "../../shared/components/Form";
 import { Plus, Search, Trash, X } from "lucide-react";
 import UniversalDeleteModal from "../../shared/components/Modal/UniversalDeleteModal";
+import Modal from "../../shared/components/Modal/Modal";
 
 /* ---------- small helpers ---------- */
 const safeSrc = (src) => (typeof src === "string" ? src.trim() : "");
@@ -282,25 +283,15 @@ function PackageDetailsModal({ packageId, isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative z-10 max-w-4xl w-full max-h-[90vh] overflow-auto bg-white rounded-lg shadow-xl p-6">
-        <div className="flex items-start justify-between mb-4">
-          <h3 className="text-xl font-semibold">
-            {pkgData?.packageName ?? `Package #${packageId}`}
-          </h3>
-          <div className="flex items-center gap-3">
-            <IconButton
-              icon={<X className="w-4 h-4" />}
-              size="sm"
-              variant="ghost"
-              onClick={onClose}
-            ></IconButton>
-          </div>
-        </div>
-
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`${pkgData?.packageName ?? `Package #${packageId}`}`}
+      size="xl"
+    >
+      <div className="relative z-10 overflow-auto">
         {loading ? (
-          <div className="py-8 flex justify-center">
+          <div className="py-4 flex justify-center">
             <LoadingSpinner />
           </div>
         ) : (
@@ -323,7 +314,7 @@ function PackageDetailsModal({ packageId, isOpen, onClose }) {
           </>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }
 
