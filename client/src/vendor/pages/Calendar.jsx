@@ -367,22 +367,28 @@ const Calendar = () => {
         : currentMoment.format("dddd, MMMM D, YYYY");
 
     return (
-      <div className="flex flex-col items-center justify-between sm:flex-row pb-7">
-        <div className="flex items-center gap-2">
-          <IconButton
-            onClick={handlePreviousPeriod}
-            variant="lightBlack"
-            icon={<ArrowLeft size={20} />}
-          />
-          <span className="text-lg font-bold">{title}</span>
-          <IconButton
-            onClick={handleNextPeriod}
-            variant="lightBlack"
-            icon={<ArrowRight size={20} />}
-          />
+      <div className="flex flex-col items-center justify-between gap-4 pb-6 sm:flex-row">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <IconButton
+              onClick={handlePreviousPeriod}
+              variant="lightBlack"
+              icon={<ArrowLeft size={20} />}
+            />
+            <h2 className="text-xl font-bold text-gray-800">
+              {title}
+            </h2>
+            <IconButton
+              onClick={handleNextPeriod}
+              variant="lightBlack"
+              icon={<ArrowRight size={20} />}
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2 mt-4 sm:mt-0">
+        
+        <div className="flex items-center gap-3">
           <FormSelect
+            className="w-32"
             options={[
               { value: "month", label: "Month" },
               { value: "week", label: "Week" },
@@ -391,29 +397,29 @@ const Calendar = () => {
             value={viewMode}
             onChange={(e) => setViewMode(e.target.value)}
           />
-          <Button onClick={handleToday} variant="ghost">
+          <Button onClick={handleToday} variant="ghost" className="whitespace-nowrap">
             Today
           </Button>
-          <div className="w-full">
-            <Button
-              onClick={() => {
-                const base = selectedDate
-                  ? toInputDate(selectedDate)
-                  : toInputDate(new Date());
-                const safe = clampToTodayISO(base);
-                setAvailabilityForm({
-                  startDate: safe,
-                  endDate: safe,
-                  startTime: "09:00",
-                  endTime: "18:00",
-                });
-                setShowCreateModal(true);
-              }}
-              icon={<Plus size={16} />}
-            >
-              New Availability
-            </Button>
-          </div>
+          
+          <Button
+            onClick={() => {
+              const base = selectedDate
+                ? toInputDate(selectedDate)
+                : toInputDate(new Date());
+              const safe = clampToTodayISO(base);
+              setAvailabilityForm({
+                startDate: safe,
+                endDate: safe,
+                startTime: "09:00",
+                endTime: "18:00",
+              });
+              setShowCreateModal(true);
+            }}
+            icon={<Plus size={16} />}
+            className="whitespace-nowrap"
+          >
+            New Availability
+          </Button>
         </div>
       </div>
     );
@@ -785,7 +791,7 @@ const Calendar = () => {
 
     return (
       <>
-        <div className="text-center px-2 py-1 text-xs text-gray-800 my-3 bg-gray-100 rounded w-fit">
+        <div className="px-2 py-1 my-3 text-xs text-center text-gray-800 bg-gray-100 rounded w-fit">
           MT: {getMoment().format("YYYY-MM-DD HH:mm")}
         </div>
         <aside className="w-full lg:w-[340px] p-5 bg-white border-l rounded-xl shadow-md">
