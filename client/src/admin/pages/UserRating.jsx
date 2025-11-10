@@ -156,14 +156,14 @@ const UserRating = () => {
       {/* Review Filters */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="p-4 bg-gray-50 border-b">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
             <h3 className="text-lg font-medium text-gray-800">
               Customer Reviews
             </h3>
 
-            <div className="flex w-full md:w-auto items-stretch gap-3">
-              {/* Search - takes remaining space on wide screens, full width on mobile */}
-              <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row w-full md:w-auto items-stretch md:items-center gap-3">
+              {/* Search input - takes full width on mobile, limited on larger screens */}
+              <div className="flex-1 min-w-[200px] md:max-w-md">
                 <FormInput
                   type="text"
                   value={searchTerm}
@@ -174,8 +174,8 @@ const UserRating = () => {
                 />
               </div>
 
-              {/* Rating filter - fixed width on md+, full width stacked on mobile */}
-              <div className="w-full sm:w-56">
+              {/* Rating filter - consistent width */}
+              <div className="w-full sm:w-48 md:w-44">
                 <FormSelect
                   value={filter}
                   onChange={handleFilterChange}

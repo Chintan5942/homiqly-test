@@ -62,6 +62,7 @@ const EditPackageModal = ({ isOpen, onClose, packageData, refresh }) => {
                 p.price ??
                 safeNumber(p.preferencePrice) ??
                 0,
+              time_required: p.time_required ?? 0,
             })),
           };
           return acc;
@@ -80,6 +81,7 @@ const EditPackageModal = ({ isOpen, onClose, packageData, refresh }) => {
               p.price ??
               safeNumber(p.preferencePrice) ??
               0,
+            time_required: p.time_required ?? 0,
           })),
         };
         return acc;
@@ -99,6 +101,7 @@ const EditPackageModal = ({ isOpen, onClose, packageData, refresh }) => {
               p.price ??
               safeNumber(p.preferencePrice) ??
               0,
+            time_required: p.time_required ?? 0,
           })),
         },
       };
@@ -119,6 +122,7 @@ const EditPackageModal = ({ isOpen, onClose, packageData, refresh }) => {
               p.price ??
               safeNumber(p.preferencePrice) ??
               0,
+            time_required: p.time_required ?? 0,
           })),
         };
         return acc;
@@ -146,7 +150,7 @@ const EditPackageModal = ({ isOpen, onClose, packageData, refresh }) => {
             addon_name: a.addon_name ?? "",
             description: a.description ?? "",
             price: a.price ?? 0,
-            time_required: a.time_required ?? "",
+            time_required: a.time_required ?? 0,
             addon_media: a.addon_media ?? a.addonMedia ?? null,
           }))
         : [],
@@ -381,6 +385,7 @@ const EditPackageModal = ({ isOpen, onClose, packageData, refresh }) => {
             preference_id: null,
             preference_value: "",
             preference_price: 0,
+            time_required: 0,
           },
         ],
       };
@@ -445,6 +450,7 @@ const EditPackageModal = ({ isOpen, onClose, packageData, refresh }) => {
         preference_id: null,
         preference_value: "",
         preference_price: 0,
+        time_required: 0,
       });
       cp[subIndex] = { ...cp[subIndex], preferences: prefs };
       return cp;
@@ -695,7 +701,7 @@ const EditPackageModal = ({ isOpen, onClose, packageData, refresh }) => {
               addon_name: a.addon_name,
               description: a.description,
               price: Number(a.price) || 0,
-              time_required: a.time_required ?? "",
+              time_required: Number(a.time_required) || 0,
             }));
 
             const cleanedConsent = (s.consentForm || []).map((c) => ({
@@ -715,6 +721,7 @@ const EditPackageModal = ({ isOpen, onClose, packageData, refresh }) => {
                       it.preference_price !== "" && it.preference_price != null
                         ? String(it.preference_price)
                         : "0",
+                    time_required: it.time_required ?? 0,
                   })),
                 };
                 return acc;
@@ -727,7 +734,7 @@ const EditPackageModal = ({ isOpen, onClose, packageData, refresh }) => {
               item_name: s.item_name,
               description: s.description,
               price: Number(s.price) || 0,
-              time_required: s.time_required ?? "",
+              time_required: Number(s.time_required) || 0,
               preferences: cleanedPrefsObj,
               addons: cleanedAddons,
               consentForm: cleanedConsent,
@@ -1085,6 +1092,21 @@ const EditPackageModal = ({ isOpen, onClose, packageData, refresh }) => {
                                         groupKey,
                                         pIndex,
                                         "preference_price",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-28"
+                                  />
+                                  <FormInput
+                                    label="Time Required (in minutes)"
+                                    type="number"
+                                    value={pref.time_required ?? ""}
+                                    onChange={(e) =>
+                                      updatePreference(
+                                        sIndex,
+                                        groupKey,
+                                        pIndex,
+                                        "time_required",
                                         e.target.value
                                       )
                                     }

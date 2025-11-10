@@ -221,34 +221,137 @@ const Payments = () => {
         </h2>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 sm:grid-cols-4">
-        <div className="p-4 bg-white rounded shadow">
-          <p className="text-sm text-gray-500">Pending Payout</p>
-          <p className="text-xl font-bold text-gray-800">
-            C${Number(stats.pendingPayout || 0).toFixed(2)}
-          </p>
-        </div>
-        <div className="p-4 bg-white rounded shadow">
-          <p className="text-sm text-gray-500">Total Bookings</p>
-          <p className="text-xl font-bold text-blue-600">
-            {stats.totalBookings}
-          </p>
-        </div>
-        <div className="p-4 bg-white rounded shadow">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Payout</p>
-              <p className="text-xl font-bold text-green-600">
-                C${Number(stats.totalPayout || 0).toFixed(2)}
-              </p>
-            </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+          <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 grid place-items-center border border-gray-100">
+            {/* wallet icon */}
+            <svg
+              className="w-6 h-6 text-slate-700 dark:text-slate-200"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M3 7h18v10H3z"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M16 11a1 1 0 100-2 1 1 0 000 2z"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-500 truncate">
+              Pending Payout
+            </p>
+            <p className="mt-1 text-lg font-semibold text-gray-800 truncate">
+              C${Number(stats.pendingPayout || 0).toFixed(2)}
+            </p>
           </div>
         </div>
-        <div className="p-4 bg-white rounded shadow">
-          <p className="text-sm text-gray-500">Paid Payout</p>
-          <p className="text-xl font-bold text-blue-600">
-            C${Number(stats.paidPayout || 0).toFixed(2)}
-          </p>
+
+        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+          <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 grid place-items-center border border-blue-100">
+            {/* booking icon */}
+            <svg
+              className="w-6 h-6 text-blue-600"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M3 7h18M7 3v4M17 3v4"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <rect
+                x="3"
+                y="7"
+                width="18"
+                height="14"
+                rx="2"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-500 truncate">
+              Total Bookings
+            </p>
+            <p className="mt-1 text-lg font-semibold text-blue-600 truncate">
+              {stats.totalBookings}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+          <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-green-50 to-green-100 grid place-items-center border border-green-100">
+            {/* payout icon */}
+            <svg
+              className="w-6 h-6 text-green-600"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M12 8v8M8 12h8"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-500 truncate">
+              Total Payout
+            </p>
+            <p className="mt-1 text-lg font-semibold text-green-600 truncate">
+              C${Number(stats.totalPayout || 0).toFixed(2)}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+          <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 grid place-items-center border border-indigo-100">
+            {/* check/paid icon */}
+            <svg
+              className="w-6 h-6 text-indigo-600"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M20 6L9 17l-5-5"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-500 truncate">
+              Paid Payout
+            </p>
+            <p className="mt-1 text-lg font-semibold text-indigo-600 truncate">
+              C${Number(stats.paidPayout || 0).toFixed(2)}
+            </p>
+          </div>
         </div>
       </div>
 

@@ -210,12 +210,7 @@ const AccountDetails = () => {
                 </div>
               </div>
               {account && !editing && (
-                <Button
-                  onClick={() => setEditing(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Edit Details
-                </Button>
+                <Button variant="lightBlack" onClick={() => setEditing(true)}>Edit Details</Button>
               )}
             </div>
 
@@ -450,14 +445,12 @@ const AccountDetails = () => {
                         fetchAccount();
                         setEditing(false);
                       }}
-                      className="border border-gray-300"
                     >
                       Cancel
                     </Button>
                     <Button
                       onClick={account ? handleUpdate : handleCreate}
                       disabled={loading}
-                      className="bg-blue-600 hover:bg-blue-700"
                     >
                       {loading
                         ? account

@@ -67,6 +67,9 @@ const PreferencesChips = React.memo(function PreferencesChips({ preferences }) {
                       <span className="text-gray-500">
                         {fmtPrice(p?.preference_price)}
                       </span>
+                      <span className="text-gray-500">
+                        {fmtTime(p?.time_required)} Min.
+                      </span>
                     </div>
                   </li>
                 ))

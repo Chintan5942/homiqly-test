@@ -475,6 +475,7 @@ const AddServiceTypeModal = ({ isOpen, onClose, isSubmitting, refresh }) => {
                 preference_id: it.preference_id,
                 preference_value: it.preference_value || "",
                 preference_price: it.preference_price || "",
+                time_required: it.time_required || "",
               })),
             };
             return acc;
@@ -869,9 +870,22 @@ const AddServiceTypeModal = ({ isOpen, onClose, isSubmitting, refresh }) => {
                                       }
                                       className="w-28"
                                     />
-                                    <div className="text-sm text-gray-500">
-                                      {/* placeholder */}
-                                    </div>
+                                    <FormInput 
+                                    label="Time Required (in minutes)"
+                                    type="number"
+                                    value={pref.time_required ?? ""}
+                                    onChange={(e) =>
+                                      handlePreferenceChange(
+                                        pkgIndex,
+                                        subIndex,
+                                        groupIndex,
+                                        prefIndex,
+                                        "time_required",
+                                        e.target.value
+                                      )
+                                    }
+                                    />
+                                    
                                   </div>
                                   <div className="flex justify-end">
                                     <Button

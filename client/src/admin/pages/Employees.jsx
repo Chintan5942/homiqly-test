@@ -188,34 +188,30 @@ const Employees = () => {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">
-          Employee Management
-        </h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">
+        Employee Management
+      </h2>
+      <div className="flex flex-col sm:flex-row items-stretch w-full md:w-auto gap-3 mb-6">
+        <div className="flex-1 min-w-[200px] max-w-md">
+          <FormInput
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by name or email..."
+            icon={<Search />}
+            className="w-full"
+            aria-label="Search employees"
+          />
+        </div>
 
-        {/* Filters */}
-        <div className="flex w-full md:w-auto items-stretch gap-3">
-          <div className="flex-1 min-w-0">
-            <FormInput
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name or email..."
-              icon={<Search />}
-              className="w-full"
-              aria-label="Search employees"
-            />
-          </div>
-
-          {/* Company select - fixed width on md+; full width below */}
-          <div className="w-full md:w-56">
-            <FormSelect
-              value={companyFilter}
-              onChange={(e) => setCompanyFilter(e.target.value)}
-              options={companyOptionsList}
-              aria-label="Filter by company"
-            />
-          </div>
+        {/* Company Select */}
+        <div className="sm:w-48">
+          <FormSelect
+            value={companyFilter}
+            onChange={(e) => setCompanyFilter(e.target.value)}
+            options={companyOptionsList}
+            aria-label="Filter by company"
+          />
         </div>
       </div>
 

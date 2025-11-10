@@ -75,25 +75,12 @@ const VendorApplications = () => {
     <div className="p-4 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mb-1 text-2xl font-bold text-gray-800">Vendor Applications</h2>
+          <h2 className="mb-1 text-2xl font-bold text-gray-800">
+            Vendor Applications
+          </h2>
           <p className="text-sm text-gray-500">
             Review and approve/reject vendor package applications.
           </p>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <div className="hidden mr-2 text-sm text-gray-600 md:block">
-            Page {page} of {totalPages}
-          </div>
-
-          <Button
-            className="h-9"
-            onClick={() => fetchPage({ keepPage: true })}
-            variant="outline"
-            icon={<RefreshCcw className="w-4 h-4 mr-2" />}
-          >
-            Refresh
-          </Button>
         </div>
       </div>
 
@@ -101,7 +88,7 @@ const VendorApplications = () => {
       <div className="mb-6">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end md:gap-6">
           {/* Search */}
-          <div className="flex-1 min-w-0 md:max-w-xs">
+          <div className="flex-1 min-w-0 md:max-w-md">
             <FormInput
               icon={<Search className="w-4 h-4" />}
               id="search"
@@ -156,6 +143,13 @@ const VendorApplications = () => {
               >
                 Reset All
               </Button>
+              <Button
+                onClick={() => fetchPage({ keepPage: true })}
+                variant="ghost"
+                icon={<RefreshCcw className="w-4 h-4 " />}
+              >
+                Refresh
+              </Button>
             </div>
           </div>
         </div>
@@ -187,7 +181,10 @@ const VendorApplications = () => {
                 keepVisibleOnSinglePage={true}
                 totalRecords={total}
                 limit={limit}
-                onLimitChange={(n) => { setLimit(n); setPage(1); }}
+                onLimitChange={(n) => {
+                  setLimit(n);
+                  setPage(1);
+                }}
                 renderLimitSelect={({ value, onChange, options }) => (
                   <FormSelect
                     id="limit"
@@ -195,7 +192,10 @@ const VendorApplications = () => {
                     dropdownDirection="auto"
                     value={value}
                     onChange={(e) => onChange(Number(e.target.value))}
-                    options={options.map((v) => ({ value: v, label: `${v} / page` }))}
+                    options={options.map((v) => ({
+                      value: v,
+                      label: `${v} / page`,
+                    }))}
                   />
                 )}
                 pageSizeOptions={[5, 10, 20, 50]}
