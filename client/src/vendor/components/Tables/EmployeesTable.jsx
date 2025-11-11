@@ -136,17 +136,17 @@ const EmployeesTable = ({ employees, isLoading, onDelete, onEdit }) => {
 
           {/* Modal card */}
           <div className="relative w-full max-w-lg mx-4">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden">
+            <div className="bg-white backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
               <div className="p-6">
                 <h3
                   id="delete-employee-title"
-                  className="text-lg font-semibold text-gray-900 dark:text-gray-100"
+                  className="text-lg font-semibold text-gray-900"
                 >
                   Delete employee
                 </h3>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                <p className="mt-2 text-sm text-gray-600">
                   Are you sure you want to permanently delete{" "}
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                  <span className="font-medium text-gray-900">
                     {employeeToDelete?.first_name} {employeeToDelete?.last_name}
                   </span>
                   ? This action cannot be undone.

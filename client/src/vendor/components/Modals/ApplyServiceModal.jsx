@@ -4,6 +4,7 @@ import { Button } from "../../../shared/components/Button";
 import api from "../../../lib/axiosConfig";
 import Select from "react-select";
 import { toast } from "sonner";
+import { Loader } from "lucide-react";
 
 const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
   const [groupedPackages, setGroupedPackages] = useState({});
@@ -24,8 +25,12 @@ const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // fetch admin packages
-        const adminResp = await api.get("/api/admin/getpackages");
+        // fetch admin packages and vendor packages in parallel
+        const [adminResp, vendorResp] = await Promise.all([
+          api.get("/api/admin/getpackages"),
+          api.get("/api/vendor/getvendorservice"),
+        ]);
+
         const rawData = Array.isArray(adminResp.data)
           ? adminResp.data
           : adminResp.data?.result || [];
@@ -65,8 +70,7 @@ const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
 
         setGroupedPackages(grouped);
 
-        // fetch vendor's existing packages & sub-packages
-        const vendorResp = await api.get("/api/vendor/getvendorservice");
+        // vendor data
         const vendorRaw = Array.isArray(vendorResp.data)
           ? vendorResp.data
           : vendorResp.data?.result || [];
@@ -75,14 +79,12 @@ const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
         const subIds = new Set();
 
         vendorRaw.forEach((p) => {
-          // top-level package id
           if (p.package_id) pkgIds.add(p.package_id);
 
-          // vendor sub-packages - sample used "package_item_id"
           const spList = p.sub_packages || [];
           spList.forEach((sp) => {
-            // support multiple field names used in different responses
-            const id = sp.sub_package_id || sp.package_item_id || sp.sub_package_item_id;
+            const id =
+              sp.sub_package_id || sp.package_item_id || sp.sub_package_item_id;
             if (id) subIds.add(id);
           });
         });
@@ -105,17 +107,16 @@ const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
               const pkg = srv.packages.find((p) => p.package_id === package_id);
               if (pkg && pkg.sub_packages?.length) {
                 const preselected = pkg.sub_packages.map((sp) => {
-                  const id = sp.sub_package_id || sp.package_item_id || sp.sub_package_item_id;
+                  const id =
+                    sp.sub_package_id || sp.package_item_id || sp.sub_package_item_id;
                   return {
                     value: id,
                     label: sp.item_name || sp.sub_package_name || sp.title,
                     package_id: pkg.package_id,
-                    // mark disabled if vendor already has it
                     isDisabled: subIds.has(id),
                   };
                 });
 
-                // filter out any that are disabled (already owned)
                 const allowed = preselected.filter((p) => !p.isDisabled);
                 const disabledOnes = preselected.filter((p) => p.isDisabled);
 
@@ -134,6 +135,7 @@ const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
         console.error("Error fetching packages or vendor services:", error);
         toast.error("Failed to load packages");
       } finally {
+        // keep loading true until all validation/prefill is complete
         setLoading(false);
       }
     };
@@ -147,6 +149,9 @@ const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
       setVendorSubPackageIds(new Set());
 
       fetchData();
+    } else {
+      // if modal closed, reset local loading state
+      setLoading(false);
     }
   }, [isOpen, initialPackage]);
 
@@ -233,9 +238,7 @@ const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
       // update local vendor sets to reflect newly added sub-packages so UI is consistent
       const newVendorSubIds = new Set(vendorSubPackageIds);
       builtPackages.forEach((bp) => {
-        // we do not assume API returns the exact ids; but optimistically update UI
         if (bp.package_id) {
-          // leave vendorPackageIds alone (top-level) — adding sub-packages doesn't always mean entire package added
           (bp.sub_packages || []).forEach((sp) => {
             newVendorSubIds.add(sp.sub_package_id);
           });
@@ -249,7 +252,6 @@ const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
       const errMsg =
         err?.response?.data?.error ||
         "Failed to request service. Please try again.";
-      // If server indicates duplicate packages, show the requested message
       toast.error(errMsg);
     } finally {
       setSubmitting(false);
@@ -266,104 +268,113 @@ const ApplyServiceModal = ({ isOpen, onClose, initialPackage }) => {
       ).map((srv) => ({ value: srv.serviceId, label: srv.serviceName }))
     : [];
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-sm text-gray-600">Loading services...</div>
-      </div>
-    );
-  }
-
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleModalClose}
       title="Request New Services"
     >
-      <div className="space-y-5 mb-6">
-        {/* Category */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Category</label>
-          <Select
-            options={categoryOptions}
-            value={selectedCategory}
-            onChange={(value) => {
-              setSelectedCategory(value);
-              setSelectedService(null);
-              setSelectedSubPackages([]);
-            }}
-            styles={customSelectStyles}
-            placeholder="Select category"
-            isClearable
-            menuPortalTarget={typeof window !== "undefined" ? document.body : null}
-            menuPosition="fixed"
-          />
+      {loading ? (
+        // Loader displayed while both GET calls + validation/prefill run
+        <div className="flex flex-col items-center justify-center py-12">
+          {/* Simple spinner */}
+          <Loader className="animate-spin h-6 w-6 mb-4 text-green-600" />
+          <div className="text-sm text-gray-600">Loading services...</div>
         </div>
+      ) : (
+        <>
+          <div className="space-y-5 mb-6">
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Category</label>
+              <Select
+                options={categoryOptions}
+                value={selectedCategory}
+                onChange={(value) => {
+                  setSelectedCategory(value);
+                  setSelectedService(null);
+                  setSelectedSubPackages([]);
+                }}
+                styles={customSelectStyles}
+                placeholder="Select category"
+                isClearable
+                menuPortalTarget={
+                  typeof window !== "undefined" ? document.body : null
+                }
+                menuPosition="fixed"
+              />
+            </div>
 
-        {/* Service */}
-        {selectedCategory && (
-          <div>
-            <label className="block text-sm font-medium mb-1">Service</label>
-            <Select
-              options={serviceOptions}
-              value={selectedService}
-              onChange={(value) => {
-                setSelectedService(value);
-                setSelectedSubPackages([]);
-              }}
-              styles={customSelectStyles}
-              placeholder="Select service"
-              isClearable
-              menuPortalTarget={typeof window !== "undefined" ? document.body : null}
-              menuPosition="fixed"
-            />
+            {/* Service */}
+            {selectedCategory && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Service</label>
+                <Select
+                  options={serviceOptions}
+                  value={selectedService}
+                  onChange={(value) => {
+                    setSelectedService(value);
+                    setSelectedSubPackages([]);
+                  }}
+                  styles={customSelectStyles}
+                  placeholder="Select service"
+                  isClearable
+                  menuPortalTarget={
+                    typeof window !== "undefined" ? document.body : null
+                  }
+                  menuPosition="fixed"
+                />
+              </div>
+            )}
+
+            {/* Sub-Packages (select directly across all packages for the chosen service) */}
+            {selectedService && subPackageOptions.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Sub-Packages
+                </label>
+                <Select
+                  options={subPackageOptions}
+                  value={selectedSubPackages}
+                  onChange={(value) => {
+                    const filtered = (value || []).filter((v) => !v.isDisabled);
+                    setSelectedSubPackages(filtered);
+                  }}
+                  styles={customSelectStyles}
+                  placeholder="Select sub-packages"
+                  isMulti
+                  isClearable
+                  menuPortalTarget={
+                    typeof window !== "undefined" ? document.body : null
+                  }
+                  menuPosition="fixed"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Choose sub-packages. Already-added sub-packages are disabled.
+                </p>
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Sub-Packages (select directly across all packages for the chosen service) */}
-        {selectedService && subPackageOptions.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium mb-1">Sub-Packages</label>
-            <Select
-              options={subPackageOptions}
-              value={selectedSubPackages}
-              onChange={(value) => {
-                // react-select will never set a disabled option via UI, but guard anyway
-                const filtered = (value || []).filter((v) => !v.isDisabled);
-                setSelectedSubPackages(filtered);
-              }}
-              styles={customSelectStyles}
-              placeholder="Select sub-packages"
-              isMulti
-              isClearable
-              menuPortalTarget={typeof window !== "undefined" ? document.body : null}
-              menuPosition="fixed"
-              // react-select recognizes option.isDisabled
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Choose sub-packages. Already-added sub-packages are disabled.
-            </p>
+          <div className="flex justify-end space-x-3">
+            <Button variant="outline" onClick={handleModalClose}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              disabled={
+                submitting ||
+                !selectedCategory ||
+                !selectedService ||
+                selectedSubPackages.length === 0
+              }
+            >
+              {submitting ? "Submitting..." : "Request Service"}
+            </Button>
           </div>
-        )}
-      </div>
-
-      <div className="flex justify-end space-x-3">
-        <Button variant="outline" onClick={handleModalClose}>
-          Cancel
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={
-            submitting ||
-            !selectedCategory ||
-            !selectedService ||
-            selectedSubPackages.length === 0
-          }
-        >
-          {submitting ? "Submitting..." : "Request Service"}
-        </Button>
-      </div>
+        </>
+      )}
     </Modal>
   );
 };

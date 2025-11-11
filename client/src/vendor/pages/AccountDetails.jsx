@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { FormFileInput, FormSelect } from "../../shared/components/Form";
 import FormInput from "../../shared/components/Form/FormInput";
+import LoadingSpinner from "../../shared/components/LoadingSpinner";
 
 const AccountDetails = () => {
   const vendorData = localStorage.getItem("vendorData")
@@ -182,7 +183,7 @@ const AccountDetails = () => {
   };
 
   return (
-    <div className="max-w-5xl p-6 mx-auto">
+    <div className="max-w-5xl mx-auto">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Payment Settings</h1>
@@ -215,12 +216,7 @@ const AccountDetails = () => {
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="text-blue-600 animate-spin" size={32} />
-                <span className="ml-3 text-gray-600">
-                  Loading account details...
-                </span>
-              </div>
+              <LoadingSpinner />
             ) : (
               <>
                 <section className="space-y-4">

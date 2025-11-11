@@ -16,33 +16,67 @@ const Services = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
 
+  // vendor lookups
+  const [vendorPackageIds, setVendorPackageIds] = useState(new Set());
+  const [vendorSubPackageIds, setVendorSubPackageIds] = useState(new Set());
+
   // keep refs to timeouts so we can clear on unmount
   const openTimersRef = useRef([]);
 
   useEffect(() => {
-    const fetchPackages = async () => {
+    const fetchAll = async () => {
+      setLoading(true);
       try {
-        const response = await api.get("/api/admin/getpackages");
-        const rawData = Array.isArray(response.data)
-          ? response.data
-          : response.data?.result || [];
+        // fetch admin packages and vendor packages in parallel
+        const [adminResp, vendorResp] = await Promise.all([
+          api.get("/api/admin/getpackages"),
+          api.get("/api/vendor/getvendorservice"),
+        ]);
 
-        const grouped = rawData.reduce((acc, item) => {
-          const category = item.service_category_name;
+        const rawAdmin = Array.isArray(adminResp.data)
+          ? adminResp.data
+          : adminResp.data?.result || [];
+
+        const grouped = rawAdmin.reduce((acc, item) => {
+          const category = item.service_category_name || "Uncategorized";
           if (!acc[category]) acc[category] = [];
           acc[category].push(item);
           return acc;
         }, {});
-
         setGroupedPackages(grouped);
+
+        const vendorRaw = Array.isArray(vendorResp.data)
+          ? vendorResp.data
+          : vendorResp.data?.result || [];
+
+        const pkgIds = new Set();
+        const subIds = new Set();
+
+        vendorRaw.forEach((p) => {
+          if (p.package_id) pkgIds.add(p.package_id);
+
+          // vendor sub-packages - try multiple field names
+          (p.sub_packages || []).forEach((sp) => {
+            const id =
+              sp.sub_package_id ||
+              sp.package_item_id ||
+              sp.package_item_id ||
+              sp.id;
+            if (id) subIds.add(id);
+          });
+        });
+
+        setVendorPackageIds(pkgIds);
+        setVendorSubPackageIds(subIds);
       } catch (error) {
-        console.error("Error fetching packages:", error);
+        console.error("Error fetching packages or vendor services:", error);
+        toast.error("Failed to load packages");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPackages();
+    fetchAll();
 
     return () => {
       // clear any running timers on unmount
@@ -107,6 +141,13 @@ const Services = () => {
     openTimersRef.current.push(timer);
   };
 
+  // helper: check whether a sub-package id is owned by vendor
+  const isSubOwned = (sub) => {
+    const subId = sub.sub_package_id || sub.package_item_id || sub.id;
+    if (!subId) return false;
+    return vendorSubPackageIds.has(subId);
+  };
+
   return (
     <div>
       <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
@@ -115,6 +156,7 @@ const Services = () => {
         {/* Dropdown */}
         <div className="flex items-center justify-between gap-3">
           <Button
+            variant="primary"
             onClick={() => {
               setSelectedPackage(null);
               setShowModal(true);
@@ -155,6 +197,7 @@ const Services = () => {
                       <img
                         src={service.service_type_media}
                         alt={service.service_type_name}
+                        loading="lazy"
                         className="w-full h-48 object-cover"
                       />
                     )}
@@ -165,6 +208,7 @@ const Services = () => {
                       <h4>
                         Service:
                         <span className="font-semibold text-gray-800">
+                          {" "}
                           {service.service_name}
                         </span>
                       </h4>
@@ -175,74 +219,128 @@ const Services = () => {
                         </span>
                       </p>
 
-                      {service.packages.map((pkg) => (
-                        <div
-                          key={pkg.package_id}
-                          className="mt-6 bg-gray-50 border border-gray-200 p-4 rounded-xl"
-                        >
-                          {/* Sub-Packages */}
-                          {pkg.sub_packages?.length > 0 && (
-                            <div className="mb-3">
-                              <p className="text-sm font-semibold mb-1 text-gray-700">
-                                Sub-packages:
-                              </p>
-                              <ul className="space-y-2">
-                                {pkg.sub_packages.map((sub) => (
-                                  <li
-                                    key={sub.sub_package_id}
-                                    className="flex gap-3"
-                                  >
-                                    <img
-                                      src={sub.item_media}
-                                      alt={sub.title}
-                                      className="w-12 h-12 object-cover rounded-lg border"
-                                    />
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-800">
-                                        {sub.item_name}
-                                      </p>
-                                      <p className="text-xs text-gray-500">
-                                        ${sub.price} | {sub.time_required} min
-                                      </p>
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                      {service.packages.map((pkg) => {
+                        // determine if all sub-packages are already added
+                        const totalSubs = pkg.sub_packages?.length || 0;
+                        const ownedCount = (pkg.sub_packages || []).reduce(
+                          (acc, s) => acc + (isSubOwned(s) ? 1 : 0),
+                          0
+                        );
+                        const allSubsAdded =
+                          totalSubs > 0 && ownedCount === totalSubs;
 
-                          <div className="flex justify-end">
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              disabled={
-                                requestingPackages[pkg.package_id] ||
-                                modalOpeningPackages[pkg.package_id]
-                              }
-                              onClick={() => {
-                                // show loader for 2s then open modal
-                                openModalWithDelay({
-                                  ...pkg,
-                                  service_id: service.service_id,
-                                  service_category_id:
-                                    service.service_category_id,
-                                });
-                              }}
-                            >
-                              {modalOpeningPackages[pkg.package_id] ? (
-                                <span className="flex items-center gap-2">
-                                  <Loader className="w-4 h-4 animate-spin" />
-                                  Opening...
-                                </span>
-                              ) : requestingPackages[pkg.package_id] ? (
-                                "Requesting..."
-                              ) : (
-                                "Request for Service"
-                              )}
-                            </Button>
+                        return (
+                          <div
+                            key={pkg.package_id}
+                            className="mt-6 bg-gray-50 border border-gray-200 p-4 rounded-xl"
+                          >
+                            {/* Sub-Packages */}
+                            {pkg.sub_packages?.length > 0 && (
+                              <div className="mb-3">
+                                <p className="text-sm font-semibold mb-1 text-gray-700">
+                                  Sub-packages:
+                                </p>
+                                <ul className="space-y-2">
+                                  {pkg.sub_packages.map((sub) => {
+                                    const owned = isSubOwned(sub);
+                                    const subId =
+                                      sub.sub_package_id ||
+                                      sub.package_item_id ||
+                                      sub.id;
+                                    return (
+                                      <li
+                                        key={subId || Math.random()}
+                                        className={`flex gap-3 items-center ${
+                                          owned ? "opacity-50" : ""
+                                        }`}
+                                      >
+                                        {(sub.item_media ||
+                                          sub.sub_package_media) && (
+                                          <img
+                                            src={
+                                              sub.item_media ||
+                                              sub.sub_package_media
+                                            }
+                                            alt={
+                                              sub.title ||
+                                              sub.sub_package_name ||
+                                              sub.item_name
+                                            }
+                                            className="w-12 h-12 object-cover rounded-lg border"
+                                          />
+                                        )}
+                                        <div className="flex-1">
+                                          <p className="text-sm font-medium text-gray-800">
+                                            {sub.item_name ||
+                                              sub.sub_package_name ||
+                                              sub.title}
+                                          </p>
+                                          <p className="text-xs text-gray-500">
+                                            {sub.price ? `$${sub.price}` : ""}{" "}
+                                            {sub.time_required
+                                              ? `| ${sub.time_required} min`
+                                              : ""}
+                                          </p>
+                                        </div>
+
+                                        {owned ? (
+                                          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-lg border">
+                                            Already added
+                                          </span>
+                                        ) : null}
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            )}
+
+                            <div className="flex justify-end">
+                              <Button
+                                size="sm"
+                                variant={
+                                  allSubsAdded
+                                    ? "lightSecondary"
+                                    : "lightPrimary"
+                                }
+                                disabled={
+                                  requestingPackages[pkg.package_id] ||
+                                  modalOpeningPackages[pkg.package_id] ||
+                                  allSubsAdded
+                                }
+                                onClick={() => {
+                                  if (allSubsAdded) {
+                                    toast(
+                                      "All sub-packages are already added."
+                                    );
+                                    return;
+                                  }
+                                  // show loader for 2s then open modal
+                                  openModalWithDelay({
+                                    ...pkg,
+                                    service_id: service.service_id,
+                                    service_category_id:
+                                      service.service_category_id,
+                                  });
+                                }}
+                              >
+                                {modalOpeningPackages[pkg.package_id] ? (
+                                  <span className="flex items-center gap-2">
+                                    <Loader className="w-4 h-4 animate-spin" />
+                                    Opening...
+                                  </span>
+                                ) : requestingPackages[pkg.package_id] ? (
+                                  "Requesting..."
+                                ) : allSubsAdded ? (
+                                  "All Added"
+                                ) : (
+                                  "Request for Service"
+                                )}
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -253,7 +351,29 @@ const Services = () => {
 
       <ApplyServiceModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => {
+          // optionally re-fetch vendor services so UI updates after modal submit (if modal added items)
+          setShowModal(false);
+          // refetch vendor data to refresh owned subpackages:
+          (async () => {
+            try {
+              const vendorResp = await api.get("/api/vendor/getvendorservice");
+              const vendorRaw = Array.isArray(vendorResp.data)
+                ? vendorResp.data
+                : vendorResp.data?.result || [];
+              const subIds = new Set();
+              vendorRaw.forEach((p) => {
+                (p.sub_packages || []).forEach((sp) => {
+                  const id = sp.sub_package_id || sp.package_item_id || sp.id;
+                  if (id) subIds.add(id);
+                });
+              });
+              setVendorSubPackageIds(subIds);
+            } catch (err) {
+              console.error("Failed to refresh vendor data:", err);
+            }
+          })();
+        }}
         initialPackage={selectedPackage}
       />
     </div>

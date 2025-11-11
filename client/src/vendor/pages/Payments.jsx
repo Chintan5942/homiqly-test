@@ -230,8 +230,8 @@ const Payments = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
-          <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 grid place-items-center border border-gray-100">
+        <div className="flex items-center gap-4 p-5 bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm">
+          <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 grid place-items-center border border-gray-100">
             {/* wallet icon */}
             <WalletCards className="text-slate-600" />
           </div>
@@ -245,7 +245,7 @@ const Payments = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-4 p-5 bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm">
           <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 grid place-items-center border border-blue-100">
             {/* booking icon */}
             <TicketCheck className="text-blue-500" />
@@ -260,7 +260,7 @@ const Payments = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-4 p-5 bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm">
           <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-green-50 to-green-100 grid place-items-center border border-green-100">
             {/* payout icon */}
             <CircleDollarSign className="text-green-600" />
@@ -275,7 +275,7 @@ const Payments = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-4 p-5 bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm">
           <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 grid place-items-center border border-indigo-100">
             {/* check/paid icon */}
             <Check className="text-indigo-600" />

@@ -14,37 +14,17 @@ import {
   AlertCircle,
   Pencil,
 } from "lucide-react";
-
-// NEW: import the separated component
 import ProfileServicesOffered from "./components/ProfileServicesOffered";
+
 const Profile = () => {
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     fetchVendorProfile();
   }, []);
-
-  const formatDate = (iso) => {
-    if (!iso) return null;
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return null;
-    return d.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const isExpired = (iso) => {
-    if (!iso) return false;
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return false;
-    const now = new Date();
-    return d.getTime() < now.getTime();
-  };
 
   const fetchVendorProfile = async () => {
     try {
@@ -68,11 +48,9 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <LoadingSpinner size="lg" />
-        </div>
-      </div>
+      <>
+        <LoadingSpinner />
+      </>
     );
   }
 

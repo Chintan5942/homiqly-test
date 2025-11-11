@@ -1,377 +1,283 @@
 // src/app/payouts/PayoutDetails.jsx
-import React, { useEffect, useState, useRef } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useCallback } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../../../lib/axiosConfig";
-import LoadingSpinner from "../../../shared/components/LoadingSpinner";
-import Breadcrumb from "../../../shared/components/Breadcrumb";
-import { Button } from "../../../shared/components/Button";
-import Modal from "../../../shared/components/Modal/Modal"; // adjust path if needed
+import { formatDate } from "../../../shared/utils/dateUtils";
+import { formatCurrency } from "../../../shared/utils/formatUtils";
 import { toast } from "sonner";
-import { CustomFileInput } from "../../../shared/components/CustomFileInput";
-import { FormTextarea } from "../../../shared/components/Form";
+import LoadingSpinner from "../../../shared/components/LoadingSpinner";
+import BreadCrumb from "../../../shared/components/BreadCrumb";
+import { Clock, DollarSign, Mail, UserCheck } from "lucide-react";
+import PayoutModal from "../../components/Modals/PayoutModal";
+
+const currency = "CAD";
 
 const PayoutDetails = () => {
-  const { payoutId } = useParams();
+  const params = useParams();
+  const vendorIdFromParam =
+    params?.vendorId ?? params?.id ?? Object.values(params)[0];
+
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [payout, setPayout] = useState(location.state?.payout || null);
-  const [loading, setLoading] = useState(false);
+  const vendorFromState = location?.state?.vendor || null;
+
+  const [vendorId] = useState(vendorFromState?.vendor_id ?? vendorIdFromParam);
+  const [details, setDetails] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Modal & form state
-  const [showApproveModal, setShowApproveModal] = useState(false);
-  const [adminNotes, setAdminNotes] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [preview, setPreview] = useState(null); // object URL or existing preview URL
-  const [submitting, setSubmitting] = useState(false);
+  // Selection state for rows in the table
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
 
-  // Keep track of generated object URL so we can revoke it on cleanup/remove
-  const generatedPreviewRef = useRef(null);
+  // modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    if (payout) return;
-
-    const fetchPayout = async () => {
-      setLoading(true);
-      try {
-        const singleRes = await api
-          .get(`/api/payment/getpayout/${payoutId}`)
-          .catch(() => null);
-
-        if (
-          singleRes &&
-          (Array.isArray(singleRes.data) ? singleRes.data[0] : singleRes.data)
-        ) {
-          const maybeObj = Array.isArray(singleRes.data)
-            ? singleRes.data[0]
-            : singleRes.data;
-          setPayout(maybeObj);
-        } else {
-          // Fallback: fetch all and find by id
-          const allRes = await api.get("/api/payment/getallpayout");
-          const list = Array.isArray(allRes.data)
-            ? allRes.data
-            : allRes.data.data || [];
-          const found = list.find(
-            (p) => String(p.payout_request_id ?? p.id) === String(payoutId)
-          );
-          if (found) setPayout(found);
-          else setError("Payout request not found.");
-        }
-      } catch (err) {
-        console.error("Error fetching payout:", err);
-        setError("Failed to load payout details.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPayout();
-  }, [payoutId, payout]);
-
-  // Clean up object URL on unmount
-  useEffect(() => {
-    return () => {
-      if (generatedPreviewRef.current) {
-        URL.revokeObjectURL(generatedPreviewRef.current);
-        generatedPreviewRef.current = null;
-      }
-    };
-  }, []);
-
-  // Handler for CustomFileInput (supports File, event, or array)
-  const handleFile = (payload) => {
-    // If payload is File directly
-    if (payload instanceof File) {
-      setSelectedFile(payload);
-      createAndSetPreview(payload);
-      return;
-    }
-
-    // If payload is an event
-    if (
-      payload &&
-      payload.target &&
-      payload.target.files &&
-      payload.target.files[0]
-    ) {
-      const f = payload.target.files[0];
-      setSelectedFile(f);
-      createAndSetPreview(f);
-      return;
-    }
-
-    // If payload is an array
-    if (Array.isArray(payload) && payload[0] instanceof File) {
-      setSelectedFile(payload[0]);
-      createAndSetPreview(payload[0]);
-      return;
-    }
-
-    // If payload is an object with file property
-    if (payload && payload.file instanceof File) {
-      setSelectedFile(payload.file);
-      createAndSetPreview(payload.file);
-      return;
-    }
-
-    // Unknown payload -> clear
-    removeImage();
-  };
-
-  // create object URL preview and clean previous one
-  const createAndSetPreview = (file) => {
-    // revoke previous
-    if (generatedPreviewRef.current) {
-      URL.revokeObjectURL(generatedPreviewRef.current);
-      generatedPreviewRef.current = null;
-    }
-
+  const fetchDetails = useCallback(async () => {
+    if (!vendorId) return;
+    setIsLoading(true);
+    setError(null);
     try {
-      const objUrl = URL.createObjectURL(file);
-      generatedPreviewRef.current = objUrl;
-      setPreview(objUrl);
+      const res = await api.get(`/api/payment/getvendorspayout?vendor_id=${vendorId}`);
+      setDetails(res?.data ?? null);
+      // reset selection when data refreshes
+      setSelectedIds([]);
+      setSelectAll(false);
     } catch (err) {
-      console.warn("Failed to create preview URL", err);
-      setPreview(null);
-    }
-  };
-
-  // remove selected file and clear preview
-  const removeImage = () => {
-    setSelectedFile(null);
-    if (generatedPreviewRef.current) {
-      URL.revokeObjectURL(generatedPreviewRef.current);
-      generatedPreviewRef.current = null;
-    }
-    setPreview(null);
-  };
-
-  const openApproveModal = () => {
-    setAdminNotes("");
-    removeImage();
-    setShowApproveModal(true);
-  };
-
-  const closeApproveModal = () => {
-    if (submitting) return;
-    setShowApproveModal(false);
-  };
-
-  const handleApproveSubmit = async (e) => {
-    e?.preventDefault?.();
-    if (!payoutId) {
-      toast.error("Missing payout id");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const formData = new FormData();
-      formData.append("status", "1");
-      formData.append("admin_notes", adminNotes || "");
-      if (selectedFile) formData.append("payoutMedia", selectedFile);
-
-      const res = await api.post(
-        `/api/payment/updatepayout/${payoutId}`,
-        formData,
-        {
-          headers: {
-            // don't set multipart/form-data manually; axios will set boundary
-          },
-        }
-      );
-
-      toast.success(res?.data?.message || "Payout updated");
-      // optimistic update
-      setPayout((prev) => ({
-        ...prev,
-        status: 1,
-        admin_notes: adminNotes,
-        ...(res.data?.updatedPayout ? res.data.updatedPayout : {}),
-      }));
-
-      setShowApproveModal(false);
-    } catch (err) {
-      console.error("Approve error:", err);
-      const msg = err?.response?.data?.message || "Failed to update payout";
-      toast.error(msg);
+      console.error("Failed to fetch vendor payouts:", err);
+      setError(err);
+      toast.error?.("Failed to fetch vendor payouts.");
     } finally {
-      setSubmitting(false);
+      setIsLoading(false);
+    }
+  }, [vendorId]);
+
+  useEffect(() => {
+    fetchDetails();
+  }, [fetchDetails]);
+
+  const pending = details?.pendingPayouts ?? [];
+
+  // toggle a single row selection
+  const toggleRow = (id) => {
+    if (!id) return;
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((x) => x !== id);
+      }
+      return [...prev, id];
+    });
+  };
+
+  // toggle select all visible pending payout rows
+  const toggleSelectAll = () => {
+    if (!pending || pending.length === 0) return;
+    if (selectAll) {
+      setSelectedIds([]);
+      setSelectAll(false);
+    } else {
+      const ids = pending.map((p) => p.payout_id).filter(Boolean);
+      setSelectedIds(ids);
+      setSelectAll(true);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <LoadingSpinner />
-      </div>
-    );
-  }
+  // open modal only when at least one selected
+  const openPayoutModal = () => {
+    if (!selectedIds || selectedIds.length === 0) {
+      toast.error?.("Please select at least one payout to proceed.");
+      return;
+    }
+    setIsModalOpen(true);
+  };
 
-  if (error) {
-    return (
-      <div className="max-w-4xl mx-auto mt-6">
-        <button onClick={() => navigate(-1)} className="mb-4 btn btn-ghost">
-          Back
-        </button>
-        <div className="bg-red-50 p-4 rounded-md text-red-600">{error}</div>
-      </div>
-    );
-  }
-
-  if (!payout) return null;
+  // called when modal confirms and update succeeds
+  const handleModalSuccess = () => {
+    setIsModalOpen(false);
+    // refresh details
+    fetchDetails();
+    toast.success?.("Payout updated successfully.");
+  };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
-      <Breadcrumb
+    <div className="">
+      <BreadCrumb
+        key={vendorId}
         links={[
-          { label: "Admin", to: "/admin" },
-          { label: "Payments", to: "/admin/payments" },
-          {
-            label: `Payout #${payout.payout_request_id ?? payout.id}`,
-            to: "#",
-          },
+          { label: "Dashboard", to: "/admin/dashboard" },
+          { label: "Payout List", to: "/admin/payments/payoutlist" },
+          { label: `Payout Details #${vendorId}` },
         ]}
       />
-
-      <div className="bg-white rounded-md shadow p-6">
-        <div className="flex items-start justify-between">
+      <div className="px-6 space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">
-              Payout Request #{payout.payout_request_id ?? payout.id}
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {payout.vendor_name} • Vendor ID: {payout.vendor_id}
-            </p>
+            <h2 className="text-2xl font-bold text-gray-800">Payout Details</h2>
           </div>
 
-          <div className="text-right">
-            <div className="text-lg font-bold">
-              {payout.requested_amount ? `$${payout.requested_amount}` : "—"}
-            </div>
-            <div className="text-sm text-gray-500 mt-1">
-              {payout.created_at
-                ? new Date(payout.created_at).toLocaleString()
-                : "-"}
-            </div>
+          {/* Payout button shown on top-right */}
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={openPayoutModal}
+              className="px-3 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-sm"
+            >
+              Payout ({selectedIds.length})
+            </button>
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="border rounded p-4">
-            <h3 className="font-medium text-gray-700 mb-2">
-              Bank / Account Info
-            </h3>
-            <div className="text-sm text-gray-800">
-              <div>
-                <strong>Account holder:</strong>{" "}
-                {payout.account_holder_name || "-"}
+        {isLoading && <LoadingSpinner />}
+
+        {error && (
+          <div className="text-sm text-red-600">Failed to load payout details.</div>
+        )}
+
+        {!isLoading && details && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Total Pending */}
+              <div className="flex items-center gap-4 p-5 bg-white/80  backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 grid place-items-center border border-amber-100">
+                  <DollarSign className="text-amber-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-500 truncate">Total Pending</p>
+                  <p className="mt-1 text-lg font-semibold text-amber-600 truncate">
+                    {details.totalPending != null ? formatCurrency(details.totalPending, currency) : "—"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <strong>Bank name:</strong> {payout.bank_name || "-"}
+
+              {/* Pending Count */}
+              <div className="flex items-center gap-4 p-5 bg-white/80  backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 grid place-items-center border border-blue-100">
+                  <Clock className="text-blue-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-500 truncate">Pending Count</p>
+                  <p className="mt-1 text-lg font-semibold text-blue-600 truncate">
+                    {details.count ?? pending.length ?? 0}
+                  </p>
+                </div>
               </div>
-              <div>
-                <strong>Institution number:</strong>{" "}
-                {payout.institution_number || "-"}
+
+              {/* Vendor Name */}
+              <div className="flex items-center gap-4 p-5 bg-white/80  backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-green-50 to-green-100 grid place-items-center border border-green-100">
+                  <UserCheck className="text-green-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-500 truncate">Vendor Name</p>
+                  <p className="mt-1 text-lg font-semibold text-green-600 truncate">
+                    {vendorFromState?.vendor_name ?? pending[0]?.vendor_name ?? "—"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <strong>Transit:</strong> {payout.transit_number || "-"}
-              </div>
-              <div>
-                <strong>Account #:</strong>{" "}
-                {payout.account_number
-                  ? `•••• ${String(payout.account_number).slice(-4)}`
-                  : "-"}
-              </div>
-              <div className="mt-2">
-                <strong>Bank address:</strong> {payout.bank_address || "-"}
+
+              {/* Vendor Email */}
+              <div className="flex items-center gap-4 p-5 bg-white/80  backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 grid place-items-center border border-purple-100">
+                  <Mail className="text-purple-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-500 truncate">Vendor Email</p>
+                  <p className="mt-1 text-sm font-semibold text-purple-600 truncate">
+                    {pending[0]?.vendor_email ?? vendorFromState?.vendor_email ?? "—"}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="border rounded p-4">
-            <h3 className="font-medium text-gray-700 mb-2">Vendor Info</h3>
-            <div className="text-sm text-gray-800">
-              <div>
-                <strong>Name:</strong> {payout.vendor_name || "-"}
-              </div>
-              <div>
-                <strong>Email:</strong> {payout.email || "-"}
-              </div>
-              <div>
-                <strong>Vendor type:</strong> {payout.vendorType || "-"}
-              </div>
-              <div>
-                <strong>Business name:</strong> {payout.business_name || "-"}
-              </div>
-              <div>
-                <strong>Government ID:</strong> {payout.government_id || "-"}
-              </div>
-              <div>
-                <strong>Preferred transfer:</strong>{" "}
-                {payout.preferred_transfer_type || "-"}
-              </div>
+            {/* Table */}
+            <div className="bg-white rounded shadow overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 w-12 text-left">
+                      <input
+                        type="checkbox"
+                        checked={selectAll}
+                        onChange={toggleSelectAll}
+                        aria-label="Select all visible"
+                        className="w-4 h-4"
+                      />
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Payout ID</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Booking ID</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Booking Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Created At</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Packages</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {pending.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-6 text-center text-sm text-gray-500">
+                        No pending payouts found.
+                      </td>
+                    </tr>
+                  ) : (
+                    pending.map((p) => {
+                      const id = p.payout_id;
+                      const checked = selectedIds.includes(id);
+                      return (
+                        <tr key={id ?? `${p.booking_id}-${p.vendor_id}`}>
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={!!checked}
+                              onChange={() => toggleRow(id)}
+                              className="w-4 h-4"
+                            />
+                          </td>
+
+                          <td className="px-4 py-3 text-sm text-gray-700">{p.payout_id}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">{p.booking_id}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {p.payout_amount != null ? formatCurrency(p.payout_amount, p.currency ?? currency) : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {p.bookingDate ? formatDate(p.bookingDate) : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700">{p.created_at ? formatDate(p.created_at) : "—"}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {Array.isArray(p.packages) && p.packages.length ? (
+                              <div className="space-y-2">
+                                {p.packages.map((pkg) => (
+                                  <div key={pkg.package_id} className="text-xs">
+                                    <div className="font-medium">{pkg.packageName}</div>
+                                    {Array.isArray(pkg.sub_packages) && pkg.sub_packages.length > 0 && (
+                                      <div className="text-xs text-gray-500">
+                                        {pkg.sub_packages.map((sp) => sp.sub_package_name).join(", ")}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-
-        <div className="mt-6 flex items-center justify-end space-x-2">
-          <Button onClick={() => navigate(-1)} variant="ghost">
-            Back
-          </Button>
-
-          <Button onClick={openApproveModal} disabled={payout.status === 1}>
-            Approve
-          </Button>
-        </div>
+        )}
       </div>
 
-      {/* Approve modal */}
-      <Modal
-        isOpen={showApproveModal}
-        onClose={closeApproveModal}
-        title="Approve Payout Request"
-      >
-        <form onSubmit={handleApproveSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Admin notes
-            </label>
-            <FormTextarea
-              value={adminNotes}
-              onChange={(e) => setAdminNotes(e.target.value)}
-              rows={4}
-              placeholder="Add notes for vendor or internal record"
-            />
-          </div>
-
-          <div>
-            {/* pass props exactly as you specified */}
-            <CustomFileInput
-              label="Payment Image"
-              onChange={handleFile}
-              preview={preview || null}
-              onRemove={removeImage}
-            />
-          </div>
-
-          <div className="flex justify-end space-x-2 pt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={closeApproveModal}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Approving..." : "Confirm Approve"}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Payout modal */}
+      <PayoutModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        payoutIds={selectedIds}
+        onSuccess={handleModalSuccess}
+      />
     </div>
   );
 };

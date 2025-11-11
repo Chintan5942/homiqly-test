@@ -103,7 +103,7 @@ const Dashboard = () => {
 
   if (error)
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 p-4 rounded-lg text-center border border-red-100 dark:border-red-700">
+      <div className="bg-red-50  text-red-600  p-4 rounded-lg text-center border border-red-100 ">
         {error}
       </div>
     );
@@ -113,7 +113,7 @@ const Dashboard = () => {
       {/* Dashboard Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-800">Admin Dashboard</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-gray-500 ">
           Overview of platform performance
         </p>
       </div>
@@ -156,7 +156,7 @@ const Dashboard = () => {
         ].map((item, idx) => (
           <div
             key={idx}
-            className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm"
+            className="flex items-center gap-4 p-5 bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm"
           >
             <div
               className={`flex-none w-12 h-12 rounded-xl bg-gradient-to-br ${item.gradient} grid place-items-center ${item.border}`}
@@ -178,8 +178,8 @@ const Dashboard = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Booking Trends Chart */}
-        <div className="p-6 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+        <div className="p-6 bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">
             Booking Trends
           </h2>
           <div className="h-72">
@@ -196,8 +196,8 @@ const Dashboard = () => {
         </div>
 
         {/* Service Categories Chart */}
-        <div className="p-6 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+        <div className="p-6 bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">
             Service Categories
           </h2>
           <div className="h-72 flex items-center justify-center">

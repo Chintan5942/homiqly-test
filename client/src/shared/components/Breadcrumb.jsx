@@ -5,7 +5,7 @@ const Breadcrumb = ({ links = [] }) => {
   const lastIndex = links.length - 1;
 
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center justify-between mb-3">
       <div className="flex flex-col ">
         {/* ← Back link */}
         <button onClick={() => navigate(-1)} className=" flex items-center ">

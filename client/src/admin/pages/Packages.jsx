@@ -6,7 +6,7 @@ import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import EditPackageModal from "../components/Modals/EditPackageModal";
 import FormSelect from "../../shared/components/Form/FormSelect";
 import { FormInput } from "../../shared/components/Form";
-import { Plus, Search, Trash, X } from "lucide-react";
+import { Eye, Pencil, Plus, Search, Trash, X } from "lucide-react";
 import UniversalDeleteModal from "../../shared/components/Modal/UniversalDeleteModal";
 import Modal from "../../shared/components/Modal/Modal";
 
@@ -547,7 +547,7 @@ export default function Packages() {
     );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">All Packages</h2>
@@ -649,17 +649,23 @@ export default function Packages() {
                                     </div>
                                   </div>
 
-                                  <div className="flex items-center gap-2">
-                                    <Button
-                                      size="sm"
+                                  <div className="flex items-center gap-3">
+                                    <IconButton
                                       variant="ghost"
+                                      icon={<Pencil className="w-4 h-4" />}
                                       onClick={() => handleEdit(pkg)}
-                                    >
-                                      Edit
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="lightError"
+                                    />
+
+                                    <IconButton
+                                      variant="ghost"
+                                      icon={<Eye className="w-4 h-4" />}
+                                      onClick={() =>
+                                        openDetails(pkg.package_id)
+                                      }
+                                    />
+                                    <IconButton
+                                      variant="lightDanger"
+                                      icon={<Trash className="w-4 h-4" />}
                                       onClick={() =>
                                         handleDeleteClick("package", {
                                           package_id: pkg.package_id,
@@ -667,18 +673,7 @@ export default function Packages() {
                                           id: pkg.package_id,
                                         })
                                       }
-                                    >
-                                      Delete
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="lightPrimary"
-                                      onClick={() =>
-                                        openDetails(pkg.package_id)
-                                      }
-                                    >
-                                      View Details
-                                    </Button>
+                                    />
                                   </div>
                                 </div>
                               </div>
