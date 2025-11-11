@@ -33,12 +33,13 @@ import PaymentDetails from "../pages/subpages/PaymentDetails";
 import ServiceCities from "../pages/subpages/ServiceCities";
 import VendorApplications from "../pages/VendorApplications";
 import VendorApplicationDetails from "../pages/subpages/VendorApplicationDetails";
-import { Loader, Loader2 } from "lucide-react";
+import { Loader } from "lucide-react";
 import AdminPromoManager from "../pages/subpages/AdminPromoManager";
 import PlatformTax from "../pages/subpages/PlatformTax";
 import PayoutList from "../pages/PayoutList";
 import PayoutDetails from "../pages/subpages/PayoutDetails";
 import TempVendor from "../pages/TempVendor";
+import LoadingSpinner from "../../shared/components/LoadingSpinner";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -46,10 +47,9 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center gap-2">
-        <Loader2 className="animate-spin" />
-        Loading...
-      </div>
+      <>
+        <LoadingSpinner />
+      </>
     );
   }
 
@@ -102,7 +102,7 @@ const AdminRoutes = () => {
         <Route path="contractors" element={<Contractors />} />
         <Route path="employees" element={<Employees />} />
         <Route path="vendor-applications" element={<VendorApplications />} />
-        <Route path="tempvendor" element={<TempVendor/>} />
+        <Route path="tempvendor" element={<TempVendor />} />
         <Route
           path="vendor-applications/:id"
           element={<VendorApplicationDetails />}
@@ -110,7 +110,10 @@ const AdminRoutes = () => {
         <Route path="payments/history" element={<Payments />} />
         <Route path="payments/:paymentId" element={<PaymentDetails />} />
         <Route path="payments/payoutlist" element={<PayoutList />} />
-        <Route path="payments/payoutlist/:payoutId" element={<PayoutDetails />} />
+        <Route
+          path="payments/payoutlist/:payoutId"
+          element={<PayoutDetails />}
+        />
         <Route path="analytics" element={<Analytics />} />
         {/* <Route path="rating" element={<UserRating />} /> */}
         <Route path="rating/user" element={<UserRating />} />

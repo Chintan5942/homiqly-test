@@ -84,12 +84,7 @@ const VendorBookings = () => {
           params,
         });
 
-        const {
-          bookings,
-          currentPage,
-          totalPages,
-          totalRecords,
-        } = res.data;
+        const { bookings, currentPage, totalPages, totalRecords } = res.data;
 
         setBookings(bookings);
         setPage(currentPage);
@@ -209,7 +204,7 @@ const VendorBookings = () => {
     setFilter("all");
     setDateRange({ startDate: "", endDate: "" });
     setLimit(10);
-    setPage(1); 
+    setPage(1);
   };
 
   // Render states for loading and error remain unchanged
@@ -218,26 +213,16 @@ const VendorBookings = () => {
     <div className="space-y-6 p-3">
       {/* Header and controls */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Vendor Booking Management</h2>
-        <div className="flex space-x-2 items-center">
-          <Button
-            onClick={() => {
-              fetchBookings(page, limit, filter, debouncedSearch, dateRange);
-              fetchEmployees();
-            }}
-            variant="lightInherit"
-            icon={<RefreshCcw className="h-4 w-4" />}
-          >
-            Refresh
-          </Button>
-        </div>
+        <h2 className="text-2xl font-bold text-gray-800">
+          Vendor Booking Management
+        </h2>
       </div>
 
       {/* Filters */}
       <div className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+        <div className="flex flex-wrap items-end gap-4">
           {/* Search */}
-          <div className="md:col-span-2">
+          <div className="flex-1 min-w-[220px] max-w-md">
             <FormInput
               icon={<Search className="w-4 h-4" />}
               id="search"
@@ -250,7 +235,7 @@ const VendorBookings = () => {
           </div>
 
           {/* Status */}
-          <div className="md:col-span-1">
+          <div className="">
             <FormSelect
               label="Status"
               name="filter"
@@ -268,7 +253,7 @@ const VendorBookings = () => {
           </div>
 
           {/* Start Date */}
-          <div className="md:col-span-1">
+          <div className="">
             <FormInput
               label="Start Date"
               id="startDate"
@@ -276,12 +261,11 @@ const VendorBookings = () => {
               value={dateRange.startDate}
               onChange={handleDateChange}
               type="date"
-              aria-label="Start date"
             />
           </div>
 
           {/* End Date */}
-          <div className="md:col-span-1">
+          <div className="">
             <FormInput
               label="End Date"
               id="endDate"
@@ -289,13 +273,13 @@ const VendorBookings = () => {
               value={dateRange.endDate}
               onChange={handleDateChange}
               type="date"
-              aria-label="End date"
             />
           </div>
 
-          <div className="md:col-span-1 flex justify-start md:justify-end space-x-2">
+          {/* Actions */}
+          <div className="flex space-x-2 ml-auto">
             <Button
-              variant="ghost"
+              variant="lightInherit"
               onClick={() => {
                 setFilter("all");
                 setDateRange({ startDate: "", endDate: "" });
@@ -304,8 +288,18 @@ const VendorBookings = () => {
             >
               Clear
             </Button>
-            <Button variant="outline" onClick={() => resetAll()}>
+            <Button variant="lightInherit" onClick={() => resetAll()}>
               Reset All
+            </Button>
+            <Button
+              onClick={() => {
+                fetchBookings(page, limit, filter, debouncedSearch, dateRange);
+                fetchEmployees();
+              }}
+              variant="outline"
+              icon={<RefreshCcw className="h-4 w-4" />}
+            >
+              Refresh
             </Button>
           </div>
         </div>

@@ -179,7 +179,7 @@ const Bookings = () => {
   }
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-800">
           Admin Booking Management
@@ -188,7 +188,7 @@ const Bookings = () => {
 
       {/* Filters */}
       <div className="mb-6">
-        <div className="flex flex-wrap items-end gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <div className="flex flex-wrap items-end gap-4 ">
           {/* Search */}
           <div className="flex-1 min-w-[220px]">
             <FormInput

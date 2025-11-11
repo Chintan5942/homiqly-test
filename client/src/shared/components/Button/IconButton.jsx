@@ -107,7 +107,7 @@ const IconButton = ({
       onClick={onClick}
       disabled={disabled || isLoading}
       title={tooltip}
-      className={`inline-flex items-center justify-center rounded-full
+      className={`inline-flex items-center justify-center rounded-md
         transition-colors duration-300 ease-in-out
         focus:outline-none focus:ring-1 focus:ring-offset-1 
         ${variantClasses[variant]} ${sizeClasses[size]} ${

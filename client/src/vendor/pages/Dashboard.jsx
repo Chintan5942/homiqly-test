@@ -16,7 +16,17 @@ import ToggleButton from "../components/ToggleButton";
 import StatusBadge from "../../shared/components/StatusBadge";
 import Calendar from "./Calendar";
 import { FormInput, FormSelect } from "../../shared/components/Form";
-import { Check, CheckCircle, Clock, DollarSign, ShoppingBag } from "lucide-react";
+import { formatCurrency } from "../../shared/utils/formatUtils";
+import {
+  Check,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  Loader,
+  ShoppingBag,
+} from "lucide-react";
+import LoadingSlider from "../../shared/components/LoadingSpinner";
+import LoadingSpinner from "../../shared/components/LoadingSpinner";
 
 // Register ChartJS components
 ChartJS.register(
@@ -106,9 +116,9 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-t-2 border-b-2 rounded-full animate-spin border-primary-light"></div>
-      </div>
+      <>
+        <LoadingSpinner />
+      </>
     );
   }
 
@@ -169,53 +179,79 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
-        <div className="flex items-center p-6 space-x-4 bg-white rounded-lg shadow">
-          <div className="p-3 text-blue-600 bg-blue-100 rounded-full">
-            <ShoppingBag className="w-6 h-6" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Total Bookings */}
+        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+          <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 grid place-items-center border border-blue-100">
+            <ShoppingBag className="text-blue-500" />
           </div>
-          <div>
-            <p className="text-sm text-gray-500">Total Bookings</p>
-            <p className="text-2xl font-semibold">{stats.totalBookings}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center p-6 space-x-4 bg-white rounded-lg shadow">
-          <div className="p-3 text-yellow-600 bg-yellow-100 rounded-full">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Started Bookings</p>
-            <p className="text-2xl font-semibold">{stats.startedBookings}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-500 truncate">
+              Total Bookings
+            </p>
+            <p className="mt-1 text-lg font-semibold text-blue-600 truncate">
+              {stats.totalBookings}
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center p-6 space-x-4 bg-white rounded-lg shadow">
-          <div className="p-3 text-green-600 bg-green-100 rounded-full">
-            <CheckCircle className="w-6 h-6" />
+        {/* Started Bookings */}
+        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+          <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-50 to-yellow-100 grid place-items-center border border-yellow-100">
+            <Clock className="text-yellow-500" />
           </div>
-          <div>
-            <p className="text-sm text-gray-500">Completed Bookings</p>
-            <p className="text-2xl font-semibold">{stats.completedBookings}</p>
-          </div>
-        </div>
-        <div className="flex items-center p-6 space-x-4 bg-white rounded-lg shadow">
-          <div className="p-3 text-blue-600 bg-blue-100 rounded-full">
-            <Check className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Approved Bookings</p>
-            <p className="text-2xl font-semibold">{stats.approvedBookings}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-500 truncate">
+              Started Bookings
+            </p>
+            <p className="mt-1 text-lg font-semibold text-yellow-600 truncate">
+              {stats.startedBookings}
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center p-6 space-x-4 bg-white rounded-lg shadow">
-          <div className="p-3 text-purple-600 bg-purple-100 rounded-full">
-            <DollarSign className="w-6 h-6" />
+        {/* Completed Bookings */}
+        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+          <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-green-50 to-green-100 grid place-items-center border border-green-100">
+            <CheckCircle className="text-green-500" />
           </div>
-          <div>
-            <p className="text-sm text-gray-500">Total Earnings</p>
-            <p className="text-2xl font-semibold">${stats.totalEarnings}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-500 truncate">
+              Completed Bookings
+            </p>
+            <p className="mt-1 text-lg font-semibold text-green-600 truncate">
+              {stats.completedBookings}
+            </p>
+          </div>
+        </div>
+
+        {/* Approved Bookings */}
+        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+          <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 grid place-items-center border border-indigo-100">
+            <Check className="text-indigo-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-500 truncate">
+              Approved Bookings
+            </p>
+            <p className="mt-1 text-lg font-semibold text-indigo-600 truncate">
+              {stats.approvedBookings}
+            </p>
+          </div>
+        </div>
+
+        {/* Total Earnings */}
+        <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+          <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 grid place-items-center border border-purple-100">
+            <DollarSign className="text-purple-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-500 truncate">
+              Total Earnings
+            </p>
+            <p className="mt-1 text-lg font-semibold text-purple-600 truncate">
+              {formatCurrency(stats.totalEarnings)}
+            </p>
           </div>
         </div>
       </div>

@@ -550,34 +550,23 @@ export default function Packages() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            All Packages
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-800">All Packages</h2>
           <p className="mt-1 text-sm text-gray-600">
             Filter by service name, package name, or category.
           </p>
         </div>
-        <div>
-          <Button
-            onClick={() => setShowAddModal(true)}
-            variant="primary"
-            icon={<Plus className="w-4 h-4" />}
-          >
-            Add Service Type
-          </Button>
-        </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-center mb-8">
+      <div className="flex flex-col justify-between sm:flex-row gap-4 items-center mb-8">
         <FormInput
-          className="w-full sm:w-2/3"
+          className="w-full sm:w-1/3"
           type="text"
           icon={<Search />}
           placeholder="Search Service Name or Package Name"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <div className="w-full sm:w-1/3">
+        <div className="flex gap-3">
           <FormSelect
             id="category"
             name="category"
@@ -586,6 +575,15 @@ export default function Packages() {
             options={[{ value: "", label: "All Categories" }, ...categories]}
             placeholder="Select Category"
           />
+          <div className="flex-shrink-0">
+            <Button
+              onClick={() => setShowAddModal(true)}
+              variant="primary"
+              icon={<Plus className="w-4 h-4" />}
+            >
+              Add Service Type
+            </Button>
+          </div>
         </div>
       </div>
 

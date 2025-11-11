@@ -6,7 +6,15 @@ import PaymentsTable from "../components/Tables/PaymentsTable";
 import { FormInput, FormSelect } from "../../shared/components/Form";
 import { Button } from "../../shared/components/Button";
 import Pagination from "../../shared/components/Pagination";
-import { RefreshCcw } from "lucide-react";
+import {
+  Check,
+  CircleDollarSign,
+  RefreshCcw,
+  TicketCheck,
+  Wallet,
+  Wallet2,
+  WalletCards,
+} from "lucide-react";
 import api from "../../lib/axiosConfig";
 
 const Payments = () => {
@@ -225,25 +233,7 @@ const Payments = () => {
         <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
           <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 grid place-items-center border border-gray-100">
             {/* wallet icon */}
-            <svg
-              className="w-6 h-6 text-slate-700 dark:text-slate-200"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path
-                d="M3 7h18v10H3z"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M16 11a1 1 0 100-2 1 1 0 000 2z"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <WalletCards className="text-slate-600" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-500 truncate">
@@ -258,29 +248,7 @@ const Payments = () => {
         <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
           <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 grid place-items-center border border-blue-100">
             {/* booking icon */}
-            <svg
-              className="w-6 h-6 text-blue-600"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path
-                d="M3 7h18M7 3v4M17 3v4"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <rect
-                x="3"
-                y="7"
-                width="18"
-                height="14"
-                rx="2"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <TicketCheck className="text-blue-500" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-500 truncate">
@@ -295,27 +263,7 @@ const Payments = () => {
         <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
           <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-green-50 to-green-100 grid place-items-center border border-green-100">
             {/* payout icon */}
-            <svg
-              className="w-6 h-6 text-green-600"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path
-                d="M12 8v8M8 12h8"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle
-                cx="12"
-                cy="12"
-                r="9"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <CircleDollarSign className="text-green-600" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-500 truncate">
@@ -330,19 +278,7 @@ const Payments = () => {
         <div className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
           <div className="flex-none w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 grid place-items-center border border-indigo-100">
             {/* check/paid icon */}
-            <svg
-              className="w-6 h-6 text-indigo-600"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path
-                d="M20 6L9 17l-5-5"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <Check className="text-indigo-600" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-500 truncate">

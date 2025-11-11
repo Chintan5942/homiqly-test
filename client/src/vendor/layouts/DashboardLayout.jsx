@@ -17,6 +17,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import LoadingSpinner from "../../shared/components/LoadingSpinner";
 
 const DashboardLayout = () => {
   const { currentUser, logout } = useVendorAuth();
@@ -136,10 +137,9 @@ const DashboardLayout = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen gap-2">
-        <Loader2 className="animate-spin" />
-        Loading...
-      </div>
+      <>
+        <LoadingSpinner />
+      </>
     );
   }
 

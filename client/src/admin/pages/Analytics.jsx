@@ -193,8 +193,8 @@ const Analytics = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <LoadingSpinner size="lg" />
+      <div className="flex justify-center items-center h-96">
+        <LoadingSpinner />
       </div>
     );
   }

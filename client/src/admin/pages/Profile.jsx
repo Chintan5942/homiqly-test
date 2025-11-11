@@ -198,7 +198,7 @@ const Profile = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner />
       </div>
     );
   }

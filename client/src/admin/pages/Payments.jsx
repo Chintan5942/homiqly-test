@@ -302,7 +302,7 @@ const Payments = () => {
       {/* If it's the very first load and there are no payments yet, show full-page spinner */}
       {loading && payments.length === 0 ? (
         <div className="flex items-center justify-center h-64">
-          <LoadingSpinner size="lg" />
+          <LoadingSpinner />
         </div>
       ) : (
         <div className="overflow-hidden">

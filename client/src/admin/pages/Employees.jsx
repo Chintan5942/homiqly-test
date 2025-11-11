@@ -191,10 +191,11 @@ const Employees = () => {
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
         Employee Management
       </h2>
-      <div className="flex flex-col sm:flex-row items-stretch w-full md:w-auto gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row items-stretch justify-between w-full md:w-auto gap-3 mb-6">
         <div className="flex-1 min-w-[200px] max-w-md">
           <FormInput
             type="text"
+            label="Search"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by name or email..."

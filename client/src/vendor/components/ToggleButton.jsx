@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../../lib/axiosConfig";
-import { Loader2 } from "lucide-react"; // or any loader icon of your choice
+import { Loader, Loader2 } from "lucide-react"; // or any loader icon of your choice
 
 export default function ToggleButton() {
   const [isOn, setIsOn] = useState(false); // false = OFF, true = ON
@@ -47,10 +47,12 @@ export default function ToggleButton() {
 
   return (
     <div className="flex items-center space-x-4">
-      <span className="text-gray-700 font-medium">
-         Service Access: {loading ? "Loading..." : isOn ? "ON" : "OFF"}
+      <span className="text-gray-700 text-sm">
+        Service Access :{" "}
+        <span className="font-semibold">
+          {loading ? "Loading..." : isOn ? "ON" : "OFF"}
+        </span>
       </span>
-
       <button
         onClick={handleToggle}
         disabled={loading || toggling}
@@ -59,7 +61,7 @@ export default function ToggleButton() {
         }`}
       >
         {toggling ? (
-          <Loader2 className="w-4 h-4 text-white animate-spin mx-auto" />
+          <Loader className="w-4 h-4 text-white animate-spin mx-auto" />
         ) : (
           <span
             className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${

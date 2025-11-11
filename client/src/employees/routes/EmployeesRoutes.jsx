@@ -19,6 +19,7 @@ import BookingDetailsPage from "../pages/subpages/BookingDetailsPage";
 import WorkHistory from "../pages/WorkHistory";
 import WorkHistoryDetails from "../pages/subpages/WorkHistoryDetails";
 import { Loader, Loader2 } from "lucide-react";
+import LoadingSpinner from "../../shared/components/LoadingSpinner";
 // import SupplyKits from "../pages/SupplyKits";
 // import Contractors from "../pages/Contractors";
 // import Employees from "../pages/Employees";
@@ -36,10 +37,9 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center gap-2">
-        <Loader2 className="animate-spin" />
-        Loading...
-      </div>
+      <>
+        <LoadingSpinner />
+      </>
     );
   }
 

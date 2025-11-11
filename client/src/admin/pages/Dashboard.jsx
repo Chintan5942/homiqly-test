@@ -12,11 +12,9 @@ import {
   LineElement,
   Title,
 } from "chart.js";
-import { Link } from "react-router-dom";
-import Loader from "../../components/Loader";
-import LoadingSlider from "../../shared/components/LoadingSpinner";
 import { DollarSign, ShoppingBag, UserCheck, Users } from "lucide-react";
-
+import LoadingSlider from "../../shared/components/LoadingSpinner";
+import { formatCurrency } from "../../shared/utils/formatUtils";
 // Register ChartJS components
 ChartJS.register(
   ArcElement,
@@ -47,24 +45,19 @@ const Dashboard = () => {
       try {
         setLoading(true);
 
-        // Fetch dashboard stats
-        const statsResponse = await api.get("/api/analytics/dashboard");
-        setStats(statsResponse.data.stats);
+        const [statsRes, trendsRes, catRes] = await Promise.all([
+          api.get("/api/analytics/dashboard"),
+          api.get("/api/analytics/booking-trends"),
+          api.get("/api/analytics/service-categories"),
+        ]);
 
-        // Fetch booking trends
-        const trendsResponse = await api.get("/api/analytics/booking-trends");
-        setBookingTrends(trendsResponse.data.trends);
-
-        // Fetch service category stats
-        const categoryResponse = await api.get(
-          "/api/analytics/service-categories"
-        );
-        setCategoryStats(categoryResponse.data.stats);
-
-        setLoading(false);
+        setStats(statsRes.data.stats);
+        setBookingTrends(trendsRes.data.trends);
+        setCategoryStats(catRes.data.stats);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
         setError("Failed to load dashboard data");
+      } finally {
         setLoading(false);
       }
     };
@@ -72,7 +65,6 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Prepare chart data
   const bookingChartData = {
     labels: bookingTrends.map((t) =>
       new Date(t.booking_date).toLocaleDateString()
@@ -82,7 +74,7 @@ const Dashboard = () => {
         label: "Total Bookings",
         data: bookingTrends.map((t) => t.booking_count),
         borderColor: "#3b82f6",
-        backgroundColor: "rgba(59, 130, 246, 0.1)",
+        backgroundColor: "rgba(59,130,246,0.1)",
         tension: 0.4,
         fill: true,
       },
@@ -107,126 +99,119 @@ const Dashboard = () => {
     ],
   };
 
-  if (loading) {
-    return <LoadingSlider />;
-  }
+  if (loading) return <LoadingSlider />;
 
-  if (error) {
+  if (error)
     return (
-      <div className="bg-red-50 p-4 rounded-md">
-        <p className="text-red-500">{error}</p>
+      <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 p-4 rounded-lg text-center border border-red-100 dark:border-red-700">
+        {error}
       </div>
     );
-  }
 
   return (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6 flex items-center space-x-4">
-          <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-            <Users className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Total Users</p>
-            <p className="text-2xl font-semibold">{stats.total_users}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6 flex items-center space-x-4">
-          <div className="p-3 rounded-full bg-green-100 text-green-600">
-            <UserCheck className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Total Vendors</p>
-            <p className="text-2xl font-semibold">{stats.total_vendors}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6 flex items-center space-x-4">
-          <div className="p-3 rounded-full bg-purple-100 text-purple-600">
-            <ShoppingBag className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Completed Bookings</p>
-            <p className="text-2xl font-semibold">{stats.completed_bookings}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6 flex items-center space-x-4">
-          <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
-            <DollarSign className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Total Revenue</p>
-            <p className="text-2xl font-semibold">
-              ${stats.total_revenue || 0}
-            </p>
-          </div>
-        </div>
+    <div className="space-y-8">
+      {/* Dashboard Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <h2 className="text-2xl font-bold text-gray-800">Admin Dashboard</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Overview of platform performance
+        </p>
       </div>
 
-      {/* Charts */}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            label: "Total Users",
+            value: stats.total_users,
+            icon: <Users className="text-blue-500" />,
+            gradient: "from-blue-50 to-blue-100",
+            border: "border-blue-100",
+            text: "text-blue-600",
+          },
+          {
+            label: "Total Vendors",
+            value: stats.total_vendors,
+            icon: <UserCheck className="text-green-500" />,
+            gradient: "from-green-50 to-green-100",
+            border: "border-green-100",
+            text: "text-green-600",
+          },
+          {
+            label: "Completed Bookings",
+            value: stats.completed_bookings,
+            icon: <ShoppingBag className="text-purple-500" />,
+            gradient: "from-purple-50 to-purple-100",
+            border: "border-purple-100",
+            text: "text-purple-600",
+          },
+          {
+            label: "Total Revenue",
+            value: formatCurrency(stats.total_revenue || 0),
+            icon: <DollarSign className="text-yellow-500" />,
+            gradient: "from-yellow-50 to-yellow-100",
+            border: "border-yellow-100",
+            text: "text-yellow-600",
+          },
+        ].map((item, idx) => (
+          <div
+            key={idx}
+            className="flex items-center gap-4 p-5 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm"
+          >
+            <div
+              className={`flex-none w-12 h-12 rounded-xl bg-gradient-to-br ${item.gradient} grid place-items-center ${item.border}`}
+            >
+              {item.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-gray-500 truncate">
+                {item.label}
+              </p>
+              <p className={`mt-1 text-lg font-semibold truncate ${item.text}`}>
+                {item.value}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Booking Trends</h2>
-          <div className="h-64">
+        {/* Booking Trends Chart */}
+        <div className="p-6 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+            Booking Trends
+          </h2>
+          <div className="h-72">
             <Line
               data={bookingChartData}
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    display: false,
-                  },
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                  },
-                },
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } },
               }}
             />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Service Categories</h2>
-          <div className="h-64 flex items-center justify-center">
+        {/* Service Categories Chart */}
+        <div className="p-6 bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+            Service Categories
+          </h2>
+          <div className="h-72 flex items-center justify-center">
             <Doughnut
               data={categoryChartData}
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: "bottom",
-                  },
-                },
+                plugins: { legend: { position: "bottom" } },
               }}
             />
           </div>
         </div>
       </div>
-
-      {/* Calendar Section */}
-      {/* <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Booking Calendar</h2>
-          <Link
-            to="/admin/bookings"
-            className="text-sm text-primary-light hover:text-primary-dark font-medium"
-          >
-            View All Bookings
-          </Link>
-        </div>
-        <div className="border rounded-lg p-4 h-96 flex items-center justify-center">
-          <p className="text-gray-500">
-            Calendar component will be integrated here
-          </p>
-        </div>
-      </div> */}
     </div>
   );
 };

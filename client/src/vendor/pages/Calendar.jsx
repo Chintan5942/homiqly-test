@@ -375,7 +375,7 @@ const Calendar = () => {
               variant="lightBlack"
               icon={<ArrowLeft size={20} />}
             />
-            <h2 className="text-xl font-bold text-gray-800">
+            <h2 className="text-xl text-center font-bold text-gray-800 w-48">
               {title}
             </h2>
             <IconButton

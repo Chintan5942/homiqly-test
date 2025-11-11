@@ -1,5 +1,5 @@
 import React from "react";
-import { Loader2 } from "lucide-react";
+import { Loader, Loader2 } from "lucide-react";
 
 const Button = ({
   children,
@@ -83,7 +83,7 @@ const Button = ({
     >
       {isLoading ? (
         <>
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          <Loader className="w-4 h-4 mr-2 animate-spin" />
           Loading...
         </>
       ) : (
