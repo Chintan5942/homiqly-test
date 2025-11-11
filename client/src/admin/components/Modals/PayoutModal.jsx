@@ -67,12 +67,12 @@ const PayoutModal = ({ open, onClose, payoutIds = [], onSuccess }) => {
   return (
     <>
       {/* backdrop */}
-      <div
+      {/* <div
         className="fixed inset-0 bg-black/40 z-50"
         onClick={() => {
           if (!submitting) onClose();
         }}
-      />
+      /> */}
 
       {/* modal */}
       <div className="fixed inset-0 z-60 flex items-center justify-center pointer-events-none">
