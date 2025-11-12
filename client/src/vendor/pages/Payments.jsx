@@ -310,9 +310,9 @@ const Payments = () => {
               options={[
                 { value: "all", label: "All Payouts" },
                 { value: "pending", label: "Pending" },
-                { value: "paid", label: "Paid" },
-                { value: "completed", label: "Completed" },
-                { value: "hold", label: "Hold" },
+                // { value: "paid", label: "Paid" },
+                { value: "approved", label: "Approved" },
+                // { value: "hold", label: "Hold" },
               ]}
             />
           </div>
@@ -354,7 +354,18 @@ const Payments = () => {
           </div>
 
           {/* Spacer to push button to right */}
-          <div className="flex justify-end col-span-3">
+          <div className="flex justify-end col-span-3 gap-3">
+            <Button
+              variant="lightInherit"
+              onClick={() => {
+                setDateRange({ startDate: "", endDate: "" });
+                setFilter("all");
+                setLimit(10);
+                setPage(1);
+              }}
+            >
+              Reset
+            </Button>
             <Button
               onClick={fetchBookings}
               variant="lightInherit"

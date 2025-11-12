@@ -94,29 +94,15 @@ const LoadingSpinner = ({
         } flex items-center justify-center bg-white/70 backdrop-blur-md pointer-events-auto ${overlayClass}`}
         style={{ transition: `opacity ${fadeMs}ms ease` }}
       >
-        <Loader
-          className="w-10 h-10 text-green-600"
-          style={{
-            // continuous spin via CSS animation
-            animation: "ls-spin 1s linear infinite",
-          }}
-        />
+        <Loader className="w-12 h-12 text-green-600 animate-spin" />
       </div>
 
       <style jsx="true">{`
-        @keyframes ls-spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
         .ls-fade-in {
           opacity: 1;
         }
         .ls-fade-out {
-          opacity: 0;
+          opacity: 1;
         }
       `}</style>
     </>

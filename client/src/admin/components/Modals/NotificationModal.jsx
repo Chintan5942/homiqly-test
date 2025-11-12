@@ -28,17 +28,21 @@ const NotificationModal = ({ isOpen, onClose }) => {
   const handleMarkAsRead = async (notificationId) => {
     try {
       await api.patch(`/api/notifications/markasread/${notificationId}`);
-      // Refresh the list after marking as read
       fetchNotifications();
     } catch (err) {
       console.error("Failed to mark notification as read", err);
     }
   };
 
+  const hasUnread = notifications.some((n) => n.is_read === 0);
+
   const filteredNotifications = notifications.filter((notif) => {
     if (activeTab === "Unread") return notif.is_read === 0;
     return true;
   });
+
+  // Hide "Unread" tab if no unread notifications exist
+  const tabs = hasUnread ? ["All", "Unread"] : ["All"];
 
   if (!isOpen) return null;
 
@@ -72,7 +76,7 @@ const NotificationModal = ({ isOpen, onClose }) => {
 
         {/* Tabs */}
         <div className="flex justify-around border-b p-3">
-          {["All", "Unread"].map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab}
               className={`text-sm font-medium px-2 py-1 rounded ${

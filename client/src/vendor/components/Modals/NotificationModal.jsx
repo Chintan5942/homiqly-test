@@ -13,9 +13,19 @@ const NotificationModal = ({ isOpen, onClose }) => {
     if (isOpen) fetchNotifications();
   }, [isOpen]);
 
+  // When notifications change, if there are no unread items and the activeTab is "Unread",
+  // switch back to "All" so the unread tab doesn't stay selected while hidden.
+  useEffect(() => {
+    const hasUnread = notifications.some((n) => n.is_read === 0);
+    if (!hasUnread && activeTab === "Unread") {
+      setActiveTab("All");
+    }
+  }, [notifications, activeTab]);
+
   const fetchNotifications = async () => {
     try {
       setLoading(true);
+      // note: you're using getvendornotification in this version
       const res = await api.get("/api/notifications/getvendornotification");
       setNotifications(res.data.notifications || []);
     } catch (err) {
@@ -35,6 +45,11 @@ const NotificationModal = ({ isOpen, onClose }) => {
     }
   };
 
+  const hasUnread = notifications.some((n) => n.is_read === 0);
+
+  // build tabs dynamically so "Unread" is omitted when there are no unread items
+  const tabs = hasUnread ? ["All", "Unread"] : ["All"];
+
   const filteredNotifications = notifications.filter((notif) => {
     if (activeTab === "Unread") return notif.is_read === 0;
     return true;
@@ -49,7 +64,6 @@ const NotificationModal = ({ isOpen, onClose }) => {
         className="fixed top-0 right-0 z-50 h-full"
         style={{
           width: "calc(100%)",
-          // left: "16rem",
         }}
         onClick={onClose}
       >
@@ -71,7 +85,7 @@ const NotificationModal = ({ isOpen, onClose }) => {
 
         {/* Tabs */}
         <div className="flex justify-around p-3 border-b">
-          {["All", "Unread"].map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab}
               className={`text-sm font-medium px-2 py-1 rounded ${
@@ -93,9 +107,7 @@ const NotificationModal = ({ isOpen, onClose }) => {
               <Loader />
             </div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="text-sm text-center text-gray-500">
-              No notifications
-            </div>
+            <div className="text-sm text-center text-gray-500">No notifications</div>
           ) : (
             filteredNotifications.map((notif) => (
               <div
@@ -104,16 +116,14 @@ const NotificationModal = ({ isOpen, onClose }) => {
               >
                 <div className="flex-shrink-0 mt-1">
                   <CheckCircle
-                    className={`w-5 h-5 ${
-                      notif.is_read ? "text-gray-400" : "text-blue-500"
-                    }`}
+                    className={`w-5 h-5 ${notif.is_read ? "text-gray-400" : "text-blue-500"}`}
                   />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-sm font-medium">{notif.title}</h3>
                   <p className="text-sm text-gray-600">{notif.body}</p>
                   <p className="mt-1 text-xs text-gray-400">
-                    {new Date(notif.sent_at).toLocaleString()}
+                    {notif.sent_at ? new Date(notif.sent_at).toLocaleString() : ""}
                   </p>
 
                   {!notif.is_read && (

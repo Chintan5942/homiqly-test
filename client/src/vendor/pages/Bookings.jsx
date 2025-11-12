@@ -210,7 +210,7 @@ const VendorBookings = () => {
   // Render states for loading and error remain unchanged
 
   return (
-    <div className="space-y-6 p-3">
+    <div className="space-y-6">
       {/* Header and controls */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">

@@ -1,8 +1,11 @@
 // src/app/payouts/components/Modals/PayoutModal.jsx
 import React, { useEffect, useState } from "react";
-import api from "../../../lib/axiosConfig"; // adjust relative path if needed
-import LoadingSpinner from "../../../shared/components/LoadingSpinner"; // adjust if shared path differs
+import api from "../../../lib/axiosConfig"; // keep same relative path you used
+import LoadingSpinner from "../../../shared/components/LoadingSpinner";
+import Modal from "../../../shared/components/Modal/Modal";
+import { Button } from "../../../shared/components/Button";
 import { toast } from "sonner";
+import { FormSelect, FormTextarea } from "../../../shared/components/Form";
 
 /**
  * Props:
@@ -25,13 +28,12 @@ const PayoutModal = ({ open, onClose, payoutIds = [], onSuccess }) => {
       setAdminNotes("");
       setStatus("approved");
     } else {
+      // reset local state when closed
       setLocalIds([]);
       setAdminNotes("");
       setSubmitting(false);
     }
   }, [open, payoutIds]);
-
-  if (!open) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,7 +55,6 @@ const PayoutModal = ({ open, onClose, payoutIds = [], onSuccess }) => {
       };
 
       const res = await api.post("/api/payment/updatepayout", payload);
-      // success message shown from response if available
       toast.success?.(res?.data?.message ?? "Payout updated successfully");
       onSuccess?.();
     } catch (err) {
@@ -66,37 +67,15 @@ const PayoutModal = ({ open, onClose, payoutIds = [], onSuccess }) => {
 
   return (
     <>
-      {/* backdrop */}
-      {/* <div
-        className="fixed inset-0 bg-black/40 z-50"
-        onClick={() => {
-          if (!submitting) onClose();
+      <Modal
+        isOpen={!!open}
+        onClose={() => {
+          if (!submitting) onClose?.();
         }}
-      /> */}
-
-      {/* modal */}
-      <div className="fixed inset-0 z-60 flex items-center justify-center pointer-events-none">
-        <div
-          className="pointer-events-auto w-full max-w-lg bg-white rounded-lg shadow-lg p-6 mx-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="flex items-start justify-between">
-            <h3 className="text-lg font-semibold text-gray-800">
-              Confirm Payout
-            </h3>
-            <button
-              onClick={() => {
-                if (!submitting) onClose();
-              }}
-              className="text-gray-500 hover:text-gray-700 ml-3"
-              aria-label="Close"
-            >
-              ✕
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        title="Confirm Payout"
+      >
+        <div className="p-2">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs text-gray-600">
                 Selected Payout IDs
@@ -122,59 +101,47 @@ const PayoutModal = ({ open, onClose, payoutIds = [], onSuccess }) => {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Status
-              </label>
-              <select
+              <FormSelect
+                label="Status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="mt-2 block w-full border rounded px-3 py-2 text-sm"
-              >
-                <option value="approved">approved</option>
-                <option value="rejected">rejected</option>
-                <option value="paid">paid</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Admin Notes <span className="text-rose-500">*</span>
-              </label>
-              <textarea
-                required
-                value={adminNotes}
-                onChange={(e) => setAdminNotes(e.target.value)}
-                className="mt-2 block w-full border rounded px-3 py-2 text-sm min-h-[100px]"
-                placeholder="Enter admin notes (required)"
-                disabled={submitting}
+                options={[
+                  { value: "approved", label: "approved" },
+                  { value: "rejected", label: "rejected" },
+                  { value: "paid", label: "paid" },
+                ]}
               />
             </div>
 
-            <div className="flex items-center justify-end space-x-3">
-              <button
+            <div>
+              <FormTextarea
+                label="Admin Notes"
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+                disabled={submitting}
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
                 type="button"
+                variant="Ghost"
                 onClick={() => {
-                  if (!submitting) onClose();
+                  if (!submitting) onClose?.();
                 }}
-                className="px-3 py-2 rounded border text-sm"
                 disabled={submitting}
               >
                 Cancel
-              </button>
-
-              <button
-                type="submit"
-                className="px-4 py-2 bg-amber-600 text-white rounded text-sm"
-                disabled={submitting}
-              >
+              </Button>
+              <Button type="submit" disabled={submitting}>
                 {submitting ? "Submitting..." : `Confirm (${localIds.length})`}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
-      </div>
+      </Modal>
 
-      {/* show spinner overlay while submitting */}
       {submitting && <LoadingSpinner />}
     </>
   );

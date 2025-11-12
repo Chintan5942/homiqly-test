@@ -269,7 +269,7 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
   };
 
   const changePassword = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); 
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error("Passwords do not match");

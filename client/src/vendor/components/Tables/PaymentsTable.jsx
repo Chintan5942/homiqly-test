@@ -5,6 +5,7 @@ import DataTable from "../../../shared/components/Table/DataTable";
 import { formatDate } from "../../../shared/utils/dateUtils";
 import IconButton from "../../../shared/components/Button/IconButton";
 import { Eye } from "lucide-react";
+import StatusBadge from "../../../shared/components/StatusBadge";
 
 const PaymentsTable = ({
   bookings = [],
@@ -90,9 +91,7 @@ const PaymentsTable = ({
       key: "user",
       render: (row) => (
         <div>
-          <div className="">
-            {row.user_name ?? row.user_email ?? "N/A"}
-          </div>
+          <div className="">{row.user_name ?? row.user_email ?? "N/A"}</div>
           {row.user_email && (
             <div className="text-sm text-gray-500">{row.user_email}</div>
           )}
@@ -126,40 +125,7 @@ const PaymentsTable = ({
     {
       title: "Status",
       key: "payout_status",
-      render: (row) => {
-        const status = (row.payout_status || "").toLowerCase();
-        let label = "Other";
-        let color = "bg-gray-100 text-gray-700";
-
-        if (status === "hold") {
-          label = "Hold";
-          color = "bg-yellow-100 text-yellow-800";
-        } else if (status === "pending") {
-          label = "Pending";
-          color = "bg-yellow-100 text-yellow-800";
-        } else if (status === "paid") {
-          label = "Paid";
-          color = "bg-blue-100 text-blue-800";
-        } else if (status === "completed") {
-          label = "Completed";
-          color = "bg-green-100 text-green-800";
-        } else if (
-          status === "rejected" ||
-          status === "cancelled" ||
-          status === "canceled"
-        ) {
-          label = status.charAt(0).toUpperCase() + status.slice(1);
-          color = "bg-red-100 text-red-800";
-        }
-
-        return (
-          <span
-            className={`px-2 py-1 rounded-full text-xs  ${color}`}
-          >
-            {label}
-          </span>
-        );
-      },
+      render: (row) => <StatusBadge status={row.payout_status} />,
     },
     {
       title: "Actions",
