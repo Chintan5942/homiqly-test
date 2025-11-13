@@ -25,7 +25,7 @@ const PaymentDetails = () => {
 
   useEffect(() => {
     // Only fetch when we DON'T have an initial payment from location.state
-    if (!payment) {
+    if (payment) {
       fetchPayment();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,7 +106,7 @@ const PaymentDetails = () => {
   const amount = formatCurrency(numericAmount, currencyCode);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
+    <div className="max-w-7xl mx-auto px-4 py-6">
       <Breadcrumb
         links={[
           { label: "Admin", to: "/admin" },
@@ -229,7 +229,7 @@ const PaymentDetails = () => {
       {/* Two-column detail area */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Invoice / Service */}
-        <div className="bg-white rounded-lg shadow border p-6">
+        <div className="bg-white rounded-lg shadow border p-6 h-fit">
           <div className="flex items-start gap-4">
             <img
               src={
@@ -247,7 +247,7 @@ const PaymentDetails = () => {
                     {payment.serviceName || payment.service_name || "—"}
                   </h3>
                   <p className="text-sm text-gray-500 mt-1">
-                    {payment.totalTime || "—"}{" "}
+                    {payment.totalTime || ""}{" "}
                     {payment.package_id
                       ? `• Package #${payment.package_id}`
                       : ""}
@@ -261,9 +261,9 @@ const PaymentDetails = () => {
                       currencyCode
                     )}
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">
+                  {/* <div className="text-xs text-gray-400 mt-1">
                     {currencyCode}
-                  </div>
+                  </div> */}
                 </div>
               </div>
 

@@ -57,8 +57,16 @@ const SupportForm = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className=" space-y-8">
+      <div className="flex flex-col space-y-2">
+        <h2 className="text-2xl font-bold text-gray-800">Support Form</h2>
+        <p className="text-gray-600">
+          Submit a support ticket and we will get back to you as soon as
+          possible.
+        </p>
+      </div>
       {/* Support Form */}
+
       <form
         onSubmit={handleSubmit}
         className="max-w-lg mx-auto space-y-4"

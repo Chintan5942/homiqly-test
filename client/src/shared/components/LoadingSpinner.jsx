@@ -10,7 +10,7 @@ import { Loader } from "lucide-react";
  */
 const LoadingSpinner = ({
   loading = true,
-  fullscreen = true,
+  fullscreen = false,
   minVisibleMs = 1500,
   fadeMs = 700,
 }) => {
@@ -90,7 +90,7 @@ const LoadingSpinner = ({
         role="status"
         aria-live="polite"
         className={`${
-          fullscreen ? "fixed inset-0 z-50" : "w-full"
+          fullscreen ? "fixed inset-0 z-50" : "w-full min-h-96"
         } flex items-center justify-center bg-white/70 backdrop-blur-md pointer-events-auto ${overlayClass}`}
         style={{ transition: `opacity ${fadeMs}ms ease` }}
       >

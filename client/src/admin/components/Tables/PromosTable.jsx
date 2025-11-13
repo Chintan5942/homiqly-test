@@ -77,15 +77,15 @@ const PromosTable = ({ promos = [], isLoading = false, onEdit, onDelete }) => {
         </div>
       ),
     },
-    {
-      title: "Description",
-      key: "description",
-      render: (row) => (
-        <div className="text-sm text-gray-700">
-          {row.description ? row.description : "-"}
-        </div>
-      ),
-    },
+    // {
+    //   title: "Description",
+    //   key: "description",
+    //   render: (row) => (
+    //     <div className="text-sm text-gray-700">
+    //       {row.description ? row.description : "-"}
+    //     </div>
+    //   ),
+    // },
     {
       title: "Actions",
       align: "right",

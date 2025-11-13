@@ -8,6 +8,7 @@ import PromosTable from "../../components/Tables/PromosTable";
 import FormSelect from "../../../shared/components/Form/FormSelect";
 import UniversalDeleteModal from "../../../shared/components/Modal/UniversalDeleteModal";
 import api from "../../../lib/axiosConfig";
+import LoadingSlider from "../../../shared/components/LoadingSpinner"
 
 /**
  * AdminPromoManager (JSX)
@@ -294,254 +295,239 @@ export default function AdminPromoManager() {
     : "Are you sure you want to delete this promo code?";
 
   return (
-    <div className="p-6 bg-slate-50 min-h-screen">
-      <div className="">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold">Promotions Manager</h1>
-
-          <div className="flex items-center gap-4">
-            <FormInput
-              className="w-64"
-              placeholder="Search code or value..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <Button onClick={openCreateModal} className="w-52">
-              + Add Promo
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-sm">Auto-assign welcome code</label>
-            <button
-              onClick={toggleAutoEnable}
-              disabled={autoLoading}
-              className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none ${
-                autoEnabled ? "bg-emerald-500" : "bg-gray-300"
-              }`}
-              aria-pressed={autoEnabled}
-              title={
-                autoLoading
-                  ? "Updating..."
-                  : autoEnabled
-                  ? "Auto-assign is enabled"
-                  : "Auto-assign is disabled"
-              }
-              type="button"
-            >
-              <span
-                className={`transform transition-transform inline-block h-5 w-5 rounded-full bg-white shadow ${
-                  autoEnabled ? "translate-x-5" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold">Promotions Manager</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <FormInput
+            className="w-64"
+            placeholder="Search code or value..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <Button onClick={openCreateModal} className="w-52">
+            + Add Promo
+          </Button>
         </div>
 
-        {/* Loading / Empty / Table conditional rendering */}
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-300 border-t-transparent" />
-            <span className="ml-3 text-gray-600">Loading promos...</span>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center text-gray-700">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-16 w-16 opacity-70"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M8 7V5a4 4 0 018 0v2"
-              />
-            </svg>
-            <h2 className="mt-4 text-lg font-medium">No promos yet</h2>
-            <p className="mt-2 text-sm text-gray-500 max-w-md">
-              You haven't created any promo codes. Create a promo to get started — you
-              can also enable auto-assign welcome codes.
-            </p>
-            <div className="mt-6 flex gap-3">
-              <Button onClick={openCreateModal}>Create Promo</Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  fetchPromos();
-                }}
-                className="px-4 py-2"
-              >
-                Refresh
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <PromosTable
-            promos={filtered}
-            isLoading={loading}
-            onEdit={openEditModal}
-            onDelete={handleDeleteClick}
-          />
-        )}
-
-        <Modal
-          size="lg"
-          isOpen={modalOpen}
-          onClose={closeModal}
-          title={isEditing ? "View / Edit Promo" : "Create Promo"}
-        >
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <FormSelect
-                  name="source_type"
-                  label="Source Type"
-                  value={form.source_type}
-                  onChange={handleChange}
-                  options={[
-                    { label: "Admin", value: "admin" },
-                    { label: "System", value: "system" },
-                  ]}
-                />
-              </div>
-
-              <div>
-                <FormSelect
-                  name="discount_type"
-                  label="Discount Type?"
-                  value={form.discount_type}
-                  onChange={handleChange}
-                  options={[
-                    { label: "Percentage", value: "percentage" },
-                    { label: "Fixed", value: "fixed" },
-                  ]}
-                  placeholder="Select option"
-                />
-              </div>
-
-              <FormInput
-                name="code"
-                value={form.code}
-                onChange={handleChange}
-                placeholder="Code"
-                label="Code"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormInput
-                type="number"
-                name="discount_value"
-                value={form.discount_value}
-                onChange={handleChange}
-                placeholder="Discount (e.g. 'upto 30' or '10%')"
-                label="Discount (e.g. 'upto 30' or '10%')"
-              />
-              <FormInput
-                name="minSpend"
-                type="number"
-                value={form.minSpend}
-                onChange={handleChange}
-                placeholder="Min Spend"
-                label="Min Spend"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormInput
-                name="maxUse"
-                type="number"
-                value={form.maxUse}
-                onChange={handleChange}
-                placeholder="Max Uses"
-                label="Max Uses"
-              />
-              {form.source_type === "admin" ? (
-                <>
-                  <FormInput
-                    name="start_date"
-                    type="datetime-local"
-                    value={form.start_date}
-                    onChange={handleChange}
-                    placeholder="Start Date"
-                    label="Start Date"
-                  />
-                  <FormInput
-                    name="end_date"
-                    type="datetime-local"
-                    value={form.end_date}
-                    onChange={handleChange}
-                    placeholder="End Date"
-                    label="End Date"
-                  />
-                </>
-              ) : (
-                <>
-                  <div />
-                  <div />
-                </>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              {form.source_type === "admin" && (
-                <FormInput
-                  name="requiredBookings"
-                  type="number"
-                  value={form.requiredBookings}
-                  onChange={handleChange}
-                  placeholder="Required Bookings"
-                  label="Required Bookings"
-                />
-              )}
-
-              <FormInput
-                name="description"
-                type="text"
-                value={form.description}
-                onChange={handleChange}
-                placeholder="Description"
-                label="Description"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 mt-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={closeModal}
-                className="px-4 py-2 border rounded-md"
-              >
-                Cancel
-              </Button>
-              <Button type="submit">{isEditing ? "Save Changes" : "Create Promo"}</Button>
-            </div>
-          </form>
-        </Modal>
-
-        {/* Universal delete modal */}
-        <UniversalDeleteModal
-          open={showDeleteModal}
-          onClose={() => {
-            if (!deleting) {
-              setShowDeleteModal(false);
-              setDeleteAction(null);
-              setDeletingPromo(null);
+        <div className="flex items-center gap-2">
+          <label className="text-sm">Auto-assign welcome code</label>
+          <button
+            onClick={toggleAutoEnable}
+            disabled={autoLoading}
+            className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none ${
+              autoEnabled ? "bg-emerald-500" : "bg-gray-300"
+            }`}
+            aria-pressed={autoEnabled}
+            title={
+              autoLoading
+                ? "Updating..."
+                : autoEnabled
+                ? "Auto-assign is enabled"
+                : "Auto-assign is disabled"
             }
-          }}
-          onDelete={deleteAction}
-          title="Delete Promo"
-          desc={deleteDesc}
-          confirmLabel="Delete"
-          cancelLabel="Cancel"
-          onError={(err) => {
-            toast.error(err?.message || "Delete failed");
-          }}
-        />
+            type="button"
+          >
+            <span
+              className={`transform transition-transform inline-block h-5 w-5 rounded-full bg-white shadow ${
+                autoEnabled ? "translate-x-5" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
       </div>
+
+      {/* Loading / Empty / Table conditional rendering */}
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <LoadingSlider />
+          <span className="ml-3 text-gray-600">Loading promos...</span>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center text-gray-700">
+          <h2 className="mt-4 text-lg font-medium">No promos yet</h2>
+          <p className="mt-2 text-sm text-gray-500 max-w-md">
+            You haven't created any promo codes. Create a promo to get started —
+            you can also enable auto-assign welcome codes.
+          </p>
+          <div className="mt-6 flex gap-3">
+            <Button onClick={openCreateModal}>Create Promo</Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                fetchPromos();
+              }}
+              className="px-4 py-2"
+            >
+              Refresh
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <PromosTable
+          promos={filtered}
+          isLoading={loading}
+          onEdit={openEditModal}
+          onDelete={handleDeleteClick}
+        />
+      )}
+
+      <Modal
+        size="lg"
+        isOpen={modalOpen}
+        onClose={closeModal}
+        title={isEditing ? "View / Edit Promo" : "Create Promo"}
+      >
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <FormSelect
+                name="source_type"
+                label="Source Type"
+                value={form.source_type}
+                onChange={handleChange}
+                options={[
+                  { label: "Admin", value: "admin" },
+                  { label: "System", value: "system" },
+                ]}
+              />
+            </div>
+
+            <div>
+              <FormSelect
+                name="discount_type"
+                label="Discount Type?"
+                value={form.discount_type}
+                onChange={handleChange}
+                options={[
+                  { label: "Percentage", value: "percentage" },
+                  { label: "Fixed", value: "fixed" },
+                ]}
+                placeholder="Select option"
+              />
+            </div>
+
+            <FormInput
+              name="code"
+              value={form.code}
+              onChange={handleChange}
+              placeholder="Code"
+              label="Code"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormInput
+              type="number"
+              name="discount_value"
+              value={form.discount_value}
+              onChange={handleChange}
+              placeholder="Discount (e.g. 'upto 30' or '10%')"
+              label="Discount (e.g. 'upto 30' or '10%')"
+            />
+            <FormInput
+              name="minSpend"
+              type="number"
+              value={form.minSpend}
+              onChange={handleChange}
+              placeholder="Min Spend"
+              label="Min Spend"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormInput
+              name="maxUse"
+              type="number"
+              value={form.maxUse}
+              onChange={handleChange}
+              placeholder="Max Uses"
+              label="Max Uses"
+            />
+            {form.source_type === "admin" ? (
+              <>
+                <FormInput
+                  name="start_date"
+                  type="datetime-local"
+                  value={form.start_date}
+                  onChange={handleChange}
+                  placeholder="Start Date"
+                  label="Start Date"
+                />
+                <FormInput
+                  name="end_date"
+                  type="datetime-local"
+                  value={form.end_date}
+                  onChange={handleChange}
+                  placeholder="End Date"
+                  label="End Date"
+                />
+              </>
+            ) : (
+              <>
+                <div />
+                <div />
+              </>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {form.source_type === "admin" && (
+              <FormInput
+                name="requiredBookings"
+                type="number"
+                value={form.requiredBookings}
+                onChange={handleChange}
+                placeholder="Required Bookings"
+                label="Required Bookings"
+              />
+            )}
+
+            <FormInput
+              name="description"
+              type="text"
+              value={form.description}
+              onChange={handleChange}
+              placeholder="Description"
+              label="Description"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 mt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={closeModal}
+              className="px-4 py-2 border rounded-md"
+            >
+              Cancel
+            </Button>
+            <Button type="submit">
+              {isEditing ? "Save Changes" : "Create Promo"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Universal delete modal */}
+      <UniversalDeleteModal
+        open={showDeleteModal}
+        onClose={() => {
+          if (!deleting) {
+            setShowDeleteModal(false);
+            setDeleteAction(null);
+            setDeletingPromo(null);
+          }
+        }}
+        onDelete={deleteAction}
+        title="Delete Promo"
+        desc={deleteDesc}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onError={(err) => {
+          toast.error(err?.message || "Delete failed");
+        }}
+      />
     </div>
   );
 }

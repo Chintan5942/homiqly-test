@@ -15,8 +15,9 @@ import {
   Pencil,
 } from "lucide-react";
 import ProfileServicesOffered from "./components/ProfileServicesOffered";
-
+import { useVendorAuth } from "../contexts/VendorAuthContext";
 const Profile = () => {
+  const { currentUser } = useVendorAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
@@ -24,7 +25,7 @@ const Profile = () => {
 
   useEffect(() => {
     fetchVendorProfile();
-  }, []);
+  }, [currentUser]);
 
   const fetchVendorProfile = async () => {
     try {

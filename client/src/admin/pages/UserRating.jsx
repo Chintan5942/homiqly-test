@@ -94,7 +94,7 @@ const UserRating = () => {
   return (
     <div>
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
-        Package Ratings & Reviews
+        User Bookings Ratings & Reviews
       </h2>
 
       {/* Summary */}

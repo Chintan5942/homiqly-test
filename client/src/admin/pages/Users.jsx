@@ -246,7 +246,7 @@ const Users = () => {
     : "Are you sure you want to delete this user?";
 
   return (
-    <div className="p-4">
+    <div className="">
       <h2 className="text-2xl font-bold text-gray-800">
         Admin User Management
       </h2>

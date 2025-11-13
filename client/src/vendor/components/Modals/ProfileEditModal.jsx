@@ -130,41 +130,43 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
 
   // Function to delete police clearance
   const deletePoliceClearance = () => {
-    setCertificatesToDelete(prev => ({
+    setCertificatesToDelete((prev) => ({
       ...prev,
-      policeClearance: true
+      policeClearance: true,
     }));
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      policeClearance: null
+      policeClearance: null,
     }));
     toast.info("Police clearance marked for removal. Save changes to confirm.");
   };
 
   // Function to delete certificate of expertise
   const deleteCertificateOfExpertise = () => {
-    setCertificatesToDelete(prev => ({
+    setCertificatesToDelete((prev) => ({
       ...prev,
-      certificateOfExpertise: true
+      certificateOfExpertise: true,
     }));
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       certificateOfExpertise: null,
-      certificateOfExpertiseExpireDate: ""
+      certificateOfExpertiseExpireDate: "",
     }));
-    toast.info("Certificate of expertise marked for removal. Save changes to confirm.");
+    toast.info(
+      "Certificate of expertise marked for removal. Save changes to confirm."
+    );
   };
 
   // Function to delete business license
   const deleteBusinessLicense = () => {
-    setCertificatesToDelete(prev => ({
+    setCertificatesToDelete((prev) => ({
       ...prev,
-      businessLicense: true
+      businessLicense: true,
     }));
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       businessLicense: null,
-      businessLicenseExpireDate: ""
+      businessLicenseExpireDate: "",
     }));
     toast.info("Business license marked for removal. Save changes to confirm.");
   };
@@ -195,9 +197,14 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
         if (value !== null && value !== "") {
           // Don't append certificate files that are marked for deletion
           if (
-            !(key === 'policeClearance' && certificatesToDelete.policeClearance) &&
-            !(key === 'certificateOfExpertise' && certificatesToDelete.certificateOfExpertise) &&
-            !(key === 'businessLicense' && certificatesToDelete.businessLicense)
+            !(
+              key === "policeClearance" && certificatesToDelete.policeClearance
+            ) &&
+            !(
+              key === "certificateOfExpertise" &&
+              certificatesToDelete.certificateOfExpertise
+            ) &&
+            !(key === "businessLicense" && certificatesToDelete.businessLicense)
           ) {
             data.append(key, value);
           }
@@ -209,13 +216,13 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
         data.append("policeClearance", "");
         toast.success("Police clearance deleted successfully");
       }
-      
+
       if (certificatesToDelete.certificateOfExpertise) {
         data.append("certificateOfExpertise", "");
         data.append("certificateOfExpertiseExpireDate", "");
         toast.success("Certificate of expertise deleted successfully");
       }
-      
+
       if (certificatesToDelete.businessLicense) {
         data.append("businessLicense", "");
         data.append("businessLicenseExpireDate", "");
@@ -233,30 +240,28 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
 
       if (response.status === 200) {
         toast.success("Profile updated successfully");
-        
+
         // Reset deletion tracking after successful update
         setCertificatesToDelete({
           policeClearance: false,
           certificateOfExpertise: false,
           businessLicense: false,
         });
-        
+
         onProfileUpdate();
       }
 
-      const updatedUser = {
-        ...(currentUser || {}),
-        name: formData.name,
-        email: formData.email,
-      };
+      const vendorData =
+        JSON.parse(localStorage.getItem("vendorData")) ||
+        JSON.parse(sessionStorage.getItem("vendorData"));
 
-      if (typeof setCurrentUser === "function") {
-        setCurrentUser(updatedUser);
-      }
+      vendorData.name = formData.name;
 
       try {
-        localStorage.setItem("vendorData", JSON.stringify(formData)) ||
-          sessionStorage.setItem("vendorData", JSON.stringify(formData));
+        localStorage.setItem("vendorData", JSON.stringify(vendorData)) ||
+          sessionStorage.setItem("vendorData", JSON.stringify(vendorData));
+
+        setCurrentUser(vendorData);
       } catch (err) {
         console.warn("Failed to write vendorData to localStorage", err);
       }
@@ -269,7 +274,7 @@ const ProfileEditModal = ({ isOpen, onClose, profile, onProfileUpdate }) => {
   };
 
   const changePassword = async (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error("Passwords do not match");

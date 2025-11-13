@@ -547,8 +547,8 @@ export default function Packages() {
     );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-7xl ">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">All Packages</h2>
           <p className="mt-1 text-sm text-gray-600">
@@ -557,7 +557,7 @@ export default function Packages() {
         </div>
       </div>
 
-      <div className="flex flex-col justify-between sm:flex-row gap-4 items-center mb-8">
+      <div className="flex flex-col justify-between sm:flex-row gap-4 items-center mb-6">
         <FormInput
           className="w-full sm:w-1/3"
           type="text"
@@ -587,7 +587,7 @@ export default function Packages() {
         </div>
       </div>
 
-      <div className="space-y-10">
+      <div className="space-y-10 p-4">
         {Object.entries(displayPackages).map(([catName, services]) => (
           <section key={catName}>
             <div className="flex items-center justify-between mb-4">

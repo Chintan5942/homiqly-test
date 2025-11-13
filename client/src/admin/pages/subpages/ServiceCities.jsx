@@ -144,7 +144,7 @@ const ServiceCities = () => {
 
   return (
     <div className="max-w-3xl mx-auto mt-12 p-6 bg-white shadow rounded-lg border border-gray-200">
-      <h2 className="text-2xl font-bold mb-1">🏙️ Service Cities</h2>
+      <h2 className="text-2xl font-bold mb-1">Service Cities</h2>
       <p className="text-sm text-gray-500 mb-6">
         Add a city and manage the list used across the platform.
       </p>
@@ -170,10 +170,10 @@ const ServiceCities = () => {
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <p className="text-sm text-gray-600">
+        {/* <p className="text-sm text-gray-600">
           Total:{" "}
           <span className="font-medium text-gray-900">{cities.length}</span>
-        </p>
+        </p> */}
         <input
           type="text"
           placeholder="Search city…"

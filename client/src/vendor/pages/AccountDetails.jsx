@@ -183,7 +183,7 @@ const AccountDetails = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="mx-auto">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Payment Settings</h1>
@@ -192,32 +192,34 @@ const AccountDetails = () => {
           </p>
         </div>
 
-        <Card className="border-0 shadow-lg">
-          <div className="p-6 space-y-8">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <BanknoteIcon className="w-6 h-6 text-blue-600" />
+        {loading ? (
+          <LoadingSpinner />
+        ) : (
+          <Card className="border-0 shadow-lg">
+            <div className="p-6 space-y-8">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <BanknoteIcon className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Bank Account Details
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                      {account
+                        ? "Your bank account is verified and ready for payouts."
+                        : "Add your bank details to start receiving payments."}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Bank Account Details
-                  </h2>
-                  <p className="text-sm text-gray-600">
-                    {account
-                      ? "Your bank account is verified and ready for payouts."
-                      : "Add your bank details to start receiving payments."}
-                  </p>
-                </div>
+                {account && !editing && (
+                  <Button variant="lightBlack" onClick={() => setEditing(true)}>
+                    Edit Details
+                  </Button>
+                )}
               </div>
-              {account && !editing && (
-                <Button variant="lightBlack" onClick={() => setEditing(true)}>Edit Details</Button>
-              )}
-            </div>
 
-            {loading ? (
-              <LoadingSpinner />
-            ) : (
               <>
                 <section className="space-y-4">
                   <div className="flex items-center mb-2 space-x-2">
@@ -226,7 +228,7 @@ const AccountDetails = () => {
                       Bank Information
                     </h3>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                     <FormInput
                       label="Account Holder Name"
                       type="text"
@@ -303,17 +305,19 @@ const AccountDetails = () => {
                       Contact Information
                     </h3>
                   </div>
-                  <FormInput
-                    label="Email Address"
-                    type="email"
-                    name="email"
-                    value={formData.email || ""}
-                    onChange={handleChange}
-                    disabled={!editing}
-                    placeholder="vendor@example.com"
-                    className="w-full max-w-md"
-                    autoComplete="email"
-                  />
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                    <FormInput
+                      label="Email Address"
+                      type="email"
+                      name="email"
+                      value={formData.email || ""}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      placeholder="vendor@example.com"
+                      className="w-full"
+                      autoComplete="email"
+                    />
+                  </div>
                 </section>
 
                 <section className="space-y-4">
@@ -326,7 +330,7 @@ const AccountDetails = () => {
                     </h3>
                   </div>
                   {vendorType === "individual" ? (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                       <FormInput
                         label="Full Legal Name"
                         type="text"
@@ -359,35 +363,37 @@ const AccountDetails = () => {
                   )}
                 </section>
 
-                <section className="space-y-4">
+                <section className="space-y-4 ">
                   <div className="flex items-center mb-2 space-x-2">
                     <Shield className="w-5 h-5 text-gray-600" />
                     <h3 className="text-lg font-semibold text-gray-900">
                       Identity Verification
                     </h3>
                   </div>
-                  <FormFileInput
-                    label="Government ID (Upload)"
-                    name="government_id"
-                    onChange={handleFileChange}
-                    disabled={!editing}
-                    accept=".jpg,.jpeg,.png,.pdf"
-                  />
-                  {formData.government_id && !governmentIdFile && (
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                    <FormFileInput
+                      label="Government ID (Upload)"
+                      name="government_id"
+                      onChange={handleFileChange}
+                      disabled={!editing}
+                      accept=".jpg,.jpeg,.png,.pdf"
+                    />
+                    {/* {formData.government_id && !governmentIdFile && (
                     <p className="text-gray-600 text-xs">
                       Current file: {formData.government_id.split("/").pop()}
                     </p>
-                  )}
-                  {formData.government_id && (
-                    <a
-                      href={formData.government_id}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-500 underline text-xs"
-                    >
-                      View Government ID
-                    </a>
-                  )}
+                  )} */}
+                    {formData.government_id && (
+                      <a
+                        href={formData.government_id}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-500 underline text-xs flex items-center"
+                      >
+                        View Government ID
+                      </a>
+                    )}
+                  </div>
                 </section>
 
                 <section className="space-y-4">
@@ -397,40 +403,42 @@ const AccountDetails = () => {
                       Transfer Preferences
                     </h3>
                   </div>
-                  <FormSelect
-                    label="Preferred Transfer Type"
-                    name="preferred_transfer_type"
-                    value={formData.preferred_transfer_type}
-                    onChange={handleChange}
-                    disabled={!editing}
-                    options={[
-                      { value: "e_transfer", label: "e-Transfer" },
-                      // { value: "bank_transfer", label: "Bank Transfer" },
-                    ]}
-                  />
-                  {formData.preferred_transfer_type === "e_transfer" && (
-                    <div className="grid grid-cols-1 gap-4 p-4 rounded-lg bg-blue-50 md:grid-cols-2">
-                      <FormInput
-                        label="Interac Email"
-                        type="email"
-                        name="interac_email"
-                        value={formData.interac_email || ""}
-                        onChange={handleChange}
-                        disabled={!editing}
-                        placeholder="email@example.com"
-                      />
-                      <FormInput
-                        label="Interac Phone (Numbers Only)"
-                        type="tel"
-                        name="interac_phone"
-                        value={formData.interac_phone || ""}
-                        onChange={handleChange}
-                        disabled={!editing}
-                        placeholder="e.g. 4165551234"
-                        inputMode="numeric"
-                      />
-                    </div>
-                  )}
+                  <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-blue-50 md:grid-cols-3">
+                    <FormSelect
+                      label="Preferred Transfer Type"
+                      name="preferred_transfer_type"
+                      value={formData.preferred_transfer_type}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      options={[
+                        { value: "e_transfer", label: "e-Transfer" },
+                        // { value: "bank_transfer", label: "Bank Transfer" },
+                      ]}
+                    />
+                    {formData.preferred_transfer_type === "e_transfer" && (
+                      <>
+                        <FormInput
+                          label="Interac Email"
+                          type="email"
+                          name="interac_email"
+                          value={formData.interac_email || ""}
+                          onChange={handleChange}
+                          disabled={!editing}
+                          placeholder="email@example.com"
+                        />
+                        <FormInput
+                          label="Interac Phone (Numbers Only)"
+                          type="tel"
+                          name="interac_phone"
+                          value={formData.interac_phone || ""}
+                          onChange={handleChange}
+                          disabled={!editing}
+                          placeholder="e.g. 4165551234"
+                          inputMode="numeric"
+                        />
+                      </>
+                    )}
+                  </div>
                 </section>
 
                 {editing && (
@@ -459,9 +467,9 @@ const AccountDetails = () => {
                   </div>
                 )}
               </>
-            )}
-          </div>
-        </Card>
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -150,7 +150,7 @@ const Services = () => {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+      <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Apply for Services</h2>
 
         {/* Dropdown */}

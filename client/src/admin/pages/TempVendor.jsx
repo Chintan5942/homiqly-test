@@ -40,31 +40,31 @@ const TempVendor = () => {
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-6">Temporary Vendors</h2>
+    <div className="">
+      <h2 className="text-2xl font-bold mb-6">Temporary Vendors</h2>
 
       {loading ? (
         <p className="text-center text-gray-500">Loading vendors...</p>
       ) : vendors.length === 0 ? (
         <p className="text-center text-gray-500">No vendor data found.</p>
       ) : (
-        <div className="overflow-x-auto border rounded-lg shadow-md">
+        <div className="overflow-x-auto border rounded-lg shadow-md text-sm">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                <th className="px-4 py-1 text-left  text-gray-700">
                   Name
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                <th className="px-4 py-1 text-left  text-gray-700">
                   Email
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                <th className="px-4 py-1 text-left  text-gray-700">
                   Phone
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                <th className="px-4 py-1 text-left  text-gray-700">
                   Service Location
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                <th className="px-4 py-3 text-center  text-gray-700">
                   Action
                 </th>
               </tr>
@@ -72,11 +72,11 @@ const TempVendor = () => {
             <tbody className="divide-y divide-gray-200 bg-white">
               {vendors.map((vendor) => (
                 <tr key={vendor.vendor_id}>
-                  <td className="px-4 py-3">{vendor.name}</td>
-                  <td className="px-4 py-3">{vendor.email}</td>
-                  <td className="px-4 py-3">{vendor.phone}</td>
-                  <td className="px-4 py-3">{vendor.serviceLocation}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-1">{vendor.name}</td>
+                  <td className="px-4 py-1">{vendor.email}</td>
+                  <td className="px-4 py-1">{vendor.phone}</td>
+                  <td className="px-4 py-1">{vendor.serviceLocation}</td>
+                  <td className="px-4 py-1 text-center">
                     <button
                       onClick={() => setSelectedVendor(vendor)}
                       className="p-2 rounded-full hover:bg-blue-100 text-blue-600 transition"

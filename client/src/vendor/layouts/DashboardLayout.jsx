@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { IconButton } from "../../shared/components/Button";
+import Loader from "../../components/Loader";
 
 /* small clsx helper */
 const clsx = (...parts) => parts.filter(Boolean).join(" ");
@@ -143,18 +144,6 @@ const DashboardLayout = () => {
     [vendorType]
   );
 
-  const getPageTitle = () => {
-    const currentPath = location.pathname;
-
-    // Try to find menu item where currentPath starts with its path
-    const menuItem = menuItems.find(
-      (item) =>
-        currentPath === item.path || currentPath.startsWith(item.path + "/")
-    );
-
-    return menuItem ? menuItem.name : "Dashboard";
-  };
-
   // Toggle sidebar
   const toggleSidebar = () => setSidebarCollapsed((s) => !s);
 
@@ -171,22 +160,14 @@ const DashboardLayout = () => {
   //   [sidebarCollapsed]
   // );
 
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <Loader />;
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Mobile overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden"
-          onClick={closeMobileMenu}
-        />
-      )}
-
       {/* Sidebar */}
       <aside
         className={clsx(
-          "bg-background text-text-primary fixed inset-y-0 left-0 z-30 transform transition-all duration-300 ease-in-out lg:static lg:inset-0",
+          "bg-background text-text-primary fixed inset-y-0 left-0 z-30 transform transition-all duration-500 ease-in-out lg:static lg:inset-0",
           mobileMenuOpen
             ? "translate-x-0"
             : "-translate-x-full lg:translate-x-0"
@@ -197,22 +178,16 @@ const DashboardLayout = () => {
           {/* Header */}
           <div
             className={clsx(
-              "px-6 py-8 border-b border-white/10",
+              "px-6 py-4 border-b border-white/10 flex items-center justify-center",
               sidebarCollapsed && "px-4"
             )}
           >
-            <div
-              className={clsx(
-                "flex items-center",
-                sidebarCollapsed ? "justify-center" : "justify-between"
-              )}
-            >
-              {sidebarCollapsed ? null : (
-                <h2 className="text-2xl font-bold">Homiqly</h2>
-              )}
-            </div>
-            {!sidebarCollapsed && (
-              <p className="mt-2 text-sm opacity-80">Vendor Panel</p>
+            {sidebarCollapsed ? null : (
+              <img
+                src="/Homiqly-Professionals.png"
+                alt="Homiqly-Professional"
+              />
+              // <h2 className="text-2xl font-bold">Homiqly</h2>
             )}
           </div>
 
@@ -246,14 +221,13 @@ const DashboardLayout = () => {
               <IconButton
                 icon={<MenuIcon />}
                 onClick={toggleSidebar}
-                className="hidden p-2 text-gray-500 rounded-md lg:block hover:text-gray-700 focus:outline-none hover:bg-gray-100"
                 aria-label={
                   sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
                 }
-              ></IconButton>
+              />
 
               {/* Mobile menu toggle */}
-              <button
+              {/* <button
                 onClick={() => setMobileMenuOpen((s) => !s)}
                 className="text-gray-500 lg:hidden hover:text-gray-700 focus:outline-none"
                 aria-label="Toggle menu"
@@ -263,11 +237,7 @@ const DashboardLayout = () => {
                 ) : (
                   <MenuIcon className="w-6 h-6" />
                 )}
-              </button>
-
-              <h1 className="ml-4 text-xl font-semibold text-gray-800">
-                {getPageTitle()}
-              </h1>
+              </button> */}
             </div>
 
             <div className="flex items-center space-x-4">

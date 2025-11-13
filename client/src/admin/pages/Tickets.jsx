@@ -55,7 +55,7 @@ const Tickets = () => {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold mb-1">Support Tickets</h1>
-        <p className="text-gray-600">Manage customer support queries here.</p>
+        <p className="text-gray-600 text-sm">Manage customer support queries here.</p>
       </div>
 
       <TicketsTable

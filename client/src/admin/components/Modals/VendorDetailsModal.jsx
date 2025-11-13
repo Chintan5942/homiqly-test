@@ -7,11 +7,6 @@ import api from "../../../lib/axiosConfig";
 import { Trash } from "lucide-react";
 import { toast } from "sonner";
 
-// Optimized Vendor Details modal
-// - Removed all complex fallback chains for item fields (we use the exact keys you provide)
-// - Added missing individual fields (expertise, aboutMe, otherInfo)
-// - Kept all company-related functionality untouched
-
 export default function VendorDetailsModal({
   refresh,
   isOpen,
@@ -29,7 +24,7 @@ export default function VendorDetailsModal({
 
   const getVendorEmail = () =>
     vendor.vendorType === "individual"
-      ? vendor.individual_email 
+      ? vendor.individual_email
       : vendor.company_companyEmail;
 
   const getVendorPhone = () =>
@@ -37,8 +32,7 @@ export default function VendorDetailsModal({
       ? vendor.individual_phone
       : vendor.company_companyPhone;
 
-  const initialStatus =
-    typeof vendor.status !== "undefined" ? vendor.status : null;
+  const initialStatus = typeof vendor.status !== "undefined" ? vendor.status : null;
 
   const [localStatus, setLocalStatus] = useState(initialStatus);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -59,8 +53,7 @@ export default function VendorDetailsModal({
   }, [vendor?.services]);
 
   useEffect(() => {
-    const newStatus =
-      typeof vendor.status !== "undefined" ? vendor.status : null;
+    const newStatus = typeof vendor.status !== "undefined" ? vendor.status : null;
     setLocalStatus(newStatus);
   }, [vendor]);
 
@@ -76,7 +69,6 @@ export default function VendorDetailsModal({
       setShowNoteModal(false);
       setNoteText("");
       setPendingValue(null);
-      // optionally refresh parent list
       refresh && refresh();
       toast.success(data?.message || "Vendor status updated");
     } catch (err) {
@@ -89,11 +81,9 @@ export default function VendorDetailsModal({
 
   const handleToggleClick = () => {
     if (localStatus === 1) {
-      // turning OFF — ask for optional note
       setPendingValue(0);
       setShowNoteModal(true);
     } else {
-      // turn ON immediately
       updateVendorStatus(1);
     }
   };
@@ -126,19 +116,12 @@ export default function VendorDetailsModal({
     }
   };
 
-  /**
-   * Core delete routine (unchanged behavior)
-   * Accepts vendor_packages_id (or package item id your backend expects)
-   */
   const handleDeleteService = async (vendor_packages_id) => {
     if (!vendor_packages_id) return;
 
-    // keep snapshot for rollback
     const prevServices = JSON.parse(JSON.stringify(localServices));
 
-    // produce updated services: remove the package item from whichever service contains it
     const updatedServices = localServices.map((svc) => {
-      // if packages is not array, return as is
       if (!Array.isArray(svc.packages)) return svc;
       const newPackages = svc.packages
         .map((pkg) => {
@@ -148,29 +131,19 @@ export default function VendorDetailsModal({
           );
           return { ...pkg, items: filteredItems };
         })
-        // remove packages with zero items (optional behaviour but safe)
-        .filter((pkg) =>
-          Array.isArray(pkg.items) ? pkg.items.length > 0 : true
-        );
+        .filter((pkg) => (Array.isArray(pkg.items) ? pkg.items.length > 0 : true));
 
       return { ...svc, packages: newPackages };
     });
 
-    // apply optimistic update
     setLocalServices(updatedServices);
 
     try {
-      const response = await api.delete(
-        `/api/admin/removepackage/${vendor_packages_id}`
-      );
-      toast.success(
-        response.data?.message || "Vendor package removed successfully by admin"
-      );
-      // optionally call refresh for parent lists
+      const response = await api.delete(`/api/admin/removepackage/${vendor_packages_id}`);
+      toast.success(response.data?.message || "Vendor package removed successfully by admin");
       refresh && refresh();
       return { success: true };
     } catch (err) {
-      // rollback on error
       console.error("Failed to delete service", err);
       setLocalServices(prevServices);
       toast.error("Failed to delete service");
@@ -178,9 +151,6 @@ export default function VendorDetailsModal({
     }
   };
 
-  /**
-   * Called when user clicks the trash icon: show the Unified Delete Modal
-   */
   const openDeleteModal = (vendor_packages_id, itemName) => {
     setDeletingItem(vendor_packages_id);
     setDeleteDesc(
@@ -191,9 +161,6 @@ export default function VendorDetailsModal({
     setShowDeleteModal(true);
   };
 
-  /**
-   * Confirmed delete from modal
-   */
   const confirmDelete = async () => {
     if (!deletingItem) {
       setShowDeleteModal(false);
@@ -201,13 +168,11 @@ export default function VendorDetailsModal({
     }
     try {
       setDeleting(true);
-      // call the same delete routine
       await handleDeleteService(deletingItem);
       setShowDeleteModal(false);
       setDeletingItem(null);
     } catch (err) {
       console.error("Confirm delete error:", err);
-      // showDeleteModal remains open (modal prop onError can also be used)
       toast.error("Error deleting item");
     } finally {
       setDeleting(false);
@@ -218,403 +183,230 @@ export default function VendorDetailsModal({
     updateVendorStatus(pendingValue === null ? 0 : pendingValue, noteText);
   };
 
+  // --- UI ---
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title="Vendor Details" size="lg">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-4 p-6">
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="text-xs font-semibold text-gray-500 mb-1">
-                Vendor ID
-              </h4>
-              <p className="text-sm text-gray-900">#{vendor.vendor_id}</p>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-semibold text-gray-500 mb-1">
-                Vendor Type
-              </h4>
-              <p className="text-sm text-gray-900 capitalize">
-                {vendor.vendorType}
-              </p>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-semibold text-gray-500 mb-1">Name</h4>
-              <p className="text-sm text-gray-900">
-                {getVendorName() || "N/A"}
-              </p>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-semibold text-gray-500 mb-1">
-                Contact
-              </h4>
-              <p className="text-sm text-gray-900">
-                {getVendorEmail() || "N/A"}
-              </p>
-              <p className="text-sm text-gray-900">
-                {getVendorPhone() || "N/A"}
-              </p>
-            </div>
-          </div>
-
-          <div className="min-w-[220px] flex flex-col items-end gap-3">
+      <Modal isOpen={isOpen} onClose={onClose} title="Vendor Details" size="xxl">
+        <div className="space-y-6">
+          {/* Top header: avatar, name, quick meta and actions */}
+          <div className="flex items-start justify-between gap-4 p-4 bg-white rounded-lg shadow-sm overflow-hidden">
             <div className="flex items-center gap-4">
-              <div className="text-xs font-semibold text-gray-500">Auth</div>
-              <StatusBadge status={vendor.is_authenticated} />
+              <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-2xl font-bold shadow">
+                {String((getVendorName() || "?").trim().charAt(0)).toUpperCase()}
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Vendor</div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-gray-900">{getVendorName() || "N/A"}</h3>
+                  <StatusBadge status={vendor.is_authenticated} />
+                </div>
+                <div className="text-sm text-gray-500 mt-1">{getVendorEmail() || "—"} • {getVendorPhone() || "—"}</div>
+              </div>
             </div>
 
-            {/* Toggle switch */}
-            <div className="flex flex-col items-end">
-              <label
-                className="inline-flex items-center cursor-pointer select-none"
-                aria-label="Toggle vendor status"
-              >
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={localStatus === 1}
-                  onChange={handleToggleClick}
-                  disabled={isUpdating}
-                />
-                <div
-                  className={`w-12 h-6 rounded-full relative transition-colors ${
-                    localStatus === 1 ? "bg-green-500" : "bg-gray-300"
-                  }`}
-                  role="switch"
-                  aria-checked={localStatus === 1}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                      localStatus === 1 ? "translate-x-6" : "translate-x-0"
-                    }`}
-                  />
-                </div>
-              </label>
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col items-end">
+                <div className="flex items-center gap-3">
+                  <div className="text-xs text-gray-500">Status</div>
+                  <div className="inline-flex items-center gap-3">
+                    <label className="flex items-center cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={localStatus === 1}
+                        onChange={handleToggleClick}
+                        disabled={isUpdating}
+                      />
+                      <div className={`w-14 h-7 rounded-full relative transition-colors ${localStatus === 1 ? "bg-emerald-500" : "bg-gray-200"}`} role="switch" aria-checked={localStatus === 1}>
+                        <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transform transition-transform ${localStatus === 1 ? "translate-x-7" : "translate-x-0"}`} />
+                      </div>
+                    </label>
 
-              {isUpdating && (
-                <div className="text-xs text-gray-500 mt-1">Updating…</div>
-              )}
+                    {isUpdating && <div className="text-xs text-gray-500">Updating…</div>}
+                  </div>
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  <Button variant="lightPrimary" onClick={handleApprove} disabled={saving || vendor.is_authenticated == 1}>
+                    {saving ? "Processing..." : "Approve"}
+                  </Button>
+                  <Button variant="lightError" onClick={handleReject} disabled={saving || vendor.is_authenticated == 0 || vendor.is_authenticated == 2}>
+                    {saving ? "Processing..." : "Reject"}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Details card */}
-        <div className="bg-gray-50 p-4 rounded-lg mb-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">
-            {vendor.vendorType === "individual"
-              ? "Individual Details"
-              : "Company Details"}
-          </h4>
+          {/* Two-column content */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left: Details Card */}
+            <div className="col-span-3 bg-white rounded-lg p-4 shadow-sm">
+              <h4 className="text-sm font-medium text-gray-700 mb-4">Details</h4>
 
-          {vendor.vendorType === "individual" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h5 className="text-xs font-medium text-gray-500 mb-1">
-                  Full Name
-                </h5>
-                <p className="text-sm text-gray-900">
-                  {vendor.individual_name || "N/A"}
-                </p>
-              </div>
+              {vendor.vendorType === "individual" ? (
+                <div className="grid grid-cols-3 gap-6 space-y-3 text-sm text-gray-700">
+                  <div>
+                    <div className="text-xs text-gray-500">Full Name</div>
+                    <div className="font-medium text-gray-900">{vendor.individual_name || "N/A"}</div>
+                  </div>
 
-              <div>
-                <h5 className="text-xs font-medium text-gray-500 mb-1">
-                  Email
-                </h5>
-                <p className="text-sm text-gray-900">
-                  {vendor.individual_email || "N/A"}
-                </p>
-              </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Email</div>
+                    <div className="font-medium text-gray-900">{vendor.individual_email || "N/A"}</div>
+                  </div>
 
-              <div>
-                <h5 className="text-xs font-medium text-gray-500 mb-1">
-                  Phone
-                </h5>
-                <p className="text-sm text-gray-900">
-                  {vendor.individual_phone || "N/A"}
-                </p>
-              </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Phone</div>
+                    <div className="font-medium text-gray-900">{vendor.individual_phone || "N/A"}</div>
+                  </div>
 
-              <div>
-                <h5 className="text-xs font-medium text-gray-500 mb-1">
-                  Expertise
-                </h5>
-                <p className="text-sm text-gray-900">
-                  {vendor.individual_expertise || "N/A"}
-                </p>
-              </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Expertise</div>
+                    <div className="font-medium text-gray-900">{vendor.individual_expertise || "N/A"}</div>
+                  </div>
 
-              <div className="md:col-span-2">
-                <h5 className="text-xs font-medium text-gray-500 mb-1">
-                  About
-                </h5>
-                <p className="text-sm text-gray-900 whitespace-pre-line">
-                  {vendor.individual_aboutMe || "N/A"}
-                </p>
-              </div>
+                  <div>
+                    <div className="text-xs text-gray-500">About</div>
+                    <div className="whitespace-pre-line text-sm text-gray-800">{vendor.individual_aboutMe || "N/A"}</div>
+                  </div>
 
-              {vendor.individual_otherInfo && (
-                <div className="md:col-span-2">
-                  <h5 className="text-xs font-medium text-gray-500 mb-1">
-                    Other Info
-                  </h5>
-                  <p className="text-sm text-gray-900">
-                    {vendor.individual_otherInfo}
-                  </p>
-                </div>
-              )}
-
-              {vendor.individual_resume && (
-                <div>
-                  <h5 className="text-xs font-medium text-gray-500 mb-1">
-                    Resume
-                  </h5>
-                  <a
-                    href={vendor.individual_resume}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    View Resume
-                  </a>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h5 className="text-xs font-medium text-gray-500 mb-1">
-                  Company Name
-                </h5>
-                <p className="text-sm text-gray-900">
-                  {vendor.company_companyName || "N/A"}
-                </p>
-              </div>
-
-              <div>
-                <h5 className="text-xs font-medium text-gray-500 mb-1">
-                  Contact Person
-                </h5>
-                <p className="text-sm text-gray-900">
-                  {vendor.company_contactPerson || "N/A"}
-                </p>
-              </div>
-
-              <div>
-                <h5 className="text-xs font-medium text-gray-500 mb-1">
-                  Company Email
-                </h5>
-                <p className="text-sm text-gray-900">
-                  {vendor.company_companyEmail || "N/A"}
-                </p>
-              </div>
-
-              <div>
-                <h5 className="text-xs font-medium text-gray-500 mb-1">
-                  Company Phone
-                </h5>
-                <p className="text-sm text-gray-900">
-                  {vendor.company_companyPhone || "N/A"}
-                </p>
-              </div>
-
-              <div className="md:col-span-2">
-                <h5 className="text-xs font-medium text-gray-500 mb-1">
-                  Company Address
-                </h5>
-                <p className="text-sm text-gray-900">
-                  {vendor.company_companyAddress || "N/A"}
-                </p>
-              </div>
-
-              {vendor.company_googleBusinessProfileLink && (
-                <div className="md:col-span-2">
-                  <h5 className="text-xs font-medium text-gray-500 mb-1">
-                    Google Business Profile
-                  </h5>
-                  <a
-                    href={vendor.company_googleBusinessProfileLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    {vendor.company_googleBusinessProfileLink}
-                  </a>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Services + Packages Section */}
-        <div>
-          {localServices?.length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-3">
-                Services Offered
-              </h4>
-
-              <div className="space-y-6">
-                {localServices.map((service, sIndex) => (
-                  <div
-                    key={service.service_id ?? sIndex}
-                    className="rounded-lg border p-4 bg-white"
-                  >
-                    {/* Service header */}
-                    <div className="flex items-center gap-3 mb-4">
-                      {service.serviceImage ? (
-                        <img
-                          src={service.serviceImage}
-                          alt={service.serviceName || "service"}
-                          className="w-12 h-12 rounded object-cover border"
-                        />
-                      ) : null}
-
-                      <div>
-                        <div className="font-medium text-gray-900 text-sm">
-                          {service.serviceName}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1">
-                          Category: {service.categoryName}
-                        </div>
-                      </div>
+                  {vendor.individual_resume && (
+                    <div>
+                      <a href={vendor.individual_resume} target="_blank" rel="noreferrer" className="text-sm text-emerald-600 hover:underline">View Resume</a>
                     </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3 text-sm text-gray-700">
+                  <div>
+                    <div className="text-xs text-gray-500">Company</div>
+                    <div className="font-medium text-gray-900">{vendor.company_companyName || "N/A"}</div>
+                  </div>
 
-                    {/* Packages under service */}
-                    {service.packages?.length > 0 ? (
-                      <div className="space-y-4">
-                        {service.packages.map((pkg, pkgIndex) => (
-                          <div
-                            key={pkg.package_id ?? pkgIndex}
-                            className="rounded-lg border p-3 bg-gray-50"
-                          >
-                            <div className="flex justify-between items-start mb-3">
-                              <div>
-                                <div className="text-sm font-semibold text-gray-800">
-                                  {pkg.packageName ||
-                                    `Package ${pkg.package_id ?? pkgIndex}`}
-                                </div>
-                                {pkg.serviceLocation && (
-                                  <div className="text-xs text-gray-600 mt-1">
-                                    Location: {pkg.serviceLocation}
-                                  </div>
-                                )}
-                              </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Contact Person</div>
+                    <div className="font-medium text-gray-900">{vendor.company_contactPerson || "N/A"}</div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-500">Email</div>
+                    <div className="font-medium text-gray-900">{vendor.company_companyEmail || "N/A"}</div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-500">Phone</div>
+                    <div className="font-medium text-gray-900">{vendor.company_companyPhone || "N/A"}</div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-500">Address</div>
+                    <div className="font-medium text-gray-900">{vendor.company_companyAddress || "N/A"}</div>
+                  </div>
+
+                  {vendor.company_googleBusinessProfileLink && (
+                    <div>
+                      <a href={vendor.company_googleBusinessProfileLink} target="_blank" rel="noreferrer" className="text-sm text-emerald-600 hover:underline">Open Google Business Profile</a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Right: Services (span 2 columns on lg) */}
+            <div className="lg:col-span-3 overflow-y-auto">
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-medium text-gray-700">Services & Packages</h4>
+                  <div className="text-xs text-gray-500">{localServices?.length ?? 0} services</div>
+                </div>
+
+                {localServices?.length > 0 ? (
+                  <div className="space-y-4">
+                    {localServices.map((service, sIndex) => (
+                      <div key={service.service_id ?? sIndex} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-3">
+                            {service.serviceImage ? (
+                              <img src={service.serviceImage} alt={service.serviceName || "service"} className="w-12 h-12 rounded object-cover border" />
+                            ) : (
+                              <div className="w-12 h-12 rounded bg-gray-50 flex items-center justify-center text-xs text-gray-400">No image</div>
+                            )}
+
+                            <div>
+                              <div className="text-sm font-semibold text-gray-800">{service.serviceName}</div>
+                              <div className="text-xs text-gray-500">Category: {service.categoryName}</div>
                             </div>
+                          </div>
 
-                            {/* Package items (NOTE: using exact keys from your payload: itemName, description, itemMedia) */}
-                            <div className="grid grid-cols-1 gap-3">
-                              {Array.isArray(pkg.items) &&
-                                pkg.items.length === 0 && (
-                                  <div className="text-xs text-gray-500 italic">
-                                    No items in this package.
+                          <div className="text-xs text-gray-500">{service.packages?.length ?? 0} packages</div>
+                        </div>
+
+                        {service.packages?.length > 0 ? (
+                          <div className="space-y-3">
+                            {service.packages.map((pkg, pkgIndex) => (
+                              <div key={pkg.package_id ?? pkgIndex} className="rounded border bg-gray-50 p-3">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div>
+                                    <div className="text-sm font-semibold text-gray-800">{pkg.packageName || `Package ${pkg.package_id ?? pkgIndex}`}</div>
+                                    {pkg.serviceLocation && <div className="text-xs text-gray-500 mt-1">Location: {pkg.serviceLocation}</div>}
                                   </div>
-                                )}
+                                </div>
 
-                              {pkg.items &&
-                                pkg.items.map((item, itemIndex) => (
-                                  <div
-                                    key={
-                                      item.vendor_packages_id ??
-                                      item.package_item_id ??
-                                      itemIndex
-                                    }
-                                    className="flex items-start gap-3 p-3 rounded bg-white"
-                                  >
-                                    {item.itemMedia ? (
-                                      <div className="w-20 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                                        <img
-                                          src={item.itemMedia}
-                                          alt={item.itemName}
-                                          className="object-cover w-full h-full"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <div className="w-20 h-16 bg-gray-50 rounded flex items-center justify-center text-xs text-gray-400">
-                                        No image
-                                      </div>
-                                    )}
+                                <div className="space-y-2">
+                                  {Array.isArray(pkg.items) && pkg.items.length === 0 && (
+                                    <div className="text-xs text-gray-500 italic">No items in this package.</div>
+                                  )}
 
-                                    <div className="flex-1">
-                                      <div className="font-medium text-gray-900 text-sm">
-                                        {item.itemName}
-                                      </div>
-
-                                      {item.description && (
-                                        <div className="text-xs text-gray-600 mt-1">
-                                          {item.description}
+                                  {pkg.items && pkg.items.map((item, itemIndex) => (
+                                    <div key={item.vendor_packages_id ?? item.package_item_id ?? itemIndex} className="flex items-start gap-3 p-3 rounded bg-white">
+                                      {item.itemMedia ? (
+                                        <div className="w-24 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                                          <img src={item.itemMedia} alt={item.itemName} className="object-cover w-full h-full" />
                                         </div>
+                                      ) : (
+                                        <div className="w-24 h-16 bg-gray-50 rounded flex items-center justify-center text-xs text-gray-400">No image</div>
                                       )}
 
-                                      <div className="flex items-center gap-2">
-                                        {/* if admin can delete package we show trash - this keeps existing functionality intact */}
+                                      <div className="flex-1">
+                                        <div className="font-medium text-gray-900 text-sm">{item.itemName}</div>
+                                        {item.description && <div className="text-xs text-gray-600 mt-1">{item.description}</div>}
+
+                                        <div className="mt-3 flex items-center gap-3">
+                                          {item.price != null && <div className="text-xs text-gray-500">Price: <span className="font-medium text-gray-900">{String(item.price)}</span></div>}
+                                          {item.time_required && <div className="text-xs text-gray-500">Time: <span className="font-medium text-gray-900">{item.time_required}</span></div>}
+                                        </div>
+                                      </div>
+
+                                      <div className="flex flex-col items-end gap-2">
                                         {item.vendor_packages_id && (
                                           <IconButton
-                                            onClick={() =>
-                                              openDeleteModal(
-                                                item.vendor_packages_id,
-                                                item.itemName
-                                              )
-                                            }
+                                            onClick={() => openDeleteModal(item.vendor_packages_id, item.itemName)}
                                             variant="lightDanger"
                                             ariaLabel="Delete package"
                                             icon={<Trash />}
                                           />
                                         )}
                                       </div>
-
-                                      <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-3">
-                                        {item.price != null && (
-                                          <div>Price: {String(item.price)}</div>
-                                        )}
-                                        {item.time_required && (
-                                          <div>Time: {item.time_required}</div>
-                                        )}
-                                      </div>
                                     </div>
-                                  </div>
-                                ))}
-                            </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        ) : (
+                          <div className="text-xs text-gray-500 italic">No packages for this service.</div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="text-xs text-gray-500 italic">
-                        No packages for this service.
-                      </div>
-                    )}
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div className="text-sm text-gray-500 italic">No services listed for this vendor.</div>
+                )}
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Approve / Reject buttons */}
-        <div className="flex justify-end space-x-3 mt-4 pt-4 border-t">
-          <Button
-            variant="lightPrimary"
-            onClick={handleApprove}
-            icon={<span>✓</span>}
-            disabled={saving || vendor.is_authenticated == 1}
-          >
-            {saving ? "Approving..." : "Approve"}
-          </Button>
-          <Button
-            variant="lightError"
-            onClick={handleReject}
-            icon={<span>✕</span>}
-            disabled={
-              saving ||
-              vendor.is_authenticated == 0 ||
-              vendor.is_authenticated == 2
-            }
-          >
-            {saving ? "Rejecting..." : "Reject"}
-          </Button>
+          </div>
         </div>
       </Modal>
 
@@ -630,10 +422,7 @@ export default function VendorDetailsModal({
         size="sm"
       >
         <div>
-          <p className="text-sm text-gray-600 mb-2">
-            Please add a note explaining why this vendor is being turned OFF
-            (optional).
-          </p>
+          <p className="text-sm text-gray-600 mb-2">Please add a note explaining why this vendor is being turned OFF (optional).</p>
           <textarea
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}

@@ -111,14 +111,14 @@ const Ratings = () => {
     );
 
   return (
-    <section className="max-w-7xl mx-auto px-4 ">
-      <header className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Ratings & Reviews</h2>
+    <section className="mx-auto ">
+      <header className="mb-4">
+        <h2 className="text-2xl font-bold text-gray-900">Ratings & Reviews</h2>
         <p className="text-gray-500 mt-1">Real feedback from customers</p>
       </header>
 
       {/* Summary Card */}
-      <div className="bg-white shadow-lg rounded-lg flex flex-col md:flex-row p-6 mb-8 gap-6">
+      <div className="bg-white shadow-lg rounded-lg flex flex-col md:flex-row p-6 mb-4 gap-6">
         <div className="flex-1 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-200 pb-6 md:pb-0 md:pr-6">
           <span className="text-6xl font-bold text-primary-dark mb-2">
             {stats.average_rating
@@ -208,7 +208,7 @@ const Ratings = () => {
         </div>
 
         {filteredRatings.length > 0 ? (
-          <ul className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
+          <ul className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
             {filteredRatings.map((rating) => (
               <li
                 key={rating.rating_id}

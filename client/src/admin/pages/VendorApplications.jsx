@@ -133,7 +133,7 @@ const VendorApplications = () => {
               </Button>
 
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
                   reset();
                 }}

@@ -57,7 +57,7 @@ const PlatformFees = () => {
 
   return (
     <div className="max-w-md mx-auto mt-12 p-6 bg-white shadow rounded-lg border border-gray-200">
-      <h2 className="text-2xl font-bold mb-4">⚙️ Platform Fee Settings</h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">Platform Fee Settings</h2>
 
       <form onSubmit={handleSubmit}>
         <div className="mb-4">

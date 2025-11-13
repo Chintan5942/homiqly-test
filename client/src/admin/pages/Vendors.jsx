@@ -125,12 +125,13 @@ const Vendors = () => {
   };
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="space-y-4">
       <h2 className="text-2xl font-bold text-gray-800">Vendor Management</h2>
 
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex-1 min-w-[200px]">
           <FormInput
+          className="max-w-md"
             icon={<Search />}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

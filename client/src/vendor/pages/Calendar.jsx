@@ -385,7 +385,7 @@ const Calendar = () => {
             />
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <FormSelect
             className="w-32"
@@ -397,10 +397,14 @@ const Calendar = () => {
             value={viewMode}
             onChange={(e) => setViewMode(e.target.value)}
           />
-          <Button onClick={handleToday} variant="ghost" className="whitespace-nowrap">
+          <Button
+            onClick={handleToday}
+            variant="ghost"
+            className="whitespace-nowrap"
+          >
             Today
           </Button>
-          
+
           <Button
             onClick={() => {
               const base = selectedDate
@@ -999,7 +1003,8 @@ const Calendar = () => {
 
   /* ---------- Render ---------- */
   return (
-    <div className="px-4 mx-auto max-w-7xl">
+    <div className="mx-auto">
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">Vendor Calendar</h2>
       <div className="flex flex-col lg:flex-row gap-7">
         <div className="flex-1 min-w-0">
           {renderHeader()}

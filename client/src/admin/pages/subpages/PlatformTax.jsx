@@ -214,8 +214,8 @@ export default function PlatformTax() {
     : "Are you sure you want to delete this tax?";
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="">
+      <div className="flex  justify-between mb-6">
         <h2 className="text-2xl font-semibold">Platform Taxes</h2>
         <Button onClick={openCreate}>
           <Plus size={16} /> Add tax

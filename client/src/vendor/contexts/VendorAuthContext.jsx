@@ -175,6 +175,7 @@ export const VendorAuthProvider = ({ children }) => {
 
   const value = {
     currentUser,
+    setCurrentUser,
     isAuthenticated,
     loading,
     error,

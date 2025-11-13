@@ -182,24 +182,25 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-8">
-
-      <h2 className="text-2xl font-bold text-gray-800">Vendor Dashboard</h2>
+    <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        <ToggleButton />
-        <div className="flex flex-col space-y-3 sm:flex-row sm:items-end sm:space-x-4 sm:space-y-0">
-          <div className="w-full sm:w-48">
-            <FormSelect
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              options={[
-                { value: "", label: "All" },
-                { value: "weekly", label: "Weekly" },
-                { value: "monthly", label: "Monthly" },
-                { value: "custom", label: "Custom" },
-              ]}
-            />
+        <h2 className="text-2xl font-bold text-gray-800">Vendor Dashboard</h2>
+        <div className="flex gap-4">
+          <ToggleButton />
+          <div className="flex flex-col space-y-3 sm:flex-row sm:items-end sm:space-x-4 sm:space-y-0">
+            <div className="w-full sm:w-40">
+              <FormSelect
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                options={[
+                  { value: "", label: "All" },
+                  { value: "weekly", label: "Weekly" },
+                  { value: "monthly", label: "Monthly" },
+                  { value: "custom", label: "Custom" },
+                ]}
+              />
+            </div>
           </div>
 
           {filterType === "custom" && (
@@ -375,8 +376,8 @@ const Dashboard = () => {
               View Calendar
             </Link>
           </div> */}
-          {/* <Calendar /> */}
-        {/* </div>
+      {/* <Calendar /> */}
+      {/* </div>
       </div> */}
     </div>
   );
