@@ -3,18 +3,11 @@ const asyncHandler = require("express-async-handler");
 const adminGetQueries = require("../config/adminQueries/adminGetQueries")
 const adminPostQueries = require("../config/adminQueries/adminPostQueries");
 const adminPutQueries = require("../config/adminQueries/adminPutQueries");
+const bookingGetQueries = require('../config/bookingQueries/bookingGetQueries');
 const adminDeleteQueries = require("../config/adminQueries/adminDeleteQueries")
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const nodemailer = require("nodemailer");
-const { sendVendorAssignedPackagesEmail } = require("../config/utils/email/mailer");
+const { sendVendorAssignedPackagesEmail , sendManualAssignmentMail} = require("../config/utils/email/mailer");
 
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
 
 const getAdminProfile = asyncHandler(async (req, res) => {
     const admin_id = req.user.admin_id;
@@ -26,9 +19,9 @@ const getAdminProfile = asyncHandler(async (req, res) => {
 
         const rows = await db.query(
             `SELECT
-                admin_id, 
-                email, 
-                name, 
+                admin_id,
+                email,
+                name,
                 created_at
              FROM admin
              WHERE admin_id = ?`,
@@ -79,8 +72,8 @@ const editAdminProfile = asyncHandler(async (req, res) => {
         values.push(admin_id);
 
         const sql = `
-            UPDATE admin 
-            SET ${fields.join(", ")} 
+            UPDATE admin
+            SET ${fields.join(", ")}
             WHERE admin_id = ?
         `;
 
@@ -122,22 +115,22 @@ const getVendor = asyncHandler(async (req, res) => {
                 SELECT v.*
                 FROM (
                     ${adminGetQueries.vendorDetails}
-                ) AS v
-                WHERE 
+                    ) AS v
+                    WHERE
                     v.individual_name LIKE ? OR
                     v.individual_email LIKE ? OR
                     v.individual_phone LIKE ? OR
                     v.company_companyName LIKE ? OR
                     v.company_companyEmail LIKE ? OR
                     v.company_companyPhone LIKE ?;
-            `;
+                    `;
 
             countQuery = `
                 SELECT COUNT(*) AS totalCount
                 FROM (
                     ${adminGetQueries.vendorDetails}
                 ) AS v
-                WHERE 
+                WHERE
                     v.individual_name LIKE ? OR
                     v.individual_email LIKE ? OR
                     v.individual_phone LIKE ? OR
@@ -191,7 +184,7 @@ const getVendor = asyncHandler(async (req, res) => {
                 const items = packageItems
                     .filter(item => item.package_id === pkg.package_id)
                     .map(item => ({
-                        vendor_package_item_id: item.vendor_package_item_id,
+                        vendor_packages_id: item.vendor_packages_id,
                         package_item_id: item.package_item_id,
                         itemName: item.itemName,
                         description: item.description,
@@ -199,7 +192,6 @@ const getVendor = asyncHandler(async (req, res) => {
                     }));
 
                 serviceMap[serviceId].packages.push({
-                    vendor_packages_id: pkg.vendor_packages_id,
                     package_id: pkg.package_id,
                     serviceLocation: pkg.serviceLocation,
                     items
@@ -366,7 +358,14 @@ const updateUserByAdmin = asyncHandler(async (req, res) => {
 
 const getBookings = asyncHandler(async (req, res) => {
     try {
-        let { page = 1, limit = 10, search = "", status, start_date, end_date } = req.query;
+        let {
+            page = 1,
+            limit = 10,
+            search = "",
+            status,
+            start_date,
+            end_date
+        } = req.query;
 
         page = parseInt(page);
         limit = parseInt(limit);
@@ -375,17 +374,28 @@ const getBookings = asyncHandler(async (req, res) => {
         let filters = " WHERE 1=1 ";
         const params = [];
 
-        // ===== Search by username, email, or service name =====
+        // ===== Search by booking ID, user, email, or service name =====
         if (search && search.trim() !== "") {
-            filters += ` AND (
-                CONCAT(u.firstName, ' ', u.lastName) LIKE ? 
-                OR u.email LIKE ? 
-                OR s.serviceName LIKE ?
-            )`;
-            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+            const searchPattern = `%${search.trim()}%`;
+            if (!isNaN(search.trim())) {
+                filters += ` AND (
+          sb.booking_id = ?
+          OR CONCAT(u.firstName, ' ', u.lastName) LIKE ?
+          OR u.email LIKE ?
+          OR s.serviceName LIKE ?
+        )`;
+                params.push(search.trim(), searchPattern, searchPattern, searchPattern);
+            } else {
+                filters += ` AND (
+          CONCAT(u.firstName, ' ', u.lastName) LIKE ?
+          OR u.email LIKE ?
+          OR s.serviceName LIKE ?
+        )`;
+                params.push(searchPattern, searchPattern, searchPattern);
+            }
         }
 
-        // ===== Filter by status =====
+        // ===== Filter by booking status =====
         if (status && [1, 3, 4].includes(Number(status))) {
             filters += ` AND sb.bookingStatus = ?`;
             params.push(status);
@@ -403,29 +413,17 @@ const getBookings = asyncHandler(async (req, res) => {
             params.push(end_date);
         }
 
-        // ===== Count total bookings =====
+        // ===== Count total records =====
         const [[{ total }]] = await db.query(
             `SELECT COUNT(DISTINCT sb.booking_id) AS total
-             FROM service_booking sb
-             LEFT JOIN users u ON sb.user_id = u.user_id
-             LEFT JOIN services s ON sb.service_id = s.service_id
-             ${filters}`,
+       FROM service_booking sb
+       LEFT JOIN users u ON sb.user_id = u.user_id
+       LEFT JOIN services s ON sb.service_id = s.service_id
+       ${filters}`,
             params
         );
 
-        // ===== Get paginated unique booking IDs =====
-        const [bookingIds] = await db.query(
-            `SELECT DISTINCT sb.booking_id
-             FROM service_booking sb
-             LEFT JOIN users u ON sb.user_id = u.user_id
-             LEFT JOIN services s ON sb.service_id = s.service_id
-             ${filters}
-             ORDER BY sb.bookingDate DESC, sb.bookingTime DESC
-             LIMIT ? OFFSET ?`,
-            [...params, limit, offset]
-        );
-
-        if (bookingIds.length === 0) {
+        if (total === 0) {
             return res.status(200).json({
                 message: "No bookings found",
                 currentPage: page,
@@ -435,195 +433,154 @@ const getBookings = asyncHandler(async (req, res) => {
             });
         }
 
-        const bookingIdList = bookingIds.map(b => b.booking_id);
+        // ===== Fetch main booking data (permanent DESC order) =====
+        const [bookings] = await db.query(`
+      SELECT
+        sb.booking_id,
+        sb.bookingDate,
+        sb.bookingTime,
+        sb.bookingStatus,
+        sb.notes,
+        sb.bookingMedia,
+        sb.payment_intent_id,
+        sb.payment_status,
 
-        // ===== Fetch full booking details =====
-        const [rows] = await db.query(
-            `
-            SELECT
-                sb.booking_id,
-                sb.bookingDate,
-                sb.bookingTime,
-                sb.bookingStatus,
-                sb.notes,
-                sb.bookingMedia,
-                sb.payment_intent_id,
-                sb.payment_status,
+        u.user_id,
+        CONCAT(u.firstName, ' ', u.lastName) AS userName,
+        u.email AS user_email,
+        u.phone AS user_phone,
 
-                u.user_id,
-                CONCAT(u.firstName, ' ', u.lastName) AS userName,
-                u.email AS user_email,
+        s.serviceName,
+        sc.serviceCategory,
 
-                s.serviceName,
-                sc.serviceCategory,
+        v.vendor_id,
+        v.vendorType,
+        IF(v.vendorType = 'company', cdet.companyName, idet.name) AS vendorName,
+        IF(v.vendorType = 'company', cdet.companyPhone, idet.phone) AS vendorPhone,
+        IF(v.vendorType = 'company', cdet.companyEmail, idet.email) AS vendorEmail,
+        IF(v.vendorType = 'company', cdet.contactPerson, NULL) AS vendorContactPerson,
 
-                v.vendor_id,
-                v.vendorType,
-                IF(v.vendorType = 'company', cdet.companyName, idet.name) AS vendorName,
-                IF(v.vendorType = 'company', cdet.companyPhone, idet.phone) AS vendorPhone,
-                IF(v.vendorType = 'company', cdet.companyEmail, idet.email) AS vendorEmail,
-                IF(v.vendorType = 'company', cdet.contactPerson, NULL) AS vendorContactPerson,
+        p.amount AS payment_amount,
+        p.currency AS payment_currency
+      FROM service_booking sb
+      LEFT JOIN users u ON sb.user_id = u.user_id
+      LEFT JOIN services s ON sb.service_id = s.service_id
+      LEFT JOIN service_categories sc ON s.service_categories_id = sc.service_categories_id
+      LEFT JOIN vendors v ON sb.vendor_id = v.vendor_id
+      LEFT JOIN individual_details idet ON v.vendor_id = idet.vendor_id
+      LEFT JOIN company_details cdet ON v.vendor_id = cdet.vendor_id
+      LEFT JOIN payments p ON p.payment_intent_id = sb.payment_intent_id
+      ${filters}
+      ORDER BY sb.booking_id DESC
+      LIMIT ? OFFSET ?
+    `, [...params, limit, offset]);
 
-                p.amount AS payment_amount,
-                p.currency AS payment_currency,
+        // ===== Fetch related data =====
+        // ===== Fetch related data (fixed for proper IN expansion) =====
+        const bookingIds = bookings.map(b => b.booking_id);
 
-                sb.package_id,
-                pkg.packageName,
-                pkg.packageMedia,
-                pi.item_id,
-                pi.itemName,
-                pi.itemMedia,
-                pi.timeRequired,
-                sbsp.quantity AS item_quantity,
-                (sbsp.price * sbsp.quantity) AS item_price,
-
-                sba.addon_id,
-                pa.addonName,
-                pa.addonTime,
-                sba.quantity AS addon_quantity,
-                (sba.price * sba.quantity) AS addon_price,
-
-                sp.preference_id,
-                bp.preferenceValue,
-
-                sbc.consent_id,
-                pcf.question,
-                sbc.answer
-            FROM service_booking sb
-            LEFT JOIN users u ON sb.user_id = u.user_id
-            LEFT JOIN services s ON sb.service_id = s.service_id
-            LEFT JOIN service_categories sc ON s.service_categories_id = sc.service_categories_id
-            LEFT JOIN vendors v ON sb.vendor_id = v.vendor_id
-            LEFT JOIN individual_details idet ON v.vendor_id = idet.vendor_id
-            LEFT JOIN company_details cdet ON v.vendor_id = cdet.vendor_id
-            LEFT JOIN payments p ON p.payment_intent_id = sb.payment_intent_id
-            LEFT JOIN packages pkg ON sb.package_id = pkg.package_id
-            LEFT JOIN service_booking_sub_packages sbsp ON sb.booking_id = sbsp.booking_id
-            LEFT JOIN package_items pi ON sbsp.sub_package_id = pi.item_id
-            LEFT JOIN service_booking_addons sba ON sb.booking_id = sba.booking_id
-            LEFT JOIN package_addons pa ON sba.addon_id = pa.addon_id
-            LEFT JOIN service_booking_preferences sp ON sb.booking_id = sp.booking_id
-            LEFT JOIN booking_preferences bp ON sp.preference_id = bp.preference_id
-            LEFT JOIN service_booking_consents sbc ON sb.booking_id = sbc.booking_id
-            LEFT JOIN package_consent_forms pcf ON sbc.consent_id = pcf.consent_id
-            WHERE sb.booking_id IN (?)
-            ORDER BY sb.bookingDate DESC, sb.bookingTime DESC
-            `,
-            [bookingIdList]
+        const [subPackages] = await db.query(
+            bookingGetQueries.getBookedSubPackagesMulti.replace("IN (?)", `IN (${bookingIds.join(",")})`)
+        );
+        const [addons] = await db.query(
+            bookingGetQueries.getBookedAddonsMulti.replace("IN (?)", `IN (${bookingIds.join(",")})`)
+        );
+        const [preferences] = await db.query(
+            bookingGetQueries.getBoookedPrefrencesMulti.replace("IN (?)", `IN (${bookingIds.join(",")})`)
+        );
+        const [consents] = await db.query(
+            bookingGetQueries.getBoookedConsentsMulti.replace("IN (?)", `IN (${bookingIds.join(",")})`)
         );
 
-        // ===== Group by booking_id =====
-        const bookingsMap = new Map();
+        // ===== Helper function to group by booking_id =====
+        const groupBy = (arr) => arr.reduce((acc, cur) => {
+            if (!acc[cur.booking_id]) acc[cur.booking_id] = [];
+            acc[cur.booking_id].push(cur);
+            return acc;
+        }, {});
 
-        for (const row of rows) {
-            let booking = bookingsMap.get(row.booking_id);
-            if (!booking) {
-                booking = {
-                    booking_id: row.booking_id,
-                    bookingDate: row.bookingDate,
-                    bookingTime: row.bookingTime,
-                    bookingStatus: row.bookingStatus,
-                    notes: row.notes,
-                    bookingMedia: row.bookingMedia,
-                    payment_intent_id: row.payment_intent_id,
-                    payment_status: row.payment_status,
+        const groupedSub = groupBy(subPackages);
+        const groupedAddons = groupBy(addons);
+        const groupedPrefs = groupBy(preferences);
+        const groupedConsents = groupBy(consents);
 
-                    user_id: row.user_id,
-                    userName: row.userName,
-                    user_email: row.user_email,
+        const bookingMap = {};
 
-                    serviceName: row.serviceName,
-                    serviceCategory: row.serviceCategory,
+        // ===== Combine all related data =====
+        for (const b of bookings) {
+            const subList = groupedSub[b.booking_id] || [];
+            const addonsList = groupedAddons[b.booking_id] || [];
+            const prefsList = groupedPrefs[b.booking_id] || [];
+            const consentList = groupedConsents[b.booking_id] || [];
 
-                    vendor_id: row.vendor_id,
-                    vendorType: row.vendorType,
-                    vendorName: row.vendorName,
-                    vendorPhone: row.vendorPhone,
-                    vendorEmail: row.vendorEmail,
-                    vendorContactPerson: row.vendorContactPerson,
+            const addonsByItem = {};
+            addonsList.forEach(a => {
+                if (!addonsByItem[a.sub_package_id]) addonsByItem[a.sub_package_id] = [];
+                const { booking_id, sub_package_id, ...rest } = a;
+                addonsByItem[a.sub_package_id].push(rest);
+            });
 
-                    payment_amount: row.payment_amount,
-                    payment_currency: row.payment_currency,
+            const prefsByItem = {};
+            prefsList.forEach(p => {
+                if (!prefsByItem[p.sub_package_id]) prefsByItem[p.sub_package_id] = [];
+                const { booking_id, sub_package_id, ...rest } = p;
+                prefsByItem[p.sub_package_id].push(rest);
+            });
 
-                    packages: []
-                };
-                bookingsMap.set(row.booking_id, booking);
-            }
+            const consentsByItem = {};
+            consentList.forEach(c => {
+                if (!consentsByItem[c.sub_package_id]) consentsByItem[c.sub_package_id] = [];
+                const { booking_id, sub_package_id, ...rest } = c;
+                consentsByItem[c.sub_package_id].push(rest);
+            });
 
-            // ===== Packages =====
-            if (row.package_id) {
-                let pkg = booking.packages.find(p => p.package_id === row.package_id);
-                if (!pkg) {
-                    pkg = {
-                        package_id: row.package_id,
-                        packageName: row.packageName,
-                        packageMedia: row.packageMedia,
+            const groupedByPackage = subList.reduce((acc, sp) => {
+                const packageId = sp.package_id;
+                if (!acc[packageId]) {
+                    acc[packageId] = {
+                        package_id: packageId,
+                        packageName: sp.packageName,
+                        packageMedia: sp.packageMedia,
                         items: [],
-                        addons: [],
-                        preferences: [],
-                        concents: []
                     };
-                    booking.packages.push(pkg);
                 }
+                acc[packageId].items.push({
+                    sub_package_id: sp.sub_package_id,
+                    itemName: sp.itemName,
+                    itemMedia: sp.itemMedia,
+                    timeRequired: sp.timeRequired,
+                    quantity: sp.quantity,
+                    price: sp.price,
+                    addons: addonsByItem[sp.sub_package_id] || [],
+                    preferences: prefsByItem[sp.sub_package_id] || [],
+                    consents: consentsByItem[sp.sub_package_id] || [],
+                });
+                return acc;
+            }, {});
 
-                if (row.item_id && !pkg.items.find(i => i.item_id === row.item_id)) {
-                    pkg.items.push({
-                        item_id: row.item_id,
-                        itemName: row.itemName,
-                        itemMedia: row.itemMedia,
-                        timeRequired: row.timeRequired,
-                        quantity: row.item_quantity,
-                        price: row.item_price
-                    });
-                }
-
-                if (row.addon_id && !pkg.addons.find(a => a.addon_id === row.addon_id)) {
-                    pkg.addons.push({
-                        addon_id: row.addon_id,
-                        addonName: row.addonName,
-                        addonTime: row.addonTime,
-                        quantity: row.addon_quantity,
-                        price: row.addon_price
-                    });
-                }
-
-                if (row.preference_id && !pkg.preferences.find(p => p.preference_id === row.preference_id)) {
-                    pkg.preferences.push({
-                        preference_id: row.preference_id,
-                        preferenceValue: row.preferenceValue
-                    });
-                }
-
-                if (row.consent_id && !pkg.concents.find(p => p.consent_id === row.consent_id)) {
-                    pkg.concents.push({
-                        consent_id: row.consent_id,
-                        question: row.question,
-                        answer: row.answer,
-                    });
-                }
-            }
+            bookingMap[b.booking_id] = { ...b, sub_packages: Object.values(groupedByPackage) };
         }
 
-        const enrichedBookings = Array.from(bookingsMap.values());
         const totalPages = Math.ceil(total / limit);
 
         res.status(200).json({
-            message: "Bookings fetched successfully",
+            message: "Bookings fetched successfully (DESC order)",
             currentPage: page,
             totalPages,
             totalRecords: total,
             limit,
-            bookings: enrichedBookings
+            bookings: bookings.map(b => bookingMap[b.booking_id]),
         });
 
     } catch (error) {
         console.error("Error fetching bookings:", error);
         res.status(500).json({
             message: "Internal server error",
-            error: error.message
+            error: error.message,
         });
     }
 });
+
 
 const createPackageByAdmin = asyncHandler(async (req, res) => {
     const connection = await db.getConnection();
@@ -711,13 +668,14 @@ const createPackageByAdmin = asyncHandler(async (req, res) => {
                                 for (const pref of groupData.items) {
                                     await connection.query(
                                         `INSERT INTO booking_preferences
-                                         (package_item_id, preferenceValue, preferencePrice, preferenceGroup, is_required)
-                                         VALUES (?, ?, ?, ?, ?)`,
+                                         (package_item_id, preferenceValue, preferencePrice, preferenceGroup, timeRequired, is_required)
+                                         VALUES (?, ?, ?, ?, ?, ?)`,
                                         [
                                             itemId,
                                             pref.preference_value,
                                             pref.preference_price || 0,
                                             groupName,
+                                            pref.time_required || 0,
                                             isRequired
                                         ]
                                     );
@@ -764,25 +722,26 @@ const createPackageByAdmin = asyncHandler(async (req, res) => {
     }
 });
 
+
 const getPackageList = asyncHandler(async (req, res) => {
     try {
         const [rows] = await db.query(`
-            SELECT 
+            SELECT
                 p.package_id,
                 -- Show packageName if exists, otherwise show serviceName
-                CASE 
-                    WHEN (p.packageName IS NULL OR p.packageName = '') 
+                CASE
+                    WHEN (p.packageName IS NULL OR p.packageName = '')
                     THEN s.serviceName
                     ELSE p.packageName
                 END AS packageName,
-                
+
                 -- Show packageMedia if exists, otherwise show serviceImage
-                CASE 
-                    WHEN (p.packageMedia IS NULL OR p.packageMedia = '') 
+                CASE
+                    WHEN (p.packageMedia IS NULL OR p.packageMedia = '')
                     THEN s.serviceImage
                     ELSE p.packageMedia
                 END AS packageMedia,
-                
+
                 st.service_type_id,
                 s.service_id,
                 sc.serviceCategory AS service_category_name
@@ -827,6 +786,7 @@ const getPackageDetails = asyncHandler(async (req, res) => {
         pcf.is_required AS consent_is_required,
         bp.preference_id,
         bp.preferenceValue,
+        bp.timeRequired,
         bp.preferencePrice,
         bp.is_required AS preference_is_required,
         bp.preferenceGroup
@@ -880,6 +840,7 @@ const getPackageDetails = asyncHandler(async (req, res) => {
                         sp.preferences[groupKey].items.push({
                             preference_id: row.preference_id,
                             preference_value: row.preferenceValue,
+                            time_required: row.timeRequired,
                             preference_price: row.preferencePrice
                         });
                     }
@@ -1113,12 +1074,13 @@ const editPackageByAdmin = asyncHandler(async (req, res) => {
                         for (const pref of groupData.items) {
                             await connection.query(
                                 `INSERT INTO booking_preferences
-                                (package_item_id, preferenceGroup, preferenceValue, preferencePrice, is_required)
-                                VALUES (?, ?, ?, ?, ?)`,
+                                (package_item_id, preferenceGroup, preferenceValue, timeRequired ,preferencePrice, is_required)
+                                VALUES (?, ?, ?, ?, ?, ?)`,
                                 [
                                     sub_package_id,
                                     groupName,
                                     pref.preference_value,
+                                    pref.time_required ?? 0,
                                     pref.preference_price ?? 0,
                                     groupRequired   // ✅ apply group-level is_required
                                 ]
@@ -1304,7 +1266,7 @@ const getAllPayments = asyncHandler(async (req, res) => {
         // 1️⃣ Get total count for completed payments (with date filter)
         const [[{ total }]] = await db.query(
             `
-            SELECT COUNT(*) AS total 
+            SELECT COUNT(*) AS total
             FROM payments p
             ${whereClause}
             `,
@@ -1482,7 +1444,7 @@ const getAllVendorPackageRequests = asyncHandler(async (req, res) => {
 
         if (search) {
             whereClause = `
-                WHERE 
+                WHERE
                     vpa.application_id LIKE ? OR
                     IF(v.vendorType = 'company', cdet.companyName, idet.name) LIKE ? OR
                     IF(v.vendorType = 'company', cdet.companyEmail, idet.email) LIKE ?
@@ -1490,7 +1452,7 @@ const getAllVendorPackageRequests = asyncHandler(async (req, res) => {
             params.push(search, search, search);
         }
 
-        // 1️⃣ Fetch total count for pagination info (with search filter)
+        // 1️⃣ Fetch total count
         const [[{ total }]] = await db.query(`
             SELECT COUNT(*) AS total
             FROM vendor_package_applications vpa
@@ -1500,7 +1462,7 @@ const getAllVendorPackageRequests = asyncHandler(async (req, res) => {
             ${whereClause}
         `, params);
 
-        // 2️⃣ Fetch paginated vendor package applications
+        // 2️⃣ Fetch main applications
         const [applications] = await db.query(`
             SELECT
                 vpa.application_id,
@@ -1543,11 +1505,13 @@ const getAllVendorPackageRequests = asyncHandler(async (req, res) => {
             });
         }
 
-        // 3️⃣ Extract all package_ids to fetch sub-packages (items) in one query
+        // 3️⃣ Get all package_ids & application_ids
         const packageIds = applications.map(a => a.package_id);
+        const applicationIds = applications.map(a => a.application_id);
+
+        // 4️⃣ Fetch all subpackages (items)
         const [packageItems] = await db.query(
-            `
-            SELECT 
+            `SELECT
                 pi.item_id,
                 pi.package_id,
                 pi.itemName,
@@ -1560,20 +1524,46 @@ const getAllVendorPackageRequests = asyncHandler(async (req, res) => {
             [packageIds]
         );
 
-        // 4️⃣ Group sub-packages by package_id
+        // 5️⃣ Fetch only applied subpackages (vendor_package_item_application)
+        const [appliedItems] = await db.query(
+            `SELECT
+                vpia.application_id,
+                vpia.package_item_id
+            FROM vendor_package_item_application vpia
+            WHERE vpia.application_id IN (?)
+            `,
+            [applicationIds]
+        );
+
+        // 6️⃣ Group applied subpackage IDs by application_id
+        const appliedByApp = {};
+        appliedItems.forEach(ai => {
+            if (!appliedByApp[ai.application_id]) appliedByApp[ai.application_id] = [];
+            appliedByApp[ai.application_id].push(ai.package_item_id);
+        });
+
+        // 7️⃣ Group all items by package_id for reference
         const itemsByPackage = {};
         packageItems.forEach(item => {
             if (!itemsByPackage[item.package_id]) itemsByPackage[item.package_id] = [];
             itemsByPackage[item.package_id].push(item);
         });
 
-        // 5️⃣ Combine everything into structured response
-        const detailedApplications = applications.map(app => ({
-            ...app,
-            subPackages: itemsByPackage[app.package_id] || []
-        }));
+        // 8️⃣ Attach filtered subPackages to applications
+        const detailedApplications = applications.map(app => {
+            const allItems = itemsByPackage[app.package_id] || [];
+            const appliedIds = appliedByApp[app.application_id] || [];
 
-        // 6️⃣ Send final response with pagination info
+            // Keep only applied subpackages for this application
+            const filteredItems = allItems.filter(item => appliedIds.includes(item.item_id));
+
+            return {
+                ...app,
+                subPackages: filteredItems
+            };
+        });
+
+        // 9️⃣ Final response
         res.status(200).json({
             message: "Vendor package requests fetched successfully",
             applications: detailedApplications,
@@ -1694,104 +1684,64 @@ const updateVendorPackageRequestStatus = asyncHandler(async (req, res) => {
 });
 
 const toggleManualVendorAssignmentByAdmin = asyncHandler(async (req, res) => {
-    const admin_id = req.user.admin_id; // must exist
-    const { vendor_id } = req.params;
-    const { status, note } = req.body; // status = 0 or 1, note = optional string
+  const admin_id = req.user.admin_id;
+  const { vendor_id } = req.params;
+  const { status, note } = req.body;
 
-    if (!admin_id) {
-        return res.status(403).json({ message: "Only admins can perform this action" });
-    }
+  if (!admin_id) {
+    return res.status(403).json({ message: "Only admins can perform this action" });
+  }
 
-    if (!vendor_id) {
-        return res.status(400).json({ message: "vendor_id is required" });
-    }
+  if (!vendor_id) {
+    return res.status(400).json({ message: "vendor_id is required" });
+  }
 
-    if (![0, 1].includes(status)) {
-        return res.status(400).json({ message: "status must be 0 (off) or 1 (on)" });
-    }
+  if (![0, 1].includes(status)) {
+    return res.status(400).json({ message: "status must be 0 (off) or 1 (on)" });
+  }
 
+  try {
+    // 1️⃣ Update vendor setting
+    await db.query(`
+      INSERT INTO vendor_settings (vendor_id, manual_assignment_enabled)
+      VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE
+          manual_assignment_enabled = VALUES(manual_assignment_enabled)
+    `, [vendor_id, status]);
+
+    // 2️⃣ Create admin notification (optional)
     try {
-        // 1️⃣ Update vendor setting
-        await db.query(`
-            INSERT INTO vendor_settings (vendor_id, manual_assignment_enabled)
-            VALUES (?, ?)
-            ON DUPLICATE KEY UPDATE
-                manual_assignment_enabled = VALUES(manual_assignment_enabled)
-        `, [vendor_id, status]);
-
-        // 2️⃣ Send notification to admin (optional)
-        try {
-            const messageText = `Admin has turned manual assignment ${status === 1 ? 'ON (disabled)' : 'OFF (enabled)'} for Vendor ID ${vendor_id}. ${note ? "Note: " + note : ""}`;
-
-            await db.query(`
-                INSERT INTO notifications (title, body, is_read, sent_at, user_type)
-                VALUES (?, ?, 0, NOW(), 'admin')
-            `, [
-                'Vendor Manual Assignment Update',
-                messageText
-            ]);
-        } catch (err) {
-            console.error("Failed to create admin notification:", err);
-        }
-
-        // 3️⃣ Send email to vendor
-        try {
-            let vendorEmail = null;
-            let vendorName = "Vendor";
-
-            // Check if vendor is an individual
-            const [individualRows] = await db.query(
-                "SELECT email, name FROM individual_details WHERE vendor_id = ?",
-                [vendor_id]
-            );
-
-            if (individualRows.length > 0) {
-                vendorEmail = individualRows[0].email;
-                vendorName = individualRows[0].name;
-            } else {
-                // Check if vendor is a company
-                const [companyRows] = await db.query(
-                    "SELECT companyEmail, companyName FROM company_details WHERE vendor_id = ?",
-                    [vendor_id]
-                );
-
-                if (companyRows.length > 0) {
-                    vendorEmail = companyRows[0].companyEmail;
-                    vendorName = companyRows[0].companyName || "Company Vendor";
-                }
-            }
-
-            if (vendorEmail) {
-                const mailText = `Hello ${vendorName},\n\nYour manual assignment for services has been ${status === 1 ? 'disabled (ON)' : 'enabled (OFF)'} by the admin.${note ? "\n\nNote from admin: " + note : ""}\n\nIf you have any questions, please contact support.\n\nThanks,\nTeam`;
-
-                const mailOptions = {
-                    from: process.env.EMAIL_USER,
-                    to: vendorEmail,
-                    subject: "Manual Assignment Status Changed by Admin",
-                    text: mailText
-                };
-
-                await transporter.sendMail(mailOptions);
-            }
-        } catch (err) {
-            console.error("Failed to send email to vendor:", err);
-        }
-
-        res.status(200).json({
-            message: `Manual assignment for vendor ${vendor_id} is now ${status === 1 ? 'ON (disabled)' : 'OFF (enabled)'}`,
-            vendor_id,
-            manual_assignment_enabled: status,
-            note: note || null
-        });
-
+      const messageText = `Admin has turned manual assignment ${status === 1 ? 'ON (enabled)' : 'OFF (disabled)'} for Vendor ID ${vendor_id}. ${note ? "Note: " + note : ""}`;
+      await db.query(`
+        INSERT INTO notifications (title, body, is_read, sent_at, user_type)
+        VALUES (?, ?, 0, NOW(), 'admin')
+      `, [
+        'Vendor Manual Assignment Update',
+        messageText
+      ]);
     } catch (err) {
-        console.error("Error toggling manual vendor assignment:", err);
-        res.status(500).json({ message: "Internal server error", error: err.message });
+      console.error("⚠️ Failed to create admin notification:", err);
     }
+
+    // 3️⃣ Send external mail
+    await sendManualAssignmentMail(vendor_id, status, note);
+
+    res.status(200).json({
+      message: `Manual assignment for vendor ${vendor_id} is now ${status === 1 ? 'ON (enabled)' : 'OFF (disabled)'}`,
+      vendor_id,
+      manual_assignment_enabled: status,
+      note: note || null
+    });
+
+  } catch (err) {
+    console.error("❌ Error toggling manual vendor assignment:", err);
+    res.status(500).json({ message: "Internal server error", error: err.message });
+  }
 });
 
+
 const removeVendorPackageByAdmin = asyncHandler(async (req, res) => {
-    // Assumes admin auth middleware verified role/permissions already
+    // ✅ Assumes admin authentication and authorization middleware already applied
     const { vendor_packages_id } = req.params;
 
     if (!vendor_packages_id) {
@@ -1802,26 +1752,34 @@ const removeVendorPackageByAdmin = asyncHandler(async (req, res) => {
     await connection.beginTransaction();
 
     try {
-        // Ensure package exists
-        const [[pkg]] = await connection.query(
+        // ✅ Ensure the vendor package (or sub-package entry) exists
+        const [existingRows] = await connection.query(
             `SELECT vendor_packages_id, vendor_id
-             FROM vendor_packages
+             FROM vendor_package_items_flat
              WHERE vendor_packages_id = ?`,
             [vendor_packages_id]
         );
 
-        if (!pkg) {
+        if (existingRows.length === 0) {
             await connection.rollback();
-            return res.status(404).json({ message: "Package not found" });
+            return res.status(404).json({
+                message: "Vendor package or sub-package not found."
+            });
         }
 
-        // Delete related sub-packages/items first
+        const vendor_id = existingRows[0].vendor_id;
+
+        // ✅ Delete from all related tables safely using the unique vendor_packages_id
+        await connection.query(
+            `DELETE FROM vendor_package_items_flat WHERE vendor_packages_id = ?`,
+            [vendor_packages_id]
+        );
+
         await connection.query(
             `DELETE FROM vendor_package_items WHERE vendor_packages_id = ?`,
             [vendor_packages_id]
         );
 
-        // Delete the vendor package
         await connection.query(
             `DELETE FROM vendor_packages WHERE vendor_packages_id = ?`,
             [vendor_packages_id]
@@ -1831,15 +1789,16 @@ const removeVendorPackageByAdmin = asyncHandler(async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "Vendor package removed successfully by admin",
-            vendor_packages_id
+            message: "✅ Vendor package (or sub-package) deleted successfully by admin.",
+            vendor_packages_id,
+            vendor_id
         });
     } catch (err) {
         await connection.rollback();
-        console.error("Admin remove vendor package error:", err);
+        console.error("❌ Admin remove vendor package error:", err);
         res.status(500).json({
             success: false,
-            message: "Failed to remove vendor package",
+            message: "Failed to delete vendor package or sub-package",
             error: err.message
         });
     } finally {
@@ -2125,6 +2084,7 @@ const getAdminCreatedPackages = asyncHandler(async (req, res) => {
         });
     }
 });
+
 
 module.exports = {
     getAdminProfile,

@@ -1,6 +1,6 @@
 const vendorGetQueries = {
 
-  getVendorService: `
+    getVendorService: `
     SELECT
         vendors.vendor_id,
         vendors.vendorType,
@@ -43,7 +43,7 @@ const vendorGetQueries = {
     ORDER BY service_type.service_type_id, packages.package_id, package_items.item_id, booking_preferences.preference_id
     `,
 
-  getServiceTypesByVendorId: `
+    getServiceTypesByVendorId: `
     SELECT
                                  serviceTypeName
                                   FROM
@@ -52,21 +52,21 @@ const vendorGetQueries = {
                                         WHERE vendor_id = ? AND service_type.is_approved = 1
     `,
 
-  getIndividualVendorServices: `
+    getIndividualVendorServices: `
         SELECT s.service_id, s.serviceName
         FROM individual_services vs
         JOIN services s ON vs.service_id = s.service_id
         WHERE vs.vendor_id = ?
     `,
 
-  getCompanyVendorServices: `
+    getCompanyVendorServices: `
     SELECT s.service_id, s.serviceName
     FROM company_services vs
     JOIN services s ON vs.service_id = s.service_id
     WHERE vs.vendor_id = ?
     `,
 
-  getProfileVendor: `
+    getProfileVendor: `
     SELECT
         vendors.vendor_id,
         vendors.vendorType,
@@ -75,7 +75,13 @@ const vendorGetQueries = {
         COALESCE(individual_details.phone, company_details.companyPhone) AS phone,
         COALESCE(individual_details.dob, company_details.dob) AS birthDate,
         COALESCE(individual_details.profileImage, company_details.profileImage) AS profileImage,
-        COALESCE(individual_details.otherInfo) AS otherInfo,
+        COALESCE(individual_details.policeClearance, company_details.policeClearance) AS policeClearance,
+        COALESCE(individual_details.businessLicense, company_details.businessLicense) AS businessLicense,
+        COALESCE(individual_details.businessLicenseExpireDate, company_details.businessLicenseExpireDate) AS businessLicenseExpireDate,
+        COALESCE(individual_details.certificateOfExpertise, company_details.certificateOfExpertise) AS certificateOfExpertise,
+        COALESCE(individual_details.certificateOfExpertiseExpireDate, company_details.certificateOfExpertiseExpireDate) AS certificateOfExpertiseExpireDate,
+        COALESCE(individual_details.aboutMe, company_details.aboutMe) AS aboutMe,
+        COALESCE(individual_details.expertise, company_details.expertise) AS expertise,
         COALESCE(individual_details.address) AS address,
         COALESCE(company_details.googleBusinessProfileLink) AS googleBusinessProfileLink,
         COALESCE(company_details.companyAddress) AS companyAddress,
@@ -87,14 +93,14 @@ const vendorGetQueries = {
     WHERE vendors.vendor_id = ?
     `,
 
-  getCertificate: `
+    getCertificate: `
     SELECT certificate_id, certificateName, certificateFile, created_at
             FROM certificates
             WHERE vendor_id = ?
     `,
 
-  getVendorPayoutHistory: `
-    SELECT 
+    getVendorPayoutHistory: `
+    SELECT
         vp.payout_id,
         vp.booking_id,
         vp.vendor_id,
@@ -108,8 +114,6 @@ const vendorGetQueries = {
         sb.bookingDate,
         sb.bookingTime,
         CONCAT(u.firstName, ' ', u.lastName) AS user_name,
-        u.email AS user_email,
-        u.phone AS user_phone,
 
         sbs.sub_package_id,
 
@@ -122,20 +126,58 @@ const vendorGetQueries = {
         spi.description AS sub_package_description
 
     FROM vendor_payouts vp
-    JOIN service_booking sb ON vp.booking_id = sb.booking_id
-    JOIN users u ON vp.user_id = u.user_id
+    LEFT JOIN service_booking sb ON vp.booking_id = sb.booking_id
+    LEFT JOIN users u ON vp.user_id = u.user_id
     LEFT JOIN service_booking_sub_packages sbs ON sbs.booking_id = sb.booking_id
     LEFT JOIN package_items spi ON spi.item_id = sbs.sub_package_id
     LEFT JOIN packages pkg ON pkg.package_id = spi.package_id
     WHERE vp.vendor_id = ?
-    ORDER BY vp.created_at DESC
-    LIMIT ? OFFSET ?;
+    ORDER BY sb.bookingDate DESC;
+`,
+
+    getAdminPayoutHistory: `
+SELECT
+    vp.payout_id,
+    vp.booking_id,
+    vp.vendor_id,
+    vp.user_id,
+    vp.platform_fee_percentage,
+    vp.payout_amount,
+    vp.currency,
+    vp.payout_status,
+    vp.created_at,
+
+    id.name AS vendor_name,
+    id.email AS vendor_email,
+    id.phone AS vendor_phone,
+
+    sb.bookingDate,
+    sb.bookingTime,
+    CONCAT(u.firstName, ' ', u.lastName) AS user_name,
+
+    sbs.sub_package_id,
+
+    pkg.package_id,
+    pkg.packageName,
+    pkg.packageMedia,
+
+    spi.itemName AS sub_package_name,
+    spi.itemMedia AS sub_package_media,
+    spi.description AS sub_package_description
+
+FROM vendor_payouts vp
+LEFT JOIN service_booking sb ON vp.booking_id = sb.booking_id
+LEFT JOIN users u ON vp.user_id = u.user_id
+LEFT JOIN service_booking_sub_packages sbs ON sbs.booking_id = sb.booking_id
+LEFT JOIN package_items spi ON spi.item_id = sbs.sub_package_id
+LEFT JOIN packages pkg ON pkg.package_id = spi.package_id
+LEFT JOIN individual_details id ON vp.vendor_id = id.vendor_id
+WHERE vp.vendor_id = ?
+ORDER BY sb.bookingDate DESC;
 `,
 
 
-
-
-  getVendorAssignedPackages: `
+    getVendorAssignedPackages: `
             SELECT
                 service_type.service_type_id,
                 service_type.serviceTypeName,
@@ -197,7 +239,7 @@ const vendorGetQueries = {
             ORDER BY service_type.service_type_id DESC
     `,
 
-  getAllPackagesForVendor: `
+    getAllPackagesForVendor: `
         SELECT
           sc.service_categories_id,
           sc.serviceCategory,

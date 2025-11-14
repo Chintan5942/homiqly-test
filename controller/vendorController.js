@@ -4,12 +4,13 @@ const nodemailer = require("nodemailer");
 const bcrypt = require("bcryptjs")
 const asyncHandler = require("express-async-handler");
 const bookingGetQueries = require("../config/bookingQueries/bookingGetQueries");
+const { sendReviewRequestMail } = require ("../config/utils/email/mailer")
 
 const getServicesWithPackages = asyncHandler(async (req, res) => {
     try {
         // 1️⃣ Fetch services with their packages
         const [rows] = await db.query(`
-                SELECT 
+                SELECT
                     sc.service_categories_id AS serviceCategoryId,
                     sc.serviceCategory AS categoryName,
                     s.service_id AS serviceId,
@@ -29,7 +30,7 @@ const getServicesWithPackages = asyncHandler(async (req, res) => {
 
         // 2️⃣ Fetch all sub-packages (package_items)
         const [subPackageRows] = await db.query(`
-            SELECT 
+            SELECT
                 item_id,
                 package_id,
                 itemName AS itemName
@@ -130,7 +131,7 @@ const applyPackagesToVendor = asyncHandler(async (req, res) => {
         // ✅ Fetch vendor details
         const [vendorDetails] = await connection.query(
             `
-            SELECT v.vendor_id, v.vendorType, 
+            SELECT v.vendor_id, v.vendorType,
                    COALESCE(i.name, c.companyName) AS vendorName,
                    COALESCE(i.email, c.companyEmail) AS vendorEmail
             FROM vendors v
@@ -154,8 +155,8 @@ const applyPackagesToVendor = asyncHandler(async (req, res) => {
 
             // ✅ Check package exists
             const [packageExists] = await connection.query(
-                `SELECT 
-                 package_id 
+                `SELECT
+                 package_id
                  FROM packages WHERE package_id = ?`,
                 [package_id]
             );
@@ -168,7 +169,7 @@ const applyPackagesToVendor = asyncHandler(async (req, res) => {
 
             // ✅ Store application
             const [insertResult] = await connection.query(
-                `INSERT INTO vendor_package_applications (vendor_id, package_id, status) 
+                `INSERT INTO vendor_package_applications (vendor_id, package_id, status)
                  VALUES (?, ?, 0)`,
                 [vendor_id, package_id]
             );
@@ -330,34 +331,39 @@ const updateProfileVendor = asyncHandler(async (req, res) => {
         name,
         email,
         phone,
-        otherInfo,
+        aboutMe,
         googleBusinessProfileLink,
         companyAddress,
         contactPerson,
         birthDate,
         address,
-        certificateNames // assume this is an array
+        expertise,
+        certificateNames // assume array
     } = req.body;
 
-    let profileImageVendor = req.uploadedFiles?.profileImageVendor?.[0]?.url || null;
+    const newFiles = req.uploadedFiles || {};
 
     try {
-        let existing;
-
-        // 1. Fetch existing details
-        if (vendor_type === "individual") {
-            [existing] = await db.query(
-                `SELECT profileImage, name, address, dob, email, phone, otherInfo FROM individual_details WHERE vendor_id = ?`,
-                [vendor_id]
-            );
-        } else if (vendor_type === "company") {
-            [existing] = await db.query(
-                `SELECT profileImage, companyName, dob, companyEmail, companyPhone, googleBusinessProfileLink, companyAddress, contactPerson FROM company_details WHERE vendor_id = ?`,
-                [vendor_id]
-            );
-        } else {
-            return res.status(400).json({ message: "Invalid vendor type" });
-        }
+        // ✅ Fetch existing vendor record
+        let [existing] =
+            vendor_type === "individual"
+                ? await db.query(
+                    `SELECT profileImage, policeClearance, certificateOfExpertise, businessLicense,
+                      businessLicenseExpireDate, certificateOfExpertiseExpireDate,
+                      name, address, dob, email, phone, aboutMe, expertise
+               FROM individual_details WHERE vendor_id = ?`,
+                    [vendor_id]
+                )
+                : vendor_type === "company"
+                    ? await db.query(
+                        `SELECT profileImage, policeClearance, certificateOfExpertise, businessLicense,
+                      businessLicenseExpireDate, certificateOfExpertiseExpireDate,
+                      companyName, dob, companyEmail, companyPhone,
+                      googleBusinessProfileLink, companyAddress, contactPerson, expertise
+               FROM company_details WHERE vendor_id = ?`,
+                        [vendor_id]
+                    )
+                    : [];
 
         if (!existing || existing.length === 0) {
             return res.status(404).json({ message: "Vendor not found" });
@@ -365,32 +371,89 @@ const updateProfileVendor = asyncHandler(async (req, res) => {
 
         const current = existing[0];
 
-        // 2. Fallback to old data if any field is not provided
-        profileImageVendor = profileImageVendor || current.profileImage;
+        // ✅ Helper to handle media fields
+        const handleMediaField = (fieldName, fileKey, currentValue) => {
+            if (req.body[fieldName] === "") return null; // explicit remove
+            return newFiles?.[fileKey]?.[0]?.url || currentValue; // preserve or replace
+        };
 
+        // ✅ Helper to handle date fields
+        const handleDateField = (fieldName, currentValue) => {
+            if (req.body[fieldName] === "") return null; // explicit remove
+            if (req.body[fieldName] === undefined) return currentValue; // preserve old
+            return req.body[fieldName]; // update with new date
+        };
+
+        // ✅ Handle media
+        const profileImageVendor = handleMediaField("profileImageVendor", "profileImageVendor", current.profileImage);
+        const policeClearance = handleMediaField("policeClearance", "policeClearance", current.policeClearance);
+        const certificateOfExpertise = handleMediaField("certificateOfExpertise", "certificateOfExpertise", current.certificateOfExpertise);
+        const businessLicense = handleMediaField("businessLicense", "businessLicense", current.businessLicense);
+
+        // ✅ Handle dates (smart delete or preserve)
+        const updatedBusinessLicenseExpireDate = handleDateField("businessLicenseExpireDate", current.businessLicenseExpireDate);
+        const updatedCertificateExpireDate = handleDateField("certificateOfExpertiseExpireDate", current.certificateOfExpertiseExpireDate);
+
+        // ✅ Update vendor profile
         if (vendor_type === "individual") {
             await db.query(
                 `UPDATE individual_details
-                 SET profileImage = ?, name = ?, address = ?, dob = ?, email = ?, phone = ?, otherInfo = ?
-                 WHERE vendor_id = ?`,
+           SET profileImage = ?,
+               policeClearance = ?,
+               certificateOfExpertise = ?,
+               businessLicense = ?,
+               businessLicenseExpireDate = ?,
+               certificateOfExpertiseExpireDate = ?,
+               name = ?,
+               address = ?,
+               dob = ?,
+               email = ?,
+               phone = ?,
+               aboutMe = ?,
+               expertise = ?
+           WHERE vendor_id = ?`,
                 [
                     profileImageVendor,
+                    policeClearance,
+                    certificateOfExpertise,
+                    businessLicense,
+                    updatedBusinessLicenseExpireDate,
+                    updatedCertificateExpireDate,
                     name ?? current.name,
                     address ?? current.address,
                     birthDate ?? current.dob,
                     email ?? current.email,
                     phone ?? current.phone,
-                    otherInfo ?? current.otherInfo,
-                    vendor_id
+                    aboutMe ?? current.aboutMe,
+                    expertise ?? current.expertise,
+                    vendor_id,
                 ]
             );
         } else if (vendor_type === "company") {
             await db.query(
                 `UPDATE company_details
-                 SET profileImage = ?, companyName = ?, dob = ?, companyEmail = ?, companyPhone = ?, googleBusinessProfileLink = ?, companyAddress = ?, contactPerson = ?
-                 WHERE vendor_id = ?`,
+           SET profileImage = ?,
+               policeClearance = ?,
+               certificateOfExpertise = ?,
+               businessLicense = ?,
+               businessLicenseExpireDate = ?,
+               certificateOfExpertiseExpireDate = ?,
+               companyName = ?,
+               dob = ?,
+               companyEmail = ?,
+               companyPhone = ?,
+               googleBusinessProfileLink = ?,
+               companyAddress = ?,
+               contactPerson = ?,
+               expertise = ?
+           WHERE vendor_id = ?`,
                 [
                     profileImageVendor,
+                    policeClearance,
+                    certificateOfExpertise,
+                    businessLicense,
+                    updatedBusinessLicenseExpireDate,
+                    updatedCertificateExpireDate,
                     name ?? current.companyName,
                     birthDate ?? current.dob,
                     email ?? current.companyEmail,
@@ -398,29 +461,34 @@ const updateProfileVendor = asyncHandler(async (req, res) => {
                     googleBusinessProfileLink ?? current.googleBusinessProfileLink,
                     companyAddress ?? current.companyAddress,
                     contactPerson ?? current.contactPerson,
-                    vendor_id
+                    expertise ?? current.expertise,
+                    vendor_id,
                 ]
             );
         }
 
-        // 3. Insert certificates if provided
-        if (certificateNames && Array.isArray(certificateNames)) {
-            for (let i = 0; i < certificateNames.length; i++) {
-                const certName = certificateNames[i];
-                const certFile = req.uploadedFiles?.[`certificateFiles_${i}`]?.[0]?.url;
-
+        // ✅ Handle new certificates
+        if (certificateNames?.length) {
+            const insertPromises = certificateNames.map((certName, i) => {
+                const certFile = newFiles?.[`certificateFiles_${i}`]?.[0]?.url;
                 if (certName && certFile) {
-                    await db.query(
-                        `INSERT INTO certificates (vendor_id, certificateName, certificateFile) VALUES (?, ?, ?)`,
+                    return db.query(
+                        `INSERT INTO certificates (vendor_id, certificateName, certificateFile)
+               VALUES (?, ?, ?)`,
                         [vendor_id, certName, certFile]
                     );
                 }
-            }
+                return null;
+            });
+            await Promise.all(insertPromises);
         }
 
-        res.status(200).json({ message: "Vendor profile and certificates updated successfully" });
+        res.status(200).json({
+            message: "✅ Vendor profile updated successfully (media and expiry dates handled properly)",
+        });
+
     } catch (err) {
-        console.error("Error updating vendor profile:", err);
+        console.error("❌ Error updating vendor profile:", err);
         res.status(500).json({ message: "Internal server error", error: err.message });
     }
 });
@@ -450,7 +518,7 @@ const editServiceType = asyncHandler(async (req, res) => {
 
             // Ensure the vendor actually owns this vendor_packages entry
             const [checkVendorPkg] = await connection.query(
-                `SELECT * FROM vendor_packages 
+                `SELECT * FROM vendor_packages
                  WHERE vendor_packages_id = ? AND vendor_id = ? AND package_id = ?`,
                 [vendor_packages_id, vendor_id, package_id]
             );
@@ -705,70 +773,6 @@ const getAllPackagesForVendor = asyncHandler(async (req, res) => {
     }
 });
 
-const getVendorAssignedPackages = asyncHandler(async (req, res) => {
-    const vendorId = req.user.vendor_id;
-
-    try {
-        // ✅ Fetch all package-subpackage pairs assigned to vendor
-        const [assignedRows] = await db.query(
-            `SELECT 
-                vpf.vendor_packages_id,
-                vpf.package_id,
-                vpf.package_item_id,
-                p.packageName,
-                pi.itemName AS sub_package_name,
-                pi.itemMedia,
-                pi.description
-             FROM vendor_package_items_flat vpf
-             JOIN packages p ON vpf.package_id = p.package_id
-             LEFT JOIN package_items pi ON vpf.package_item_id = pi.item_id
-             WHERE vpf.vendor_id = ?`,
-            [vendorId]
-        );
-
-        if (assignedRows.length === 0) {
-            return res.status(200).json({
-                message: "No packages assigned to this vendor",
-                result: []
-            });
-        }
-
-        // ✅ Group sub-packages by package_id
-        const grouped = {};
-        assignedRows.forEach(row => {
-            if (!grouped[row.package_id]) {
-                grouped[row.package_id] = {
-                    vendor_packages_id: row.vendor_packages_id,
-                    package_id: row.package_id,
-                    package_name: row.packageName,
-                    sub_packages: []
-                };
-            }
-
-            // Only add sub-package if package_item_id is not 0 (placeholder for no sub-packages)
-            if (row.package_item_id && row.package_item_id !== 0) {
-                grouped[row.package_id].sub_packages.push({
-                    sub_package_id: row.package_item_id,
-                    sub_package_name: row.sub_package_name || "Unknown",
-                    sub_package_media: row.itemMedia || null,
-                    sub_package_description: row.description || null
-                });
-            }
-        });
-
-        const result = Object.values(grouped);
-
-        res.status(200).json({
-            message: "Vendor packages fetched successfully",
-            result
-        });
-
-    } catch (err) {
-        console.error("Error fetching vendor packages:", err);
-        res.status(500).json({ error: "Database error", details: err.message });
-    }
-});
-
 const addRatingToPackages = asyncHandler(async (req, res) => {
     const vendor_id = req.user.vendor_id;
     const { service_id, package_id, rating, review } = req.body;
@@ -834,6 +838,16 @@ const toggleManualVendorAssignment = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "vendor_id is required" });
     }
 
+    const [vendorExists] = await db.query(
+        "SELECT vendor_id FROM vendors WHERE vendor_id = ?",
+        [vendor_id]
+    );
+
+    if (vendorExists.length === 0) {
+        return res.status(400).json({ message: "Vendor does not exist." });
+    }
+
+
     try {
         await db.query(`
             INSERT INTO vendor_settings (vendor_id, manual_assignment_enabled)
@@ -859,7 +873,7 @@ const toggleManualVendorAssignment = asyncHandler(async (req, res) => {
 
 
         res.status(200).json({
-            message: `Manual assignment for vendor ${vendor_id} is now ${value === 1 ? 'ON (disabled)' : 'OFF (enabled)'}`,
+            message: `Manual assignment for vendor ${vendor_id} is now ${value === 1 ? 'ON (enabled)' : 'OFF (disabled)'}`,
             vendor_id,
             manual_assignment_enabled: value
         });
@@ -897,6 +911,8 @@ const getManualAssignmentStatus = asyncHandler(async (req, res) => {
 const getVendorPayoutHistory = asyncHandler(async (req, res) => {
     const vendor_id = req.user.vendor_id;
 
+    const { startDate, endDate } = req.query;
+
     if (!vendor_id) {
         return res.status(400).json({ message: "Vendor ID is required" });
     }
@@ -907,17 +923,42 @@ const getVendorPayoutHistory = asyncHandler(async (req, res) => {
     const offset = (page - 1) * limit;
 
     try {
-        // 🔢 Count total payouts for vendor
+        // 🧮 Build dynamic filters
+        let filterCondition = "WHERE vp.vendor_id = ?";
+        const filterParams = [vendor_id];
+
+        // ✅ Apply date filters dynamically
+        if (startDate && endDate) {
+            filterCondition += " AND DATE(sb.bookingDate) BETWEEN ? AND ?";
+            filterParams.push(startDate, endDate);
+        } else if (startDate) {
+            filterCondition += " AND DATE(sb.bookingDate) >= ?";
+            filterParams.push(startDate);
+        } else if (endDate) {
+            filterCondition += " AND DATE(sb.bookingDate) <= ?";
+            filterParams.push(endDate);
+        }
+
+        // 🔢 Count total payouts (with filters)
         const [[{ total }]] = await db.query(
-            `SELECT COUNT(*) AS total FROM vendor_payouts WHERE vendor_id = ?`,
-            [vendor_id]
+            `SELECT COUNT(DISTINCT vp.payout_id) AS total
+             FROM vendor_payouts vp
+             LEFT JOIN service_booking sb ON vp.booking_id = sb.booking_id
+            ${filterCondition}
+            `,
+            filterParams
         );
 
-        // ✅ Fetch payouts + booking info (paginated)
-        const [payoutRows] = await db.query(
-            vendorGetQueries.getVendorPayoutHistory,
-            [vendor_id, limit, offset]
-        );
+        // ✅ Build final SQL query with filters + pagination
+        const finalQuery = `
+            ${vendorGetQueries.getVendorPayoutHistory.replace(
+            "WHERE vp.vendor_id = ?",
+            filterCondition
+        )}
+        `;
+
+        // ✅ Fetch paginated payouts
+        const [payoutRows] = await db.query(finalQuery, [...filterParams, limit, offset]);
 
         if (!payoutRows.length) {
             return res.status(200).json({
@@ -937,10 +978,11 @@ const getVendorPayoutHistory = asyncHandler(async (req, res) => {
         }
 
         // ✅ Group by booking_id
-        const payoutMap = {};
+        const payoutMap = new Map();
+
         payoutRows.forEach(row => {
-            if (!payoutMap[row.booking_id]) {
-                payoutMap[row.booking_id] = {
+            if (!payoutMap.has(row.payout_id)) {
+                payoutMap.set(row.booking_id, {
                     payout_id: row.payout_id,
                     booking_id: row.booking_id,
                     vendor_id: row.vendor_id,
@@ -956,34 +998,27 @@ const getVendorPayoutHistory = asyncHandler(async (req, res) => {
                     bookingDate: row.bookingDate,
                     bookingTime: row.bookingTime,
                     user_name: row.user_name,
-                    user_email: row.user_email,
-                    user_phone: row.user_phone,
                     packages: []
-                };
+                });
             }
 
             if (row.package_id && row.sub_package_id) {
-                const pkgIndex = payoutMap[row.booking_id].packages.findIndex(
-                    p => p.package_id === row.package_id
-                );
+                const payout = payoutMap.get(row.booking_id);
+                const pkgIndex = payout.packages.findIndex(p => p.package_id === row.package_id);
                 if (pkgIndex === -1) {
-                    // Add new package
-                    payoutMap[row.booking_id].packages.push({
+                    payout.packages.push({
                         package_id: row.package_id,
                         packageName: row.packageName,
                         packageMedia: row.packageMedia,
-                        sub_packages: [
-                            {
-                                sub_package_id: row.sub_package_id,
-                                sub_package_name: row.sub_package_name,
-                                sub_package_media: row.sub_package_media,
-                                sub_package_description: row.sub_package_description
-                            }
-                        ]
+                        sub_packages: [{
+                            sub_package_id: row.sub_package_id,
+                            sub_package_name: row.sub_package_name,
+                            sub_package_media: row.sub_package_media,
+                            sub_package_description: row.sub_package_description
+                        }]
                     });
                 } else {
-                    // Append sub_package to existing package
-                    payoutMap[row.booking_id].packages[pkgIndex].sub_packages.push({
+                    payout.packages[pkgIndex].sub_packages.push({
                         sub_package_id: row.sub_package_id,
                         sub_package_name: row.sub_package_name,
                         sub_package_media: row.sub_package_media,
@@ -993,9 +1028,14 @@ const getVendorPayoutHistory = asyncHandler(async (req, res) => {
             }
         });
 
-        const allPayouts = Object.values(payoutMap);
+        const allPayouts = Array.from(payoutMap.values());
 
-        // 💰 Calculate totals
+        // ✅ Apply pagination *after* grouping
+        const totalRecords = allPayouts.length;
+        const startIndex = (page - 1) * limit;
+        const paginatedPayouts = allPayouts.slice(startIndex, startIndex + limit);
+
+        // 💰 Totals
         const totalPayout = parseFloat(
             allPayouts.reduce((sum, b) => sum + b.payout_amount, 0).toFixed(2)
         );
@@ -1007,19 +1047,19 @@ const getVendorPayoutHistory = asyncHandler(async (req, res) => {
         );
         const paidPayout = parseFloat(
             allPayouts
-                .filter(b => b.payout_status === 3 || b.payout_status === "paid")
+                .filter(b => b.payout_status === 3 || b.payout_status === "approved")
                 .reduce((sum, b) => sum + b.payout_amount, 0)
                 .toFixed(2)
         );
 
-        // 📦 Response with pagination
+        // 📦 Response
         res.status(200).json({
             vendor_id,
             totalBookings: allPayouts.length,
-            totalPayout,
+            totalPayout: totalPayout,
             pendingPayout,
             paidPayout,
-            allPayouts,
+            allPayouts: paginatedPayouts,
             page,
             limit,
             totalPages: Math.ceil(total / limit),
@@ -1034,29 +1074,22 @@ const getVendorPayoutHistory = asyncHandler(async (req, res) => {
     }
 });
 
+
 const updateBookingStatusByVendor = asyncHandler(async (req, res) => {
     const vendor_id = req.user.vendor_id;
     const { booking_id, status } = req.body;
 
-    console.log(vendor_id);
-
-    // ✅ Validate input    
     if (!booking_id || ![3, 4].includes(status)) {
         return res.status(400).json({ message: "Invalid booking ID or status" });
     }
 
     try {
-        // 🔐 Check if the booking is assigned to the current vendor
+        // 🔐 Validate vendor ownership
         const [checkBooking] = await db.query(
-            `SELECT sb.booking_id, 
-              sb.vendor_id, 
-              sb.user_id,
-              sb.bookingDate,
-              sb.bookingTime,
-              p.status AS payment_status
-       FROM service_booking sb
-       LEFT JOIN payments p ON sb.payment_intent_id = p.payment_intent_id
-       WHERE sb.booking_id = ? AND sb.vendor_id = ?`,
+            `SELECT sb.booking_id, sb.vendor_id, sb.user_id, sb.bookingDate, sb.bookingTime, p.status AS payment_status
+             FROM service_booking sb
+             LEFT JOIN payments p ON sb.payment_intent_id = p.payment_intent_id
+             WHERE sb.booking_id = ? AND sb.vendor_id = ?`,
             [booking_id, vendor_id]
         );
 
@@ -1066,14 +1099,11 @@ const updateBookingStatusByVendor = asyncHandler(async (req, res) => {
 
         const { payment_status, user_id, bookingDate, bookingTime } = checkBooking[0];
 
-        // ✅ Restrict start time (status = 3) → only within 10 min before start
+        // ✅ Restrict start service window (10 min before start)
         if (status === 3) {
             const bookingDateTime = new Date(`${bookingDate} ${bookingTime}`);
             const now = new Date();
-
-            // Allow start only if current time >= booking time - 10 minutes
             const startWindow = new Date(bookingDateTime.getTime() - 10 * 60000);
-
             if (now < startWindow) {
                 return res.status(400).json({
                     message: "You can only start the service within 10 minutes of the booking time."
@@ -1081,23 +1111,30 @@ const updateBookingStatusByVendor = asyncHandler(async (req, res) => {
             }
         }
 
-        // ✅ Determine completed_flag
+        // ✅ Update service booking record
         const completed_flag = status === 4 ? 1 : 0;
+        let updateFields = { bookingStatus: status, completed_flag };
+        if (status === 3) updateFields.start_time = new Date();
+        else if (status === 4) updateFields.end_time = new Date();
 
-        // ✅ Update the booking status and completed flag
-        await db.query(
-            `UPDATE service_booking SET bookingStatus = ?, completed_flag = ? WHERE booking_id = ?`,
-            [status, completed_flag, booking_id]
-        );
+        const updateKeys = Object.keys(updateFields);
+        const updateValues = Object.values(updateFields);
+        const updateSQL = `UPDATE service_booking
+                           SET ${updateKeys.map(k => `${k} = ?`).join(', ')}
+                           WHERE booking_id = ?`;
 
+        await db.query(updateSQL, [...updateValues, booking_id]);
+
+        // ✅ Send user notifications
+        let notificationTitle, notificationBody;
         if (status === 4) {
             notificationTitle = "Your service has been completed";
             notificationBody = `Your service for booking ID ${booking_id} has been completed. Please take a moment to rate your experience.`;
             const ratingLink = `https://homiqly-h81s.vercel.app/Profile/history`;
 
             await db.query(
-                `INSERT INTO notifications(user_type, user_id, title, body, action_link, is_read, sent_at)
-                VALUES(?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+                `INSERT INTO notifications (user_type, user_id, title, body, action_link, is_read, sent_at)
+                 VALUES (?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
                 ['users', user_id, notificationTitle, notificationBody, ratingLink]
             );
         } else {
@@ -1105,62 +1142,137 @@ const updateBookingStatusByVendor = asyncHandler(async (req, res) => {
             notificationBody = `Your service for booking ID ${booking_id} has been started by the vendor`;
 
             await db.query(
-                `INSERT INTO notifications(user_type, user_id, title, body, is_read, sent_at)
-                VALUES(?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+                `INSERT INTO notifications (user_type, user_id, title, body, is_read, sent_at)
+                 VALUES (?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
                 ['users', user_id, notificationTitle, notificationBody]
             );
         }
 
+        // ✅ Handle payout when completed
         if (status === 4) {
-            // ✅ Fetch payment + platform fee details
             const [[paymentInfo]] = await db.query(
-                `SELECT 
-                    p.amount, 
-                    p.currency, 
+                `SELECT
+                    p.amount,
+                    p.currency,
                     p.status AS payment_status,
-                    v.vendorType
-                FROM payments p
-                JOIN service_booking sb ON sb.payment_intent_id = p.payment_intent_id
-                JOIN vendors v ON v.vendor_id = sb.vendor_id
-                WHERE sb.booking_id = ? LIMIT 1`,
+                    p.payment_intent_id,
+                    v.vendorType,
+                    sb.user_promo_code_id
+                 FROM payments p
+                 JOIN service_booking sb ON sb.payment_intent_id = p.payment_intent_id
+                 JOIN vendors v ON v.vendor_id = sb.vendor_id
+                 WHERE sb.booking_id = ? LIMIT 1`,
                 [booking_id]
             );
 
             if (paymentInfo && paymentInfo.payment_status === 'completed') {
+                const paidAmount = Number(paymentInfo.amount || 0);
+                const vendorType = paymentInfo.vendorType;
+                const promoId = paymentInfo.user_promo_code_id;
+                let promoDiscount = 0;
+                let discountType = null;
+
+                // 🔹 Fetch promo if exists
+                if (promoId) {
+                    const [[userPromo]] = await db.query(`
+                        SELECT pc.discountValue, pc.discount_type
+                        FROM user_promo_codes upc
+                        LEFT JOIN promo_codes pc ON upc.promo_id = pc.promo_id
+                        WHERE upc.user_promo_code_id = ?;
+                    `, [promoId]);
+
+                    if (userPromo && userPromo.discountValue != null) {
+                        promoDiscount = Number(userPromo.discountValue);
+                        discountType = userPromo.discount_type;
+                    } else {
+                        const [[systemPromo]] = await db.query(`
+                            SELECT spct.discountValue, spct.discount_type
+                            FROM system_promo_codes spc
+                            LEFT JOIN system_promo_code_templates spct
+                            ON spc.template_id = spct.system_promo_code_template_id
+                            WHERE spc.system_promo_code_id = ?;
+                        `, [promoId]);
+
+                        if (systemPromo && systemPromo.discountValue != null) {
+                            promoDiscount = Number(systemPromo.discountValue);
+                            discountType = systemPromo.discount_type;
+                        }
+                    }
+                }
+
+                // 🧮 Compute gross & payout
+                let grossAmount = paidAmount;
+                if (promoDiscount && discountType === "percentage")
+                    grossAmount = paidAmount * (1 + promoDiscount / 100);
+                else if (promoDiscount && discountType === "fixed")
+                    grossAmount = paidAmount + promoDiscount;
+
                 const [feeRows] = await db.query(
-                    `SELECT platform_fee_percentage 
-                    FROM platform_settings 
-                    WHERE vendor_type = ? LIMIT 1`,
-                    [paymentInfo.vendorType]
+                    `SELECT platform_fee_percentage FROM platform_settings WHERE vendor_type = ? LIMIT 1`,
+                    [vendorType]
                 );
 
                 const platform_fee_percentage = Number(feeRows?.[0]?.platform_fee_percentage ?? 0);
-                const gross_amount = Number(paymentInfo.amount || 0);
-                const payout_amount = Number((gross_amount * (1 - platform_fee_percentage / 100)).toFixed(2));
+                const platformFeeAmount = grossAmount * (platform_fee_percentage / 100);
+                const payout_amount = Number((grossAmount - platformFeeAmount).toFixed(2));
 
-                // ✅ Insert payout only using booking_id, vendor_id, user_id, and payment info
-                const [insertResult] = await db.query(
-                    `INSERT INTO vendor_payouts 
-                    (booking_id, vendor_id, user_id, payment_intent_id, gross_amount, platform_fee_percentage, payout_amount, currency)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE
-                    payout_amount = VALUES(payout_amount),
-                    platform_fee_percentage = VALUES(platform_fee_percentage)`,
+                await db.query(
+                    `INSERT INTO vendor_payouts
+                     (booking_id, vendor_id, user_id, payment_intent_id, gross_amount, discount_amount, platform_fee_percentage, payout_amount, currency)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                        discount_amount = VALUES(discount_amount),
+                        payout_amount = VALUES(payout_amount),
+                        platform_fee_percentage = VALUES(platform_fee_percentage)`,
                     [
                         booking_id,
                         vendor_id,
                         user_id,
                         paymentInfo.payment_intent_id,
-                        gross_amount,
+                        grossAmount,
+                        promoDiscount || 0,
                         platform_fee_percentage,
                         payout_amount,
                         paymentInfo.currency
                     ]
                 );
+
+                // ✅ Fire & Forget Review Email
+                (async () => {
+                    try {
+                        const [[userData]] = await db.query(
+                            `SELECT u.firstName AS userName, u.email AS userEmail,
+                                    s.serviceName AS serviceName,
+                                    CASE
+                                        WHEN v.vendorType = 'company' THEN cd.companyName
+                                        ELSE id.name
+                                    END AS vendorName
+                             FROM service_booking sb
+                             JOIN users u ON sb.user_id = u.user_id
+                             JOIN services s ON sb.service_id = s.service_id
+                             JOIN vendors v ON v.vendor_id = sb.vendor_id
+                             LEFT JOIN company_details cd ON cd.vendor_id = v.vendor_id
+                             LEFT JOIN individual_details id ON id.vendor_id = v.vendor_id
+                             WHERE sb.booking_id = ? LIMIT 1;`,
+                            [booking_id]
+                        );
+
+                        if (userData && userData.userEmail) {
+                            sendReviewRequestMail({
+                                userName: userData.userName,
+                                userEmail: userData.userEmail,
+                                serviceName: userData.serviceName,
+                                vendorName: userData.vendorName
+                            });
+                        }
+                    } catch (mailErr) {
+                        console.error("⚠️ Failed to trigger review email:", mailErr.message);
+                    }
+                })();
             }
         }
 
-
+        // ✅ Success Response
         res.status(200).json({
             message: `Booking marked as ${status === 3 ? 'started' : 'completed'} successfully`
         });
@@ -1180,122 +1292,193 @@ const getVendorDashboardStats = asyncHandler(async (req, res) => {
     // filterType = 'all' | 'weekly' | 'monthly' | 'custom'
 
     try {
-        // ✅ Get vendor type
-        const [[vendorRow]] = await db.query(
-            bookingGetQueries.getVendorIdForBooking,
-            [vendor_id]
-        );
-        const vendorType = vendorRow?.vendorType || null;
-
-        // ✅ Get platform fee %
-        const [platformSettings] = await db.query(
-            bookingGetQueries.getPlateFormFee,
-            [vendorType]
-        );
-        const platformFee = Number(platformSettings?.[0]?.platform_fee_percentage ?? 0);
-
-        // ✅ Build WHERE clause for date filters
+        // 1️⃣ Build date filter dynamically
         let dateFilter = "";
         let params = [vendor_id];
 
         if (filterType === "weekly") {
-            dateFilter = "AND sb.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+            dateFilter = "AND vp.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
         } else if (filterType === "monthly") {
-            dateFilter = "AND sb.created_at >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
+            dateFilter = "AND vp.created_at >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
         } else if (filterType === "custom" && startDate && endDate) {
-            dateFilter = "AND sb.created_at BETWEEN ? AND ?";
+            dateFilter = "AND DATE(vp.created_at) BETWEEN ? AND ?";
             params = [vendor_id, startDate, endDate];
-        } // else all-time → no filter
+        }
 
-        // ✅ Get bookings summary
+        // 2️⃣ Fetch booking counts
         const [[bookingStats]] = await db.query(
             `
-                SELECT
-                COUNT(*) AS totalBookings,
-                    SUM(CASE WHEN sb.bookingStatus = 0 THEN 1 ELSE 0 END) AS pendingBookings,
-                        SUM(CASE WHEN sb.bookingStatus = 1 THEN 1 ELSE 0 END) AS completedBookings
-            FROM service_booking sb
-            WHERE sb.vendor_id = ? ${dateFilter};
-                `,
+        SELECT
+          COUNT(sb.booking_id) AS totalBookings,
+          SUM(CASE WHEN sb.bookingStatus = 1 THEN 1 ELSE 0 END) AS approvedBookings,
+          SUM(CASE WHEN sb.bookingStatus = 3 THEN 1 ELSE 0 END) AS startedBookings,
+          SUM(CASE WHEN sb.bookingStatus = 4 THEN 1 ELSE 0 END) AS completedBookings
+        FROM service_booking sb
+        WHERE sb.vendor_id = ? ${dateFilter.replace(/vp\./g, "sb.")};
+      `,
             params
         );
 
-        // ✅ Get earnings
-        const [[earnings]] = await db.query(
+        // 3️⃣ Fetch earnings directly from vendor_payouts table
+        const [[earningsStats]] = await db.query(
             `
-                SELECT
-                CAST(SUM(p.amount * (1 - ? / 100)) AS DECIMAL(10, 2)) AS totalEarnings
-            FROM service_booking sb
-            JOIN payments p ON sb.payment_intent_id = p.payment_intent_id
-            WHERE sb.vendor_id = ? AND p.status = 'completed' ${dateFilter};
-                `,
-            [platformFee, ...params]
+        SELECT
+          COALESCE(SUM(vp.payout_amount), 0) AS totalEarnings
+        FROM vendor_payouts vp
+        WHERE vp.vendor_id = ? ${dateFilter};
+      `,
+            params
         );
 
+        // ✅ Format and respond
         res.status(200).json({
             message: "Vendor dashboard stats fetched successfully",
             filterType,
             stats: {
                 totalBookings: bookingStats.totalBookings || 0,
-                pendingBookings: bookingStats.pendingBookings || 0,
+                approvedBookings: bookingStats.approvedBookings || 0,
+                startedBookings: bookingStats.startedBookings || 0,
                 completedBookings: bookingStats.completedBookings || 0,
-                totalEarnings: earnings.totalEarnings
-                    ? parseFloat(earnings.totalEarnings)
-                    : 0
-            }
+                totalEarnings: Number(earningsStats.totalEarnings).toFixed(2),
+            },
         });
     } catch (error) {
-        console.error("Error fetching vendor dashboard stats:", error);
+        console.error("❌ Error fetching vendor dashboard stats:", error);
         res.status(500).json({
             message: "Internal server error",
-            error: error.message
+            error: error.message,
         });
+    }
+});
+
+
+const getVendorAssignedPackages = asyncHandler(async (req, res) => {
+    const vendorId = req.user.vendor_id;
+
+    try {
+        // ✅ Fetch all package-subpackage pairs assigned to vendor
+        const [assignedRows] = await db.query(
+            `SELECT
+                vpf.vendor_packages_id,
+                vpf.package_id,
+                vpf.package_item_id,
+                p.packageName,
+                pi.itemName AS sub_package_name,
+                pi.itemMedia,
+                pi.description
+             FROM vendor_package_items_flat vpf
+             JOIN packages p ON vpf.package_id = p.package_id
+             LEFT JOIN package_items pi ON vpf.package_item_id = pi.item_id
+             WHERE vpf.vendor_id = ?`,
+            [vendorId]
+        );
+
+        if (assignedRows.length === 0) {
+            return res.status(200).json({
+                message: "No packages assigned to this vendor",
+                result: []
+            });
+        }
+
+        // ✅ Group sub-packages by package_id
+        const grouped = {};
+        assignedRows.forEach(row => {
+            if (!grouped[row.package_id]) {
+                grouped[row.package_id] = {
+                    package_id: row.package_id,
+                    package_name: row.packageName,
+                    sub_packages: []
+                };
+            }
+
+            // Only add sub-package if package_item_id is not 0 (placeholder for no sub-packages)
+            if (row.package_item_id && row.package_item_id !== 0) {
+                grouped[row.package_id].sub_packages.push({
+                    package_item_id: row.package_item_id,
+                    vendor_packages_id: row.vendor_packages_id,
+                    sub_package_name: row.sub_package_name || "Unknown",
+                    sub_package_media: row.itemMedia || null,
+                    sub_package_description: row.description || null
+                });
+            }
+        });
+
+        const result = Object.values(grouped);
+
+        res.status(200).json({
+            message: "Vendor packages fetched successfully",
+            result
+        });
+
+    } catch (err) {
+        console.error("Error fetching vendor packages:", err);
+        res.status(500).json({ error: "Database error", details: err.message });
     }
 });
 
 const removeVendorPackage = asyncHandler(async (req, res) => {
     const vendorId = req.user.vendor_id;
-
     const { vendor_packages_id } = req.params;
+    const { package_id, package_item_id } = req.body;
 
-    if (!vendor_packages_id) {
-        return res.status(400).json({ message: "vendor_packages_id is required" });
+    if (!vendor_packages_id || !package_id || !package_item_id) {
+        return res.status(400).json({
+            message: "vendor_packages_id, package_id, and package_item_id are required"
+        });
     }
 
     const connection = await db.getConnection();
     await connection.beginTransaction();
 
     try {
-        // ✅ Ensure the package belongs to the vendor
+        // ✅ Verify this subpackage exists and belongs to this vendor
         const [rows] = await connection.query(
-            `SELECT vendor_packages_id FROM vendor_package_items_flat 
-             WHERE vendor_packages_id = ? AND vendor_id = ?`,
-            [vendor_packages_id, vendorId]
+            `SELECT vendor_packages_id, vendor_id, package_id, package_item_id
+             FROM vendor_package_items_flat
+             WHERE vendor_packages_id = ?
+               AND package_id = ?
+               AND package_item_id = ?`,
+            [vendor_packages_id, package_id, package_item_id]
         );
 
         if (rows.length === 0) {
             await connection.rollback();
-            return res.status(404).json({ message: "Package not found or not owned by this vendor" });
+            return res.status(404).json({
+                message: "Sub-package not found or not owned by this vendor"
+            });
         }
 
-        // ✅ Delete the vendor package
-        await connection.query(
-            `DELETE FROM vendor_package_items_flat WHERE vendor_packages_id = ? AND vendor_id = ?`,
-            [vendor_packages_id, vendorId]
+        // Optional: check vendor ownership if your table includes vendor_id
+        if (rows[0].vendor_id && rows[0].vendor_id !== vendorId) {
+            await connection.rollback();
+            return res.status(403).json({
+                message: "This sub-package does not belong to your account"
+            });
+        }
+
+        // ✅ Delete the specific row
+        const [result] = await connection.query(
+            `DELETE FROM vendor_package_items_flat
+             WHERE vendor_packages_id = ?
+               AND package_id = ?
+               AND package_item_id = ?
+             LIMIT 1`,
+            [vendor_packages_id, package_id, package_item_id]
         );
 
         await connection.commit();
 
         res.status(200).json({
             success: true,
-            message: "Vendor package removed successfully"
+            message: "Sub-package removed successfully",
+            deletedRows: result.affectedRows
         });
     } catch (err) {
         await connection.rollback();
-        console.error("Error removing vendor package:", err);
+        console.error("❌ Error removing vendor sub-package:", err);
         res.status(500).json({
             success: false,
-            message: "Failed to remove vendor package",
+            message: "Failed to remove vendor sub-package",
             error: err.message
         });
     } finally {
@@ -1320,8 +1503,8 @@ const editEmployeeProfileByCompany = asyncHandler(async (req, res) => {
     try {
         // Step 1: Fetch employee and check if belongs to this vendor/company
         const [existingRows] = await db.query(
-            `SELECT first_name, last_name, phone, email, profile_image, password 
-             FROM company_employees 
+            `SELECT first_name, last_name, phone, email, profile_image, password
+             FROM company_employees
              WHERE employee_id = ? AND vendor_id = ?`,
             [employee_id, vendorId]
         );

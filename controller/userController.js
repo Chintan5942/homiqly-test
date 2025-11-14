@@ -1,7 +1,19 @@
 const { db } = require("../config/db");
 const asyncHandler = require("express-async-handler");
 const userGetQueries = require("../config/userQueries/userGetQueries")
+const { parsePhoneNumberFromString } = require("libphonenumber-js");
 const bcrypt = require("bcryptjs")
+
+function normalizePhone(phone) {
+    if (!phone) return null;
+    try {
+        const parsed = parsePhoneNumberFromString(phone);
+        if (!parsed) return phone;
+        return parsed.nationalNumber; // e.g., +91 9427988352 → "9427988352"
+    } catch {
+        return phone;
+    }
+}
 
 const getServiceCategories = asyncHandler(async (req, res) => {
     try {
@@ -91,7 +103,7 @@ const getServiceByCategory = asyncHandler(async (req, res) => {
 
         // 2️⃣ Fetch average rating and review count per service
         const [ratings] = await db.query(`
-            SELECT 
+            SELECT
                 s.service_id,
                 ROUND(AVG(r.rating), 1) AS avgRating,
                 COUNT(r.rating_id) AS reviewCount
@@ -239,7 +251,6 @@ const getUserData = asyncHandler(async (req, res) => {
     }
 });
 
-
 const updateUserData = asyncHandler(async (req, res) => {
     const user_id = req.user.user_id;
     const { firstName, lastName, email, phone } = req.body;
@@ -247,8 +258,8 @@ const updateUserData = asyncHandler(async (req, res) => {
     try {
         // Step 1: Fetch existing user data
         const [existingRows] = await db.query(
-            `SELECT firstName, lastName, email, phone, profileImage, is_approved 
-             FROM users 
+            `SELECT firstName, lastName, email, phone, profileImage, is_approved
+             FROM users
              WHERE user_id = ?`,
             [user_id]
         );
@@ -259,41 +270,88 @@ const updateUserData = asyncHandler(async (req, res) => {
 
         const existing = existingRows[0];
 
-        // Step 2: Prevent updating phone if user is approved
+        // Step 2: Determine if phone can be updated
         let updatedPhone = existing.phone;
+
         if (existing.is_approved !== 1 && phone) {
-            // Step 2a: Check if phone already exists for another user
+            // ✅ Normalize both new and DB phones
+            const normalizedInputPhone = normalizePhone(phone);
+
+            // ✅ Fetch all users (for cross-country check)
+            const [allUsers] = await db.query("SELECT user_id, phone FROM users");
+
+            const matchedByDigits = allUsers.find(u => {
+                const normalizedDbPhone = normalizePhone(u.phone);
+                return (
+                    normalizedDbPhone &&
+                    normalizedInputPhone &&
+                    normalizedDbPhone === normalizedInputPhone &&
+                    u.user_id !== user_id &&
+                    u.phone !== phone
+                );
+            });
+
+            if (matchedByDigits) {
+                return res.status(400).json({
+                    message:
+                        "This phone number (same digits) is already registered with another country code.",
+                    conflict: true,
+                });
+            }
+
+            // ✅ Check if exact phone already exists
             const [phoneRows] = await db.query(
                 `SELECT user_id FROM users WHERE phone = ? AND user_id != ?`,
                 [phone, user_id]
             );
+
             if (phoneRows.length > 0) {
                 return res.status(400).json({ message: "Phone number already in use" });
             }
+
             updatedPhone = phone;
+        } else if (existing.is_approved === 1 && phone && phone !== existing.phone) {
+            return res.status(403).json({
+                message: "Approved users cannot update their phone number",
+            });
         }
 
         const updatedFirstName = firstName || existing.firstName;
         const updatedLastName = lastName || existing.lastName;
         const updatedEmail = email || existing.email;
-        const updatedProfileImage = req.uploadedFiles?.profileImage?.[0]?.url || existing.profileImage;
+        const updatedProfileImage =
+            req.uploadedFiles?.profileImage?.[0]?.url || existing.profileImage;
 
-        // Step 3: Update the user record
+        // Step 3: Update user record
         await db.query(
-            `UPDATE users SET profileImage = ?, firstName = ?, lastName = ?, email = ?, phone = ? WHERE user_id = ?`,
-            [updatedProfileImage, updatedFirstName, updatedLastName, updatedEmail, updatedPhone, user_id]
+            `UPDATE users
+             SET profileImage = ?, firstName = ?, lastName = ?, email = ?, phone = ?
+             WHERE user_id = ?`,
+            [
+                updatedProfileImage,
+                updatedFirstName,
+                updatedLastName,
+                updatedEmail,
+                updatedPhone,
+                user_id,
+            ]
         );
 
         res.status(200).json({
-            message: "User data updated successfully"
+            message: "User data updated successfully",
+            updated: {
+                firstName: updatedFirstName,
+                lastName: updatedLastName,
+                email: updatedEmail,
+                phone: updatedPhone,
+                profileImage: updatedProfileImage,
+            },
         });
-
     } catch (err) {
         console.error("Error updating user data:", err);
         res.status(500).json({ error: "Database error", details: err.message });
     }
 });
-
 
 const addUserData = asyncHandler(async (req, res) => {
     const user_id = req.user.user_id;
@@ -309,49 +367,62 @@ const addUserData = asyncHandler(async (req, res) => {
         flatNumber,
     } = req.body;
 
+    const connection = await db.getConnection(); // 🔹 Get dedicated connection for transaction
+
     try {
+        // Start transaction
+        await connection.beginTransaction();
+
         // 1️⃣ Validate required fields
-        if (!firstName || !lastName || !phone || !address || !postalcode || !flatNumber) {
+        if (!firstName || !lastName || !phone || !address || !postalcode) {
+            await connection.rollback();
+            connection.release();
             return res.status(400).json({
                 message: "All fields are required. Please fill in all user details.",
             });
         }
 
-        // 2️⃣ Check if user exists and get is_approved status
-        const [userCheck] = await db.query(
-            `SELECT user_id, is_approved FROM users WHERE user_id = ?`,
-            [user_id]
+        // 2️⃣ Check if user exists
+        const [userCheck] = await connection.query(
+            `SELECT user_id, is_approved FROM users WHERE user_id = ? FOR UPDATE`,
+            [user_id] // 🔒 Locks this row to prevent concurrent updates
         );
 
         if (userCheck.length === 0) {
+            await connection.rollback();
+            connection.release();
             return res.status(404).json({ message: "User not found" });
         }
 
         const user = userCheck[0];
 
-        // 3️⃣ Prevent update if user is not approved
+        // 3️⃣ Prevent update if not approved
         if (user.is_approved === 0) {
+            await connection.rollback();
+            connection.release();
             return res.status(403).json({
                 message: "Phone not verified. You cannot update data yet.",
             });
         }
 
-        // 4️⃣ Check if phone number already exists for another user
-        const [phoneCheck] = await db.query(
+        // 4️⃣ Check if phone number already exists
+        const [phoneCheck] = await connection.query(
             `SELECT user_id FROM users WHERE phone = ? AND user_id != ?`,
             [phone, user_id]
         );
 
         if (phoneCheck.length > 0) {
+            await connection.rollback();
+            connection.release();
             return res.status(409).json({
                 message: "Phone number already exists",
             });
         }
 
         // 5️⃣ Update user data
-        await db.query(
-            `UPDATE users 
-             SET firstName = ?, lastName = ?, parkingInstruction = ?, phone = ?, address = ?, state = ?, postalcode = ?, flatNumber = ? 
+        await connection.query(
+            `UPDATE users
+             SET firstName = ?, lastName = ?, parkingInstruction = ?, phone = ?, address = ?, state = ?, postalcode = ?, flatNumber = ?
              WHERE user_id = ?`,
             [
                 firstName,
@@ -366,19 +437,40 @@ const addUserData = asyncHandler(async (req, res) => {
             ]
         );
 
+        // ✅ Commit transaction
+        await connection.commit();
+        connection.release();
+
         res.status(200).json({
             message: "User data updated successfully",
         });
+
     } catch (err) {
+        // ❌ Rollback on any error
+        if (connection) {
+            try {
+                await connection.rollback();
+                connection.release();
+            } catch (rollbackErr) {
+                console.error("Rollback failed:", rollbackErr);
+            }
+        }
+
         console.error("Error updating user data:", err);
+
+        if (err.code === "ER_LOCK_WAIT_TIMEOUT") {
+            return res.status(500).json({
+                error: "Database locked. Please try again in a few seconds.",
+                details: err.message,
+            });
+        }
+
         res.status(500).json({
             error: "Database error",
             details: err.message,
         });
     }
 });
-
-
 
 const getPackagesByServiceTypeId = asyncHandler(async (req, res) => {
     const { service_type_id } = req.params;
@@ -470,7 +562,8 @@ const getPackagesDetails = asyncHandler(async (req, res) => {
                     SELECT CONCAT('[', GROUP_CONCAT(
                         JSON_OBJECT(
                             'preference_id', bp.preference_id,
-                            'preference_value', bp.preferenceValue
+                            'preference_value', bp.preferenceValue,
+                            'time_required', bp.timeRequired
                         )
                     ), ']')
                     FROM booking_preferences bp
@@ -535,7 +628,7 @@ const getPackagesByServiceType = asyncHandler(async (req, res) => {
 
     try {
         const [packages] = await db.query(
-            `SELECT 
+            `SELECT
                 p.package_id,
                 p.packageName,
                 p.packageMedia
@@ -576,7 +669,7 @@ const getPackageDetailsById = asyncHandler(async (req, res) => {
     try {
         // 1️⃣ Fetch package + subpackages + related data
         const [rows] = await db.query(
-            `SELECT 
+            `SELECT
                 p.package_id,
                 p.packageName,
                 p.packageMedia,
@@ -597,6 +690,7 @@ const getPackageDetailsById = asyncHandler(async (req, res) => {
                 bp.preferencePrice,
                 bp.preferenceGroup,
                 bp.is_required AS preference_is_required,
+                bp.timeRequired AS time_required,
                 pcf.consent_id,
                 pcf.package_item_id AS consent_package_item_id,
                 pcf.question AS consent_question,
@@ -617,7 +711,7 @@ const getPackageDetailsById = asyncHandler(async (req, res) => {
 
         // 2️⃣ Fetch average rating per sub_package that has booking data in service_booking_sub_packages
         const [ratingRows] = await db.query(
-            `SELECT 
+            `SELECT
                 sbsp.sub_package_id,
                 ROUND(AVG(r.rating), 1) AS avgRating,
                 COUNT(r.rating_id) AS reviewCount
@@ -697,7 +791,8 @@ const getPackageDetailsById = asyncHandler(async (req, res) => {
                         sp.preferences[groupName].selections.push({
                             preference_id: row.preference_id,
                             preference_value: row.preferenceValue,
-                            preference_price: row.preferencePrice
+                            time_required: row.time_required,
+                            preference_price: row.preferencePrice,
                         });
                     }
                 }
@@ -773,14 +868,14 @@ const getUserProfileWithCart = asyncHandler(async (req, res) => {
         // 1️⃣ Fetch user data
         // =======================
         const results = await db.query(
-            `SELECT 
-                user_id, 
-                firstName, 
-                lastName, 
-                email, 
-                phone, 
+            `SELECT
+                user_id,
+                firstName,
+                lastName,
+                email,
+                phone,
                 flatNumber
-             FROM users 
+             FROM users
              WHERE user_id = ?`,
             [user_id]
         );
@@ -798,8 +893,8 @@ const getUserProfileWithCart = asyncHandler(async (req, res) => {
         // 2️⃣ Fetch active service tax
         // =======================
         const [[taxRow]] = await db.query(`
-            SELECT taxName, taxPercentage 
-            FROM service_taxes 
+            SELECT taxName, taxPercentage
+            FROM service_taxes
             WHERE status = '1'
         `);
 
@@ -810,7 +905,7 @@ const getUserProfileWithCart = asyncHandler(async (req, res) => {
         // 3️⃣ Fetch specific cart OR all carts
         // =======================
         const [cartRows] = await db.query(
-            `SELECT 
+            `SELECT
                 sc.cart_id,
                 sc.service_id,
                 sc.user_id,
@@ -840,7 +935,7 @@ const getUserProfileWithCart = asyncHandler(async (req, res) => {
 
             // ---- Sub-Packages ----
             const [subPackages] = await db.query(
-                `SELECT 
+                `SELECT
                     cpi.cart_package_items_id,
                     cpi.sub_package_id,
                     pi.itemName,
@@ -968,7 +1063,7 @@ const getUserProfileWithCart = asyncHandler(async (req, res) => {
 
                 if (!promoDetails) {
                     const [systemPromoRows] = await db.query(
-                        `SELECT sc.*, st.discount_type, st.discountValue 
+                        `SELECT sc.*, st.discount_type, st.discountValue
                          FROM system_promo_codes sc
                          JOIN system_promo_code_templates st ON sc.template_id = st.system_promo_code_template_id
                          WHERE sc.system_promo_code_id = ? LIMIT 1`,

@@ -1,9 +1,9 @@
 const cron = require("node-cron");
 const nodemailer = require("nodemailer");
 const { db } = require("../config/db"); // Update with your actual DB path
+const { sendMail } = require('../config/utils/email/templates/nodemailer');
 
-const REMINDER_INTERVAL_MINUTES = 120; // 2 hours
-const CRON_EVERY_5_MIN = "*/10 * * * *"; // run every 5 minutes (change as needed)
+const CRON_EVERY_5_MIN = "*/10 * * * *"; // run every 10 minutes (change as needed)
 const SERVICE_START_REMINDER_MINUTES = 60; // send reminder 60 minutes before service start
 
 
@@ -17,84 +17,6 @@ cron.schedule(CRON_EVERY_5_MIN, async () => {
             pass: process.env.EMAIL_PASS,
         },
     });
-
-    // =============================
-    // 1️⃣ PAYMENT REMINDER
-    // =============================
-    try {
-        console.log("🔍 Checking for payment reminders...");
-        const [paymentRows] = await db.query(
-            `
-            SELECT
-                sb.booking_id,
-                sb.user_id,
-                sb.bookingDate,
-                sb.bookingTime,
-                CONCAT(u.firstName, ' ', u.lastName) AS user_name,
-                u.email
-            FROM service_booking sb
-            JOIN users u ON u.user_id = sb.user_id
-            LEFT JOIN payments p ON sb.payment_intent_id = p.payment_intent_id
-            WHERE sb.bookingStatus = 1
-                AND (p.status IS NULL OR p.status <> 'completed')
-                AND TIMESTAMP(CONCAT(sb.bookingDate, ' ', sb.bookingTime)) > NOW()
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM notifications n
-                    WHERE n.user_type = 'users'
-                        AND n.user_id = sb.user_id
-                        AND n.title = 'Payment reminder'
-                        AND COALESCE(JSON_EXTRACT(n.data, '$.booking_id'), 0) = sb.booking_id
-                        AND n.sent_at >= DATE_SUB(NOW(), INTERVAL ? MINUTE)
-                )
-            `,
-            [REMINDER_INTERVAL_MINUTES]
-        );
-
-        for (const b of paymentRows) {
-            const name = b.user_name || `User #${b.user_id}`;
-            const subject = "Payment reminder";
-            const bodyText = `
-                Hi ${name},
-
-                Your booking (#${b.booking_id}) is approved, but payment hasn't been completed yet.
-                Please pay before the service starts on ${b.bookingDate} at ${b.bookingTime}.
-
-                Thanks,
-                Homiqly Team
-            `.trim();
-
-            try {
-                await transporter.sendMail({
-                    from: `"Homiqly" <${process.env.EMAIL_USER}>`,
-                    to: b.email,
-                    subject,
-                    text: bodyText,
-                    html: bodyText.replace(/\n/g, "<br/>"),
-                });
-                console.log(`✅ Payment reminder sent to ${b.email} for booking ${b.booking_id}`);
-            } catch (e) {
-                console.error(`❌ Email failed for booking ${b.booking_id}:`, e.message);
-            }
-
-            try {
-                const notifData = { booking_id: b.booking_id, user_id: b.user_id, name };
-                await db.query(
-                    `INSERT INTO notifications (user_type, user_id, title, body, data, is_read, sent_at)
-                     VALUES ('users', ?, 'Payment reminder', ?, ?, 0, CURRENT_TIMESTAMP)`,
-                    [
-                        b.user_id,
-                        `Please complete payment for booking #${b.booking_id} before the service starts.`,
-                        JSON.stringify(notifData),
-                    ]
-                );
-            } catch (e) {
-                console.error(`⚠️ Notification insert failed for booking ${b.booking_id}:`, e.message);
-            }
-        }
-    } catch (err) {
-        console.error("❌ Payment reminder cron error:", err.message);
-    }
 
     // =============================
     // 2️⃣ SERVICE START REMINDER
@@ -226,46 +148,49 @@ cron.schedule(CRON_EVERY_5_MIN, async () => {
     }
 });
 
-// cron.schedule('*/10 * * * *', async () => {
-//     try {
-//         const [rows] = await db.query(`
-//             UPDATE vendor_settings
-//             SET manual_assignment_enabled = 0
-//             WHERE manual_assignment_enabled = 1
-//               AND end_datetime IS NOT NULL
-//               AND NOW() > end_datetime
-//         `);
-//         if (rows.affectedRows > 0) {
-//             console.log(`[${new Date().toISOString()}] Auto-disabled ${rows.affectedRows} vendor(s) manual assignment`);
-//         }
-//     } catch (err) {
-//         console.error("Cron error:", err);
-//     }
-// });
-
-
 // Email function (non-blocking)
-const sendPromoEmail = async (userEmail, promoCode, discountValue) => {
+const sendPromoEmail = async (userEmail, promoCode) => {
     try {
-        // Configure your transporter
-        const transport = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
-        const mailOptions = {
-            from: 'homiqlydevelopment@gmail.com',
-            to: userEmail,
-            subject: `You've received a new promo code!`,
-            html: `<p>Hi,</p>
-                   <p>You've received a new promo code: <b>${promoCode}</b></p>
-                   <p>Discount Value: ${discountValue}</p>
-                   <p>Use it on your next booking!</p>`
-        };
+        const subject = `You've received a new promo code!`
 
-        await transport.sendMail(mailOptions);
+        const bodyHtml = `
+   <div style="padding: 5px 30px 30px; font-size: 15px; color: #ffffff; text-align: left;
+            font-family: Arial, sans-serif; background-color: #000;">
+
+
+            <p style="font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+                <strong>Hi ${user_name || "there"},</strong><br><br>
+                Great news! You’ve just completed the minimum number of bookings required to unlock your special reward on Homiqly.
+                We appreciate your trust in our at-home beauty services.
+            </p>
+
+            <p style="margin-bottom: 10px; font-size: 15px;">
+                As a thank-you for reaching this milestone, your reward is now active on your account.
+                You can apply it automatically on your next eligible booking—no extra steps needed.
+            </p>
+
+            <h3 style="font-weight: 500; margin-bottom: 20px; font-size: 16px;">
+                Keep exploring, keep glowing. More perks await as you continue booking with Homiqly!
+            </h3>
+
+            <p style="font-size: 14px; margin-top: 15px; line-height: 1.6;">
+                This reward is available only to users who have completed the required number of bookings.
+                It applies to eligible at-home beauty services booked through the Homiqly website.
+                Rewards are non-transferable and cannot be combined with other promotions.
+                Terms may change without prior notice.
+            </p>
+
+        </div>
+ `;
+
+        await sendMail({
+            to: userEmail,
+            subject,
+            bodyHtml,
+            layout: "adminCode",
+            extraData: { promoCode }, // ✅ Add this line
+        })
+
         console.log(`📧 Promo email sent to ${userEmail}`);
     } catch (err) {
         console.error(`❌ Error sending promo email to ${userEmail}:`, err.message);
@@ -283,9 +208,9 @@ cron.schedule("0 0 * * *", async () => {
 
         for (const promo of promos) {
             const [eligibleUsers] = await db.query(
-                `SELECT 
-                 service_booking.user_id, 
-                 email, 
+                `SELECT
+                 service_booking.user_id,
+                 email,
                  COUNT(*) as completed_count
                  FROM service_booking
                  JOIN users ON users.user_id = service_booking.user_id

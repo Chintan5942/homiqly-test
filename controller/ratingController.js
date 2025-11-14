@@ -129,11 +129,10 @@ const addRatingToServiceType = asyncHandler(async (req, res) => {
 
 const addRatingToBooking = asyncHandler(async (req, res) => {
     const user_id = req.user.user_id;
-    const { booking_id, package_id, rating, review } = req.body;
+    const { booking_id, rating, review } = req.body;
 
-
-    if (!booking_id || !package_id || !rating) {
-        return res.status(400).json({ message: "Booking ID, Package ID, and rating are required" });
+    if (!booking_id || !rating) {
+        return res.status(400).json({ message: "Booking ID and rating are required" });
     }
 
     if (rating < 1 || rating > 5) {
@@ -141,44 +140,72 @@ const addRatingToBooking = asyncHandler(async (req, res) => {
     }
 
     try {
-        // ✅ Check if the booking belongs to the user and includes this package
-        const [booked] = await db.query(`
-            SELECT 1 
-            FROM service_booking 
-            WHERE user_id = ? 
-              AND booking_id = ? 
-              AND package_id = ?
-        `, [user_id, booking_id, package_id]);
+        // 1️⃣ Verify the booking belongs to this user and get vendor_id
+        const [bookingInfo] = await db.query(
+            `SELECT vendor_id
+             FROM service_booking
+             WHERE user_id = ? AND booking_id = ?`,
+            [user_id, booking_id]
+        );
 
-        if (booked.length === 0) {
-            return res.status(403).json({ message: "You can only rate packages from your own bookings." });
+        if (bookingInfo.length === 0) {
+            return res.status(403).json({ message: "You can only rate your own bookings." });
         }
 
-        // ✅ Prevent duplicate rating for the same booking + package
-        const [existing] = await db.query(`
-            SELECT rating_id 
-            FROM ratings
-            WHERE user_id = ? 
-              AND booking_id = ? 
-              AND package_id = ?
-        `, [user_id, booking_id, package_id]);
+        const vendor_id = bookingInfo[0].vendor_id;
 
-        if (existing.length > 0) {
-            return res.status(400).json({ message: "You have already rated this package for this booking." });
+        // 2️⃣ Check if the user already rated this booking
+        const [existingRatings] = await db.query(
+            `SELECT rating_id FROM ratings WHERE user_id = ? AND booking_id = ?`,
+            [user_id, booking_id]
+        );
+
+        if (existingRatings.length > 0) {
+            return res.status(400).json({ message: "You have already rated this booking." });
         }
 
-        // ✅ Insert the rating (linking booking_id too)
-        await db.query(`
-            INSERT INTO ratings (user_id, booking_id, package_id, rating, review, created_at)
-            VALUES (?, ?, ?, ?, ?, NOW())
-        `, [user_id, booking_id, package_id, rating, review]);
+        // 3️⃣ Fetch all package_ids linked to this booking
+        const [packages] = await db.query(
+            `SELECT DISTINCT package_id
+             FROM service_booking_packages
+             WHERE booking_id = ?`,
+            [booking_id]
+        );
 
-        res.status(201).json({ message: "Rating for package submitted successfully" });
+        if (packages.length === 0) {
+            return res.status(404).json({ message: "No packages found for this booking." });
+        }
+
+        // 4️⃣ Prepare bulk insert values with vendor_id
+        const values = packages.map(pkg => [
+            user_id,
+            booking_id,
+            pkg.package_id,
+            vendor_id,
+            rating,
+            review || null,
+            new Date()
+        ]);
+
+        // 5️⃣ Insert into ratings including vendor_id
+        await db.query(
+            `INSERT INTO ratings (user_id, booking_id, package_id, vendor_id, rating, review, created_at)
+             VALUES ?`,
+            [values]
+        );
+
+        res.status(201).json({
+            message: "✅ Rating submitted successfully for all packages in this booking.",
+            vendor_id,
+            packagesRated: packages.map(p => p.package_id)
+        });
+
     } catch (error) {
-        console.error("Error submitting package rating:", error);
+        console.error("❌ Error submitting package rating:", error);
         res.status(500).json({ message: "Internal server error", error: error.message });
     }
 });
+
 
 const getBookedPackagesForRating = asyncHandler(async (req, res) => {
     const user_id = req.user.user_id;
@@ -244,41 +271,31 @@ const getVendorServicesForReview = asyncHandler(async (req, res) => {
 const getPackageRatings = asyncHandler(async (req, res) => {
     try {
         const [ratings] = await db.query(
-            `SELECT 
+            `SELECT
                 r.rating_id,
                 CONCAT(u.firstName, ' ', u.lastName) AS userName,
                 r.package_id,
                 p.packageName,
                 r.rating,
+                r.vendor_id,
                 r.review,
                 r.created_at,
 
-                -- Vendor ID and type from vendor_packages → vendors
-                v.vendor_id,
-                v.vendorType AS vendorType,
 
-                -- Unified vendor name, email, phone using CONCAT_WS
-                CONCAT_WS(' ', id.name, cd.companyName) AS vendor_name,
-                CONCAT_WS(' ', id.email, cd.companyEmail) AS vendor_email,
-                CONCAT_WS(' ', id.phone, cd.companyPhone) AS vendor_phone
+                COALESCE(id.name, cd.companyName) AS vendor_name,
+                COALESCE(id.email, cd.companyEmail) AS vendor_email,
+                COALESCE(id.phone, cd.companyPhone) AS vendor_phone
 
             FROM ratings r
-            JOIN users u ON r.user_id = u.user_id
-            JOIN packages p ON r.package_id = p.package_id
-
-            -- New join to vendor_packages
-            JOIN vendor_packages vp ON p.package_id = vp.package_id
-
-            -- Join to vendors
-            JOIN vendors v ON vp.vendor_id = v.vendor_id
-
-            -- Optional vendor details
-            LEFT JOIN individual_details id ON v.vendor_id = id.vendor_id
-            LEFT JOIN company_details cd ON v.vendor_id = cd.vendor_id
+            LEFT JOIN users u ON r.user_id = u.user_id
+            LEFT JOIN packages p ON r.package_id = p.package_id
+            LEFT JOIN vendors v ON r.vendor_id = v.vendor_id
+            LEFT JOIN individual_details id ON r.vendor_id = id.vendor_id
+            LEFT JOIN company_details cd ON r.vendor_id = cd.vendor_id
 
             ORDER BY r.created_at DESC`
         );
-
+        
         res.status(200).json({
             message: "Package ratings fetched successfully",
             rating: ratings,
@@ -295,9 +312,9 @@ const getPackageAverageRating = asyncHandler(async (req, res) => {
     try {
         // 1. Get package details with average rating and total review count
         const [packageRows] = await db.query(
-            `SELECT 
+            `SELECT
                 p.packageName,
-                p.packageMedia, 
+                p.packageMedia,
                 AVG(r.rating) AS average_rating,
                 COUNT(r.rating_id) AS total_reviews
             FROM packages p
@@ -315,7 +332,7 @@ const getPackageAverageRating = asyncHandler(async (req, res) => {
 
         // 2. Get individual reviews with user names
         const [reviews] = await db.query(
-            `SELECT 
+            `SELECT
                 r.rating_id,
                 r.user_id,
                 CONCAT(u.firstName, ' ', u.lastName) AS userName,
@@ -365,7 +382,7 @@ const getAllVendorRatings = asyncHandler(async (req, res) => {
             sc.serviceCategory,
 
             v.vendorType,
-            
+
             CONCAT_WS(' ', id.name, cd.companyName) AS vendor_name,
             CONCAT_WS(' ', id.email, cd.companyEmail) AS vendor_email,
             CONCAT_WS(' ', id.phone, cd.companyPhone) AS vendor_phone

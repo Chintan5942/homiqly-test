@@ -1,12 +1,14 @@
-const { db } = require("../config/db");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const userAuthQueries = require("../config/userQueries/userAuthQueries");
 const asyncHandler = require("express-async-handler");
-const { assignWelcomeCode } = require("../config/utils/email/mailer");
 const twilio = require('twilio');
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const { db } = require("../config/db");
+const { parsePhoneNumberFromString } = require("libphonenumber-js");
 const { sendPasswordUpdatedMail, sendPasswordResetCodeMail, sendUserVerificationMail, sendUserWelcomeMail } = require("../config/utils/email/mailer");
+const { assignWelcomeCode } = require("../config/utils/email/mailer");
+const userAuthQueries = require("../config/userQueries/userAuthQueries");
+
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 
 // Generate 6-digit OTP
@@ -142,81 +144,6 @@ const setPassword = asyncHandler(async (req, res) => {
         res.status(500).json({ error: "Server error", details: err.message });
     }
 });
-
-// const loginUser = asyncHandler(async (req, res) => {
-//     const { email, password, fcmToken } = req.body;
-
-//     if (!email || !password) {
-//         return res.status(400).json({ error: "Email and password are required" });
-//     }
-
-//     try {
-//         const [loginUser] = await db.query(userAuthQueries.userLogin, [email]);
-
-//         if (!loginUser || loginUser.length === 0) {
-//             return res.status(401).json({ error: "Invalid credentials" });
-//         }
-
-//         const user = loginUser[0];
-
-//         // 🧩 Check if user registered via Google (no password stored)
-//         if (!user.password) {
-//             return res.status(400).json({
-//                 error: "This account was created using Google. Please log in using Google.",
-//             });
-//         }
-
-//         // 🧩 Compare password
-//         const isPasswordValid = await bcrypt.compare(password, user.password);
-//         if (!isPasswordValid) {
-//             return res.status(401).json({ error: "Invalid credentials" });
-//         }
-
-//         // 🧩 Update FCM token if needed
-//         if (fcmToken && typeof fcmToken === "string" && fcmToken.trim() !== "") {
-//             const trimmedToken = fcmToken.trim();
-
-//             if (user.fcmToken !== trimmedToken) {
-//                 try {
-//                     await db.query(
-//                         "UPDATE users SET fcmToken = ? WHERE user_id = ?",
-//                         [trimmedToken, user.user_id]
-//                     );
-//                 } catch (err) {
-//                     console.error("❌ FCM token update error:", err.message);
-//                 }
-//             }
-//         }
-
-//         // 🧩 Assign welcome code if not already assigned
-//         let welcomeCode = null;
-//         try {
-//             welcomeCode = await assignWelcomeCode(user.user_id, user.email);
-//         } catch (err) {
-//             console.error("❌ Auto-assign welcome code error:", err.message);
-//         }
-
-//         // 🧩 Generate JWT
-//         const token = jwt.sign(
-//             {
-//                 user_id: user.user_id,
-//                 email: user.email,
-//                 status: user.status,
-//             },
-//             process.env.JWT_SECRET
-//         );
-
-//         res.status(200).json({
-//             message: "Login successful",
-//             user_id: user.user_id,
-//             token,
-//             ...(welcomeCode && { welcomeCode }),
-//         });
-//     } catch (err) {
-//         console.error("Login Error:", err);
-//         res.status(500).json({ error: "Server error", details: err.message });
-//     }
-// });
 
 const requestReset = asyncHandler(async (req, res) => {
     const { email } = req.body;
@@ -406,7 +333,7 @@ const googleLogin = asyncHandler(async (req, res) => {
                 try {
                     await sendUserWelcomeMail({
                         userEmail: email,
-                        firstName,
+                        fullName: `${firstName}${lastName ? " " + lastName : ""}`,
                     });
                     console.log(`📧 Welcome email sent to ${email}`);
                 } catch (error) {
@@ -422,156 +349,89 @@ const googleLogin = asyncHandler(async (req, res) => {
 });
 
 
-// const googleSignup = asyncHandler(async (req, res) => {
-//     const { email, name, picture, fcmToken } = req.body;
-
-//     if (!email) {
-//         return res.status(400).json({ error: "Email is required" });
-//     }
-
-//     const [given_name = "", family_name = ""] = name?.split(" ") || [];
-
-//     try {
-//         // ✅ Check if user already exists
-//         const [existingUsers] = await db.query(userAuthQueries.userMailCheck, [email]);
-
-//         // 🟠 If user exists
-//         if (existingUsers.length > 0) {
-//             const user = existingUsers[0];
-
-//             // 🚫 If the user has a password → normal login account → reject
-//             if (user.password && user.password.trim() !== "") {
-//                 return res.status(409).json({
-//                     error: "This email is registered with a password. Please log in using email and password.",
-//                 });
-//             }
-
-//             // 🟢 If user exists but password is empty → login via Google
-//             const token = jwt.sign(
-//                 {
-//                     user_id: user.user_id,
-//                     email: user.email,
-//                     status: user.status || "active",
-//                 },
-//                 process.env.JWT_SECRET
-//                 // { expiresIn: "30d" }
-//             );
-
-//             // Optional: Update FCM token if changed
-//             if (fcmToken && fcmToken !== user.fcmToken) {
-//                 try {
-//                     await db.query("UPDATE users SET fcmToken = ? WHERE user_id = ?", [fcmToken, user.user_id]);
-//                 } catch (err) {
-//                     console.error("❌ FCM token update error:", err.message);
-//                 }
-//             }
-
-//             return res.status(200).json({
-//                 message: "Login successful via Google",
-//                 user_id: user.user_id,
-//                 token,
-//             });
-//         }
-
-//         // 🟢 If user not found → create new Google user
-//         const [result] = await db.query(userAuthQueries.userInsert, [
-//             given_name,
-//             family_name,
-//             email,
-//             null, // phone
-//             picture,
-//             fcmToken || null
-//         ]);
-
-//         const user_id = result.insertId;
-
-//         // Fetch the inserted user
-//         const [[newUser]] = await db.query(userAuthQueries.userMailCheck, [email]);
-
-//         // Optional: Assign welcome code
-//         let welcomeCode = null;
-//         try {
-//             welcomeCode = await assignWelcomeCode(user_id, email);
-//         } catch (err) {
-//             console.error("❌ Auto-assign welcome code error:", err.message);
-//         }
-
-//         // Generate JWT
-//         const token = jwt.sign(
-//             {
-//                 user_id: newUser.user_id,
-//                 email: newUser.email,
-//                 status: newUser.status || "active",
-//             },
-//             process.env.JWT_SECRET,
-//             { expiresIn: "30d" }
-//         );
-
-//         res.status(201).json({
-//             message: "Signup successful via Google",
-//             user_id: newUser.user_id,
-//             token,
-//             ...(welcomeCode && { welcomeCode }),
-//         });
-//     } catch (err) {
-//         console.error("Google Signup Error:", err);
-//         res.status(500).json({ error: "Server error", details: err.message });
-//     }
-// });
-
-
 // ✅ Step 1: Request OTP
 const sendOtp = asyncHandler(async (req, res) => {
-    const { phone, email, forceOtp = false } = req.body;
+    const { phone, email } = req.body;
 
     if (!phone && !email) {
         return res.status(400).json({ message: "Either phone or email is required" });
     }
 
-    // ✅ 1. Check if user exists
-    const [existingUsers] = await db.query(
-        "SELECT user_id, firstName, lastName, phone, email, password FROM users WHERE phone = ? OR email = ?",
-        [phone || null, email || null]
-    );
+    // ✅ 1. Lookup phone & email separately
+    let [byPhone] = phone
+        ? await db.query("SELECT user_id, firstName, lastName, phone, email FROM users WHERE phone = ?", [phone])
+        : [[]];
+    let [byEmail] = email
+        ? await db.query("SELECT user_id, firstName, lastName, phone, email FROM users WHERE email = ?", [email])
+        : [[]];
 
-    const user = existingUsers[0];
-    const is_registered = existingUsers.length > 0;
+    const phoneExists = byPhone.length > 0;
+    const emailExists = byEmail.length > 0;
 
-    // ✅ 2. Determine flags (true = NOT registered for that specific identifier)
-    const is_phone_registered = !existingUsers.some(u => u.phone === phone);
-    const is_email_registered = !existingUsers.some(u => u.email === email);
+    // ✅ 2. Determine final user (if both exist and same user_id)
+    let user = null;
+    if (phone && email) {
+        if (phoneExists && emailExists && byPhone[0].user_id === byEmail[0].user_id) {
+            user = byPhone[0];
+        } else if (phoneExists && !emailExists) {
+            user = byPhone[0];
+        } else if (emailExists && !phoneExists) {
+            user = byEmail[0];
+        } else if (phoneExists && emailExists && byPhone[0].user_id !== byEmail[0].user_id) {
+            return res.status(400).json({
+                message: "Phone and email belong to different accounts. Please use only one to log in.",
+                conflict: true,
+            });
+        }
+    } else {
+        user = phoneExists ? byPhone[0] : byEmail[0];
+    }
+
+    const is_registered = phoneExists || emailExists;
 
     // 🔢 3. Generate OTP
     const otp = generateOTP();
 
-    // 🔐 4. Create JWT (30 minutes expiry)
+    // 🔐 4. Create JWT (valid 30 min)
     const tokenPayload = { otp };
     if (phone) tokenPayload.phone = phone;
     if (email) tokenPayload.email = email;
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "30m" });
 
-    // 📱 5. Send OTP via SMS (non-blocking)
+    // 📱 5. Send OTP via SMS (async)
     if (phone) {
-        (async () => {
-            try {
-                const smsMessage = is_registered
-                    ? `Welcome back to Homiqly! Your verification code is ${otp}. It expires in 5 minutes. Never share this code.`
-                    : `Welcome to Homiqly! Your verification code is ${otp}. It expires in 5 minutes. Never share this code.`;
+        try {
+            const smsMessage = `Your Homiqly verification code is ${otp}. It expires in 5 minutes. Never share this code.`;
+            // ✅ Await Twilio directly
+            await client.messages.create({
+                body: smsMessage,
+                from: process.env.TWILIO_PHONE_NUMBER,
+                to: phone,
+            });
 
-                await client.messages.create({
-                    body: smsMessage,
-                    from: process.env.TWILIO_PHONE_NUMBER,
-                    to: phone,
+        } catch (error) {
+            console.error("❌ Failed to send SMS OTP:", error.message);
+
+            // Optionally handle Twilio errors properly:
+            if (
+                error.message.includes("cannot be a landline") ||
+                error.code === 21614 ||
+                error.code === 21211
+            ) {
+                return res.status(400).json({
+                    message: "Invalid or unsupported phone number. Please use a valid mobile number.",
+                    error: error.message,
                 });
-
-                console.log(`📱 OTP sent via SMS to ${phone}`);
-            } catch (error) {
-                console.error("❌ Failed to send SMS OTP:", error.message);
             }
-        })();
+
+            return res.status(500).json({
+                message: "Failed to send OTP via SMS. Please try again later.",
+                error: error.message,
+            });
+        }
     }
 
-    // 📧 6. Send OTP via Email (non-blocking)
+    // 📧 6. Send OTP via Email (async)
     if (email) {
         (async () => {
             try {
@@ -579,8 +439,8 @@ const sendOtp = asyncHandler(async (req, res) => {
                     userEmail: email,
                     code: otp,
                     subject: is_registered
-                        ? "Welcome back to the Homiqly community"
-                        : "Welcome to the Homiqly community",
+                        ? "Welcome back to Homiqly"
+                        : "Welcome to Homiqly",
                 });
 
                 console.log(`📧 OTP email sent to ${email}`);
@@ -590,169 +450,279 @@ const sendOtp = asyncHandler(async (req, res) => {
         })();
     }
 
-    // ✅ 7. Response message
+    // ✅ 7. Build response
     const responseMsg = is_registered
-        ? `Welcome back, ${user?.firstName || "User"}! We've sent your OTP.`
+        ? `Welcome back${user?.firstName ? `, ${user.firstName}` : ""}! We've sent your OTP.`
         : "OTP sent successfully. Please continue registration.";
 
-    // ✅ 8. Build response
-    const responseData = {
+    res.status(200).json({
         message: responseMsg,
         token,
         is_registered,
-    };
-
-    if (email) {
-        responseData.is_email_registered = is_email_registered;
-    } else if (phone) {
-        responseData.is_phone_registered = is_phone_registered;
-    }
-
-    if (user?.firstName) responseData.firstName = user.firstName;
-    if (user?.lastName) responseData.lastName = user.lastName;
-
-    // ✅ 9. Send response immediately (no waiting for SMS/email)
-    res.status(200).json(responseData);
+        // ✅ FINAL LOGIC:
+        // if email provided AND it's new → true
+        // if only phone is provided and new → false
+        is_email_registered: email && !emailExists ? true : false,
+        firstName: user?.firstName || null,
+        lastName: user?.lastName || null,
+    });
 });
 
+
+function normalizePhone(phone) {
+    if (!phone) return null;
+    try {
+        const parsed = parsePhoneNumberFromString(phone);
+        if (!parsed) return phone;
+        return parsed.nationalNumber; // return only the local part (no +91 or +1)
+    } catch {
+        return phone; // fallback if invalid format
+    }
+}
 
 // ✅ Step 2: Verify OTP (Handles both Login & Registration)
 const verifyOtp = asyncHandler(async (req, res) => {
     let { phone, email, otp, firstName, lastName, password } = req.body;
     const authHeader = req.headers.authorization;
 
-    // 🧩 Step 1: Lookup existing user
-    const [rows] = await db.query(
-        "SELECT * FROM users WHERE phone = ? OR email = ?",
-        [phone || null, email || null]
-    );
-    const user = rows[0];
+    // ✅ Normalize incoming phone number
+    const normalizedInputPhone = normalizePhone(phone);
 
-    // 🧩 Step 2: Direct password-based login (email/phone + password)
-    if ((email || phone) && password && user && user.password?.trim() !== "") {
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ message: "Invalid credentials" });
-        }
+    // ✅ Lookup all users
+    let [allUsers] = await db.query("SELECT user_id, phone, email, firstName, lastName FROM users");
 
-        const loginToken = jwt.sign(
-            { user_id: user.user_id, phone: user.phone, email: user.email },
-            process.env.JWT_SECRET
-        );
+    // Normalize DB phones
+    const matchedByDigits = allUsers.find(u => {
+        const normalizedDbPhone = normalizePhone(u.phone);
+        return normalizedDbPhone && normalizedInputPhone && normalizedDbPhone === normalizedInputPhone;
+    });
 
-        // Fire and forget welcome code assignment
-        assignWelcomeCode({ user_id: user.user_id, user_email: user.email })
-            .catch((err) => console.error("❌ Auto-assign welcome code error:", err.message));
+    // Check existence
+    let [byPhone] = phone
+        ? await db.query("SELECT * FROM users WHERE phone = ?", [phone])
+        : [[]];
+    let [byEmail] = email
+        ? await db.query("SELECT * FROM users WHERE email = ?", [email])
+        : [[]];
 
-        return res.status(200).json({
-            message: email
-                ? "Login successful via email/password"
-                : "Login successful via phone/password",
-            token: loginToken,
+    const phoneExists = byPhone.length > 0 || !!matchedByDigits;
+    const emailExists = byEmail.length > 0;
+
+    // 🚫 Cross-country duplicate check
+    if (!byPhone.length && matchedByDigits) {
+        return res.status(400).json({
+            message: `This phone number (same digits) is already registered with another country code.`,
+            conflict: true,
         });
     }
 
-    // 🧩 Step 3: OTP is mandatory when no password login
-    if (!otp) {
-        return res.status(400).json({ message: "OTP is required for the login" });
-    }
+    // 🧠 Determine user & check conflict
+    let user = null;
 
-    otp = String(otp);
-    let decoded = null;
-
-    // 🧩 Step 4: Validate OTP token (from sendOtp)
-    if (authHeader?.startsWith("Bearer ")) {
-        const token = authHeader.split(" ")[1];
-        try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET);
-            decoded.otp = String(decoded.otp);
-
-            const otpValidForPhone =
-                decoded.phone && phone && decoded.phone === phone && decoded.otp === otp;
-            const otpValidForEmail =
-                decoded.email && email && decoded.email === email && decoded.otp === otp;
-
-            if (!otpValidForPhone && !otpValidForEmail) {
-                return res.status(400).json({ message: "Invalid OTP or identifier" });
+    if (phone && email) {
+        if (phoneExists && emailExists) {
+            // Both exist but belong to different users
+            if (byPhone[0].user_id !== byEmail[0].user_id) {
+                return res.status(400).json({
+                    message: "This phone and email belong to different accounts. Please use only one.",
+                    conflict: true,
+                });
+            } else {
+                user = byPhone[0]; // Same user, safe to continue
             }
-        } catch (err) {
-            console.error("JWT Verification Error:", err);
-            if (err.name === "TokenExpiredError") {
-                return res.status(400).json({ message: "OTP expired. Please request a new one." });
+        } else if (phoneExists && !emailExists) {
+            // 🚫 Block if trying to register a new email on existing phone
+            if (!byPhone[0].email || byPhone[0].email === email) {
+                // Allow only if email is same or null
+                user = byPhone[0];
+            } else {
+                return res.status(400).json({
+                    message: "This phone number is already registered with another account.",
+                });
             }
-            return res.status(400).json({ message: "Invalid token" });
+        } else if (emailExists && !phoneExists) {
+            // 🚫 Block if trying to register a new phone on existing email
+            if (!byEmail[0].phone || byEmail[0].phone === phone) {
+                user = byEmail[0];
+            } else {
+                return res.status(400).json({
+                    message: "This email is already registered with another account.",
+                });
+            }
+        } else {
+            // Neither exists → new registration
+            user = null;
         }
     } else {
+        user = phoneExists ? byPhone[0] : byEmail[0];
+    }
+
+    // ✅ Direct password login (no OTP required)
+    if (password && user) {
+        const storedPassword = user.password
+            ? (typeof user.password === "object" ? user.password.toString() : user.password)
+            : null;
+
+        if (storedPassword) {
+            const isMatch = await bcrypt.compare(password, storedPassword);
+            if (!isMatch) {
+                return res.status(401).json({ message: "Invalid credentials" });
+            }
+
+            // Successful password login — return immediately
+            const loginToken = jwt.sign(
+                { user_id: user.user_id, phone: user.phone, email: user.email },
+                process.env.JWT_SECRET
+            );
+
+            assignWelcomeCode({
+                user_email: email,
+                user_id: user.user_id,
+                user_name: `${firstName || ""} ${lastName || ""}`.trim(),
+            }).catch(err => console.error("❌ Auto-assign welcome code error:", err.message));
+
+            return res.status(200).json({
+                message: "Login successful via password",
+                token: loginToken,
+                user: {
+                    user_id: user.user_id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    phone: user.phone,
+                    email: user.email,
+                    is_approved: user.is_approved,
+                    created_at: user.created_at,
+                },
+            });
+        }
+    }
+
+
+    // ✅ OTP required
+    if (!otp) {
+        return res.status(400).json({ message: "OTP is required for login/registration" });
+    }
+
+    // 🧩 Decode OTP token
+    if (!authHeader?.startsWith("Bearer ")) {
         return res.status(400).json({ message: "Authorization token missing" });
     }
 
-    // 🧩 Step 5: OTP verified successfully
-    if (decoded && decoded.otp === otp) {
-        if (!user) {
-            // 🟢 New User Registration
-            if (!firstName || !lastName) {
-                return res.status(200).json({
-                    message: "Welcome — please provide name (and optionally password)",
-                    requireDetails: true,
-                });
-            }
+    let decoded;
+    try {
+        const token = authHeader.split(" ")[1];
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+        if (err.name === "TokenExpiredError") {
+            return res.status(400).json({ message: "OTP expired. Please request a new one." });
+        }
+        return res.status(400).json({ message: "Invalid token" });
+    }
 
-            const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
-            const isApproved = phone ? 1 : 0;
+    decoded.otp = String(decoded.otp);
+    otp = String(otp);
 
-            const [result] = await db.query(
-                `INSERT INTO users (firstName, lastName, phone, email, password, is_approved, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-                [firstName, lastName, phone || null, email || null, hashedPassword, isApproved]
-            );
+    const otpValid =
+        (decoded.phone && phone && decoded.phone === phone && decoded.otp === otp) ||
+        (decoded.email && email && decoded.email === email && decoded.otp === otp);
 
-            const user_id = result.insertId;
-            const loginToken = jwt.sign({ user_id, phone, email }, process.env.JWT_SECRET);
+    if (!otpValid) {
+        return res.status(400).json({ message: "Invalid OTP or identifier" });
+    }
 
-            // 🔹 Send Welcome Email (non-blocking)
-            if (email) {
-                (async () => {
-                    try {
-                        await sendUserWelcomeMail({
-                            userEmail: email,
-                            firstName,
-                        });
-                        console.log(`📧 Welcome email sent to ${email}`);
-                    } catch (error) {
-                        console.error("❌ Failed to send welcome email:", error.message);
-                    }
-                })();
-            }
-
-            // 🔹 Fire-and-forget welcome code assignment
-            assignWelcomeCode({ user_id, user_email: email })
-                .catch((err) => console.error("❌ Auto-assign welcome code error:", err.message));
-
+    // ✅ OTP verified
+    if (!user) {
+        // New registration path
+        if (!firstName || !lastName) {
             return res.status(200).json({
-                message: "Registration successful",
-                user: { user_id, firstName, lastName, phone, email, is_approved: isApproved },
-                token: loginToken,
+                message: "Welcome — please provide name (and optionally password)",
+                requireDetails: true,
             });
         }
 
-        // 🟢 Existing user — Login success via OTP
-        const loginToken = jwt.sign(
-            { user_id: user.user_id, phone: user.phone, email: user.email },
-            process.env.JWT_SECRET
+        // 🚫 NEW LOGIC — strict check before creating new user
+        if (phoneExists) {
+            return res.status(400).json({
+                message: "This phone number is already registered. Please log in instead.",
+            });
+        }
+
+        if (emailExists) {
+            return res.status(400).json({
+                message: "This email is already registered. Please log in instead.",
+            });
+        }
+
+        // ✅ Create user only if both phone & email are free
+        const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+
+        const [result] = await db.query(
+            `INSERT INTO users (firstName, lastName, phone, email, password, created_at)
+                VALUES (?, ?, ?, ?, ?, NOW())`,
+            [firstName, lastName, phone || null, email || null, hashedPassword]
         );
 
-        assignWelcomeCode({ user_id: user.user_id, user_email: user.email })
-            .catch((err) => console.error("❌ Auto-assign welcome code error:", err.message));
+        const user_id = result.insertId;
+        const loginToken = jwt.sign({ user_id, phone, email }, process.env.JWT_SECRET);
+
+        if (email) {
+            (async () => {
+                try {
+                    await
+                        sendUserWelcomeMail({ userEmail: email, fullName: `${firstName}${lastName ? " " + lastName : ""}` });
+                    console.log(`📧 Welcome email sent to ${email}`);
+                } catch (err) {
+                    console.error("❌ Failed to send welcome email:", err.message);
+                }
+            })();
+        }
+
+        assignWelcomeCode({
+            user_email: email,
+            user_id,
+            user_name: `${firstName || ""} ${lastName || ""}`.trim(),
+        })
+            .catch(err => console.error("❌ Auto-assign welcome code error:", err.message));
 
         return res.status(200).json({
-            message: "Login successful via OTP",
+            message: "Registration successful",
             token: loginToken,
+            user: {
+                user_id,
+                firstName,
+                lastName,
+                phone,
+                email,
+                created_at: new Date(),
+            },
         });
     }
 
-    // 🧩 Step 6: Default fallback
-    return res.status(400).json({ message: "OTP or valid password required to login" });
+    // ✅ Existing user login via OTP
+    const loginToken = jwt.sign(
+        { user_id: user.user_id, phone: user.phone, email: user.email },
+        process.env.JWT_SECRET
+    );
+
+    assignWelcomeCode({ user_id: user.user_id, user_email: email, user_name: `${firstName || ""} ${lastName || ""}`.trim(), })
+        .catch(err => console.error("❌ Auto-assign welcome code error:", err.message));
+
+    return res.status(200).json({
+        message: "Login successful via OTP",
+        token: loginToken,
+        user: {
+            user_id: user.user_id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            email: user.email,
+            is_approved: user.is_approved,
+            created_at: user.created_at,
+        },
+    });
 });
+
+
 
 
 

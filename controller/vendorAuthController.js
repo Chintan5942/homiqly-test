@@ -42,6 +42,7 @@ const registerVendor = async (req, res) => {
             googleBusinessProfileLink,
             companyEmail,
             contactPerson,
+            expertise,
             companyPhone,
             serviceLocation,
             packages = [],
@@ -74,6 +75,8 @@ const registerVendor = async (req, res) => {
                 googleBusinessProfileLink,
                 companyPhone,
                 companyAddress,
+                expertise,
+                serviceLocation
             ]);
         } else {
             const resume = req.uploadedFiles?.resume?.[0]?.url || null;
@@ -84,6 +87,8 @@ const registerVendor = async (req, res) => {
                 email,
                 resume,
                 aboutme,
+                expertise,
+                serviceLocation
             ]);
         }
 
@@ -104,9 +109,9 @@ const registerVendor = async (req, res) => {
 
             // Insert vendor package application
             const [vpRes] = await conn.query(
-                `INSERT INTO vendor_package_applications (vendor_id, package_id, serviceLocation, status)
-                 VALUES (?, ?, ?, 0)`,
-                [vendor_id, package_id, serviceLocation]
+                `INSERT INTO vendor_package_applications (vendor_id, package_id, status)
+                 VALUES (?, ?, 0)`,
+                [vendor_id, package_id]
             );
             const application_id = vpRes.insertId;
 
@@ -144,7 +149,7 @@ const registerVendor = async (req, res) => {
                 if (parsedPackages.length > 0) {
                     const firstPackageId = parsedPackages[0].package_id;
                     const [serviceRows] = await db.query(
-                        `SELECT s.serviceName 
+                        `SELECT s.serviceName
                          FROM packages p
                          JOIN service_type sp ON p.service_type_id = sp.service_type_id
                          JOIN services s ON sp.service_id = s.service_id
